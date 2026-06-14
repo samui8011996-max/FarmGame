@@ -250,16 +250,16 @@ const MAPS={
    "WWWWWWWWWWWWWWWWWWWW",
    "WWWWWWWWWWWWWWWWWWWW",
    "WWWWWWWWWWWWWWWWWWWW",
-   "WWW................W",
-   "WWW................W",
-   "WWW................W",
-   "WW.................W",
-   "W..................W",
-   "W..................W",
-   "W..................W",
-   "W..................W",
-   "W.WWWWWWWWW........W",
-   "W.WWWWWWWWW........W",
+   "WWW...........WWWWWW",
+   "WWW...........WWWWWW",
+   "WWW...........WWWWWW",
+   "WW............WWWWWW",
+   "W.................WW",
+   "W.................WW",
+   "W.................WW",
+   "W.................WW",
+   "W.WWWWWWWWW.......WW",
+   "W.WWWWWWWWW.......WW",
    "WWWWWWWWWWWWWWWWWWWW",
   ],
   cafe:[
@@ -340,6 +340,9 @@ const SPEED=0.13;
 const held={up:false,down:false,left:false,right:false};
 const DIR={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
 const cam={x:0,y:0};
+let animFrame=0, animTimer=0, walkStep=0;
+const WALK_CYCLE=[0,1,0,2];   // 收步→跨左→收步→跨右（對應上面的第幾列）
+const WALK_SPEED=7;           // 每幾個畫面換一次姿勢，數字越小走越快
 
 function blankState(){
   const plots=[];for(let i=0;i<4;i++)plots.push(null);
@@ -735,12 +738,24 @@ let tickAccum=0;
 function update(){
   let dx=0,dy=0;
   if(held.up)dy-=1;if(held.down)dy+=1;if(held.left)dx-=1;if(held.right)dx+=1;
- if(dx||dy){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
+  const moving = (dx||dy);                         // ← 新增：有沒有在動
+  if(moving){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
     const nx=player.x+dx*SPEED,ny=player.y+dy*SPEED;
-    const foot=0.8;   // 判定點往下偏移到腳底（0=中心，越大越靠腳）
+    const foot=0.8;
     if(walkable(nx,player.y+foot))player.x=nx;
     if(walkable(player.x,ny+foot))player.y=ny;}
+
+  // ← 新增：走路動畫
+  if(moving){
+    animTimer++;
+    if(animTimer>=WALK_SPEED){ animTimer=0; walkStep=(walkStep+1)%WALK_CYCLE.length; }
+    animFrame=WALK_CYCLE[walkStep];
+  }else{
+    animFrame=0; animTimer=0; walkStep=0;          // 停下來→回到收步
+  }
+
   updateCamera();
+  // ……後面原本的程式不動……
   // oven ui
   const ob=document.getElementById('ovenbar');
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
@@ -778,6 +793,9 @@ function loadBg(scene, src){
   img.src = src;
   SCENE_BG[scene] = img;
 }
+const SCENE_FG = {};                       // 前景圖（畫在人物上面）
+function loadFg(scene, src){ const img=new Image(); img.src=src; SCENE_FG[scene]=img; }
+loadFg('office', 'office_desk.png');       // 整張透明、只有桌子的那張
 loadBg('office', 'office.png');               // 辦公室用你的圖
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
@@ -796,7 +814,7 @@ function draw(){
       const ch=tileAt(x,y);
       ctx.fillStyle=cssVar(tileColor(ch,x,y));
       ctx.fillRect(x*TS-ox,y*TS-oy,TS,TS);
-      if(ch==='W'||ch==='F'||ch==='B'){ctx.fillStyle='#00000022';ctx.fillRect(x*TS-ox,y*TS-oy+TS-3,TS,3);}
+    if(ch==='W'||ch==='F'||ch==='B'){ctx.fillStyle='#00000022';ctx.fillRect(x*TS-ox,y*TS-oy+TS-3,TS,3);}
     }
   }
   // DEBUG：顯示碰撞格（對齊家具用，調好後把 DEBUG 改成 false）
@@ -819,15 +837,46 @@ function draw(){
   }
   const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
   // 影子
-  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+8,7,3,0,0,Math.PI*2);ctx.fill();
-  // 人物圖（維持原比例，約 1.5 格寬）
+  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+4,7,3,0,0,Math.PI*2);ctx.fill();
+  
+  // === 將以下區塊替換為橫向精靈圖裁切邏輯 ===
+  // 影子
+  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+5,7,3,0,0,Math.PI*2);ctx.fill();
+  
+ // 影子（配合 64x64 角色，稍微把影子放大一點點，比較好看）
+  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
+  
+  // === 64x64 橫向精靈圖裁切邏輯 ===
   if (PLAYER_IMG.complete && PLAYER_IMG.naturalWidth) {
-    const pw = 34;                          // 人物寬度（像素，想大想小改這個）
-    const ph = pw * PLAYER_IMG.naturalHeight / PLAYER_IMG.naturalWidth;  // 維持比例
-    ctx.drawImage(PLAYER_IMG, px - pw/2, py - ph + 10, pw, ph);  // 腳對齊格子
+    const spriteW = 64; // 素材單格寬度改成 64
+    const spriteH = 64; // 素材單格高度改成 64
+
+    // 根據圖片從左到右的順序：正面(down)=0, 左側(left)=1, 右側(right)=2, 背面(up)=3
+    const dirCols = { down: 0, left: 1, right: 2, up: 3 };
+    const colIndex = dirCols[player.facing] || 0;
+
+    const sx = colIndex * spriteW;        // X：方向（不變）
+    const sy = animFrame * spriteH;       // ← 改這行：Y 用動畫姿勢決定第幾列
+
+    // 遊戲畫面中顯示的大小（如果你覺得 64 放在地圖上太大，也可以把這兩個數值改成 48 或原來的 34，它會自動縮放）
+    const pw = 64; 
+    const ph = 64; 
+    
+    // 渲染角色
+    ctx.drawImage(
+      PLAYER_IMG, 
+      sx, sy, spriteW, spriteH,        // 從大圖中精準裁切出指定的 64x64 區塊
+      px - pw/2, py - ph + 14, pw, ph  // 渲染到遊戲地圖上（微調了垂直偏移量 +14，讓腳貼地）
+    );
   } else {
-    ctx.font='17px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle'; // 稍微放大文字防呆
     ctx.fillText('🧑‍🌾', px, py);
+  }
+
+  // === 前景：桌子畫在人物之後 → 蓋在人物上面 ===
+  const fg = SCENE_FG[curScene];
+  if (fg && fg.complete && fg.naturalWidth) {
+    ctx.drawImage(fg, -ox, -oy, mapCols()*TS, mapRows()*TS);
   }
 }
 function loop(){if(S){update();draw();}requestAnimationFrame(loop);}
