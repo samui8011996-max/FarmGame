@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -21,111 +22,113 @@
   body{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:0}
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 
-  .topbar{background:var(--paper2);border-bottom:2px solid var(--line2);padding:8px 12px;
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .topbar .who{font-weight:700;font-size:15px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px 8px;font-size:13px}
-  .stat b{color:var(--accent);font-variant-numeric:tabular-nums}
-  .clock{margin-left:auto;font-size:13px;color:var(--ink2)}
+.topbar{background:var(–paper2);border-bottom:2px solid var(–line2);padding:8px 12px;
+display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.topbar .who{font-weight:700;font-size:15px}
+.stat{background:var(–card);border:1px solid var(–line);border-radius:10px;padding:4px 8px;font-size:13px}
+.stat b{color:var(–accent);font-variant-numeric:tabular-nums}
+.clock{margin-left:auto;font-size:13px;color:var(–ink2)}
 
-  .title{text-align:center;color:var(--accent);font-size:19px;font-weight:700;letter-spacing:2px;margin:7px 0 2px}
-  .recipe-bar{text-align:center;font-size:12px;color:var(--ink2);margin-bottom:4px;min-height:18px}
-  .recipe-bar b{color:var(--accent)}
-  .recipe-bar .step{display:inline-block;margin:0 2px;padding:1px 6px;border-radius:9px;background:var(--paper2);border:1px solid var(--line)}
-  .recipe-bar .step.done{background:var(--accent2);color:#fff;border-color:var(--accent2)}
-  .recipe-bar .step.cur{background:var(--gold);color:#fff;border-color:var(--gold)}
+.title{text-align:center;color:var(–accent);font-size:19px;font-weight:700;letter-spacing:2px;margin:7px 0 2px}
+.recipe-bar{text-align:center;font-size:12px;color:var(–ink2);margin-bottom:4px;min-height:18px}
+.recipe-bar b{color:var(–accent)}
+.recipe-bar .step{display:inline-block;margin:0 2px;padding:1px 6px;border-radius:9px;background:var(–paper2);border:1px solid var(–line)}
+.recipe-bar .step.done{background:var(–accent2);color:#fff;border-color:var(–accent2)}
+.recipe-bar .step.cur{background:var(–gold);color:#fff;border-color:var(–gold)}
 
-  .stagewrap{padding:0 12px}
-  .stage{position:relative;width:100%;aspect-ratio:10/9;border:3px solid var(--fence);
-    border-radius:10px;overflow:hidden;background:var(--grass);box-shadow:0 3px 0 var(--shadow)}
-  #game{display:block;width:100%;height:100%;image-rendering:pixelated}
-  .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;background:#3a2c1cdd;
-    color:var(--paper);font-size:13px;padding:5px 12px;border-radius:14px;opacity:0;
-    transition:opacity .15s;pointer-events:none;white-space:nowrap}
-  .hint.show{opacity:1}
-  .ovenbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#3a2c1cdd;
-    color:var(--paper);font-size:13px;padding:4px 12px;border-radius:12px;display:none;align-items:center;gap:8px}
-  .ovenbar.show{display:flex}
-  .ovenbar .meter{width:90px;height:8px;background:#ffffff33;border-radius:4px;overflow:hidden}
-  .ovenbar .meter>i{display:block;height:100%;background:var(--accent2);width:0}
-  .ovenbar.warn .meter>i{background:var(--gold)} .ovenbar.burn .meter>i{background:var(--danger)}
+.stagewrap{padding:0 12px}
+.stage{position:relative;width:100%;aspect-ratio:10/9;border:3px solid var(–fence);
+border-radius:10px;overflow:hidden;background:var(–grass);box-shadow:0 3px 0 var(–shadow)}
+#game{display:block;width:100%;height:100%;image-rendering:pixelated}
+.hint{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;background:#3a2c1cdd;
+color:var(–paper);font-size:13px;padding:5px 12px;border-radius:14px;opacity:0;
+transition:opacity .15s;pointer-events:none;white-space:nowrap}
+.hint.show{opacity:1}
+.ovenbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#3a2c1cdd;
+color:var(–paper);font-size:13px;padding:4px 12px;border-radius:12px;display:none;align-items:center;gap:8px}
+.ovenbar.show{display:flex}
+.ovenbar .meter{width:90px;height:8px;background:#ffffff33;border-radius:4px;overflow:hidden}
+.ovenbar .meter>i{display:block;height:100%;background:var(–accent2);width:0}
+.ovenbar.warn .meter>i{background:var(–gold)} .ovenbar.burn .meter>i{background:var(–danger)}
 
-  .dialogue{margin:8px 12px 4px;background:var(--card);border:2px solid var(--line2);border-radius:14px;
-    padding:9px 12px;display:flex;align-items:center;gap:10px;min-height:60px;box-shadow:0 2px 0 var(--shadow)}
-  .dialogue .avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(--paper2);
-    border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:24px}
-  .dialogue .dlgtext{flex:1;font-size:14px;line-height:1.4;color:var(--ink)}
-  .dialogue.idle{opacity:.65} .dialogue.idle .dlgtext{color:var(--ink2);font-size:13px}
-  .dialogue .name{font-weight:700;color:var(--accent);margin-right:5px}
+.dialogue{margin:8px 12px 4px;background:var(–card);border:2px solid var(–line2);border-radius:14px;
+padding:9px 12px;display:flex;align-items:center;gap:10px;min-height:60px;box-shadow:0 2px 0 var(–shadow)}
+.dialogue .avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(–paper2);
+border:2px solid var(–line2);display:flex;align-items:center;justify-content:center;font-size:24px}
+.dialogue .dlgtext{flex:1;font-size:14px;line-height:1.4;color:var(–ink)}
+.dialogue.idle{opacity:.65} .dialogue.idle .dlgtext{color:var(–ink2);font-size:13px}
+.dialogue .name{font-weight:700;color:var(–accent);margin-right:5px}
 
-  .controls{padding:8px 16px 8px;display:flex;align-items:flex-end;justify-content:space-between}
-  .bag{width:52px;height:52px;border-radius:12px;background:var(--card);border:2px solid var(--line2);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 0 var(--shadow)}
-  .bag span{font-size:10px;color:var(--ink2);margin-top:-2px}
-  .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:6px}
-  .key{width:44px;height:44px;border-radius:11px;font-size:19px;font-weight:700;display:flex;
-    align-items:center;justify-content:center;box-shadow:0 3px 0 #00000018;border:2px solid #00000010}
-  .key:active{transform:translateY(2px);box-shadow:0 1px 0 #00000018}
-  .k-up{grid-column:2;grid-row:1;background:#bcd3e8}
-  .k-left{grid-column:1;grid-row:2;background:#f0cdb0}
-  .k-down{grid-column:2;grid-row:2;background:#d9c5ea}
-  .k-right{grid-column:3;grid-row:2;background:#cfe2b8}
-  .actbtn{width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;
-    font-weight:700;box-shadow:0 4px 0 #00000020;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
-  .actbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #00000020}
-  .actbtn.dim{background:var(--line2)}
+.controls{padding:8px 16px 8px;display:flex;align-items:flex-end;justify-content:space-between}
+.bag{width:52px;height:52px;border-radius:12px;background:var(–card);border:2px solid var(–line2);
+display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 0 var(–shadow)}
+.bag span{font-size:10px;color:var(–ink2);margin-top:-2px}
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:6px}
+.key{width:44px;height:44px;border-radius:11px;font-size:19px;font-weight:700;display:flex;
+align-items:center;justify-content:center;box-shadow:0 3px 0 #00000018;border:2px solid #00000010}
+.key:active{transform:translateY(2px);box-shadow:0 1px 0 #00000018}
+.k-up{grid-column:2;grid-row:1;background:#bcd3e8}
+.k-left{grid-column:1;grid-row:2;background:#f0cdb0}
+.k-down{grid-column:2;grid-row:2;background:#d9c5ea}
+.k-right{grid-column:3;grid-row:2;background:#cfe2b8}
+.actbtn{width:62px;height:62px;border-radius:50%;background:var(–accent);color:#fff;font-size:15px;
+font-weight:700;box-shadow:0 4px 0 #00000020;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.actbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #00000020}
+.actbtn.dim{background:var(–line2)}
 
-  .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex}
-  .nav button{flex:1;padding:7px 2px 8px;font-size:11px;color:var(--ink2);display:flex;
-    flex-direction:column;align-items:center;gap:1px;font-weight:700}
-  .nav button .ic{font-size:19px}
-  .nav button.on{color:var(--accent)} .nav button.on .ic{transform:scale(1.12)}
+.nav{background:var(–paper2);border-top:2px solid var(–line2);display:flex}
+.nav button{flex:1;padding:7px 2px 8px;font-size:11px;color:var(–ink2);display:flex;
+flex-direction:column;align-items:center;gap:1px;font-weight:700}
+.nav button .ic{font-size:19px}
+.nav button.on{color:var(–accent)} .nav button.on .ic{transform:scale(1.12)}
 
-  .mask{position:fixed;inset:0;background:#3a2c1c66;z-index:50;display:none;align-items:flex-end;justify-content:center}
-  .mask.show{display:flex}
-  .sheet{background:var(--paper);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px 16px 22px;max-height:82vh;overflow:auto}
-  .sheethead{display:flex;align-items:center;margin-bottom:10px}
-  .sheethead h3{margin:0;font-size:18px}
-  .sheethead .close{margin-left:auto;font-size:22px;color:var(--ink2);padding:0 6px}
-  .small{font-size:12px;color:var(--ink2)}
-  .row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line)}
-  .row:last-child{border-bottom:none}
-  .row .e{font-size:22px;width:28px;text-align:center}
-  .row .info{flex:1;min-width:0}
-  .row .info .n{font-weight:700;font-size:14px}
-  .row .info .d{font-size:12px;color:var(--ink2)}
-  .price{font-variant-numeric:tabular-nums;font-weight:700}
-  .up{color:var(--accent2)} .down{color:var(--danger)}
-  .btn{background:var(--accent);color:#fff;border-radius:10px;padding:7px 12px;font-size:14px;font-weight:700;box-shadow:0 2px 0 #00000018;white-space:nowrap}
-  .btn:active{transform:translateY(1px);box-shadow:none}
-  .btn.sm{padding:5px 9px;font-size:13px}
-  .btn.green{background:var(--accent2)} .btn.gold{background:var(--gold)}
-  .btn.ghost{background:var(--paper2);color:var(--ink);border:1px solid var(--line2)}
-  .btn.dis{background:var(--line2);color:#fff8;pointer-events:none}
-  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-  .tabs button{background:var(--paper2);border:1px solid var(--line);border-radius:16px;padding:4px 11px;font-size:13px;font-weight:700;color:var(--ink2)}
-  .tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .menucard{border:2px solid var(--line);border-radius:12px;padding:9px;margin-bottom:8px;background:var(--card)}
-  .menucard.on{border-color:var(--accent2);background:#f3f7ec}
-  .seedchip{display:inline-flex;gap:3px;background:var(--paper2);border:1px solid var(--line);border-radius:18px;padding:3px 9px;font-size:13px;margin:3px}
-  .hr{height:1px;background:var(--line);margin:9px 0}
-  .empty-note{text-align:center;color:var(--ink2);font-size:13px;padding:14px}
+.mask{position:fixed;inset:0;background:#3a2c1c66;z-index:50;display:none;align-items:flex-end;justify-content:center}
+.mask.show{display:flex}
+.sheet{background:var(–paper);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px 16px 22px;max-height:82vh;overflow:auto}
+.sheethead{display:flex;align-items:center;margin-bottom:10px}
+.sheethead h3{margin:0;font-size:18px}
+.sheethead .close{margin-left:auto;font-size:22px;color:var(–ink2);padding:0 6px}
+.small{font-size:12px;color:var(–ink2)}
+.row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(–line)}
+.row:last-child{border-bottom:none}
+.row .e{font-size:22px;width:28px;text-align:center}
+.row .info{flex:1;min-width:0}
+.row .info .n{font-weight:700;font-size:14px}
+.row .info .d{font-size:12px;color:var(–ink2)}
+.price{font-variant-numeric:tabular-nums;font-weight:700}
+.up{color:var(–accent2)} .down{color:var(–danger)}
+.btn{background:var(–accent);color:#fff;border-radius:10px;padding:7px 12px;font-size:14px;font-weight:700;box-shadow:0 2px 0 #00000018;white-space:nowrap}
+.btn:active{transform:translateY(1px);box-shadow:none}
+.btn.sm{padding:5px 9px;font-size:13px}
+.btn.green{background:var(–accent2)} .btn.gold{background:var(–gold)}
+.btn.ghost{background:var(–paper2);color:var(–ink);border:1px solid var(–line2)}
+.btn.dis{background:var(–line2);color:#fff8;pointer-events:none}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:var(–paper2);border:1px solid var(–line);border-radius:16px;padding:4px 11px;font-size:13px;font-weight:700;color:var(–ink2)}
+.tabs button.on{background:var(–accent);color:#fff;border-color:var(–accent)}
+.menucard{border:2px solid var(–line);border-radius:12px;padding:9px;margin-bottom:8px;background:var(–card)}
+.menucard.on{border-color:var(–accent2);background:#f3f7ec}
+.seedchip{display:inline-flex;gap:3px;background:var(–paper2);border:1px solid var(–line);border-radius:18px;padding:3px 9px;font-size:13px;margin:3px}
+.hr{height:1px;background:var(–line);margin:9px 0}
+.empty-note{text-align:center;color:var(–ink2);font-size:13px;padding:14px}
 
-  /* splash */
-  .splash{position:fixed;inset:0;background:var(--paper);z-index:80;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;padding:24px;text-align:center}
-  .splash h1{font-size:30px;margin:0 0 4px;letter-spacing:2px}
-  .splash p{color:var(--ink2);margin:0 0 22px}
-  .splash input{width:100%;max-width:300px;padding:13px 14px;border:2px solid var(--line2);border-radius:12px;
-    background:var(--card);text-align:center;font-weight:700;font-size:18px;margin-bottom:12px;font-family:inherit}
+/* splash */
+.splash{position:fixed;inset:0;background:var(–paper);z-index:80;display:flex;flex-direction:column;
+align-items:center;justify-content:center;padding:24px;text-align:center}
+.splash h1{font-size:30px;margin:0 0 4px;letter-spacing:2px}
+.splash p{color:var(–ink2);margin:0 0 22px}
+.splash input{width:100%;max-width:300px;padding:13px 14px;border:2px solid var(–line2);border-radius:12px;
+background:var(–card);text-align:center;font-weight:700;font-size:18px;margin-bottom:12px;font-family:inherit}
 
-  #toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);
-    padding:9px 16px;border-radius:22px;font-size:14px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+#toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:var(–ink);color:var(–paper);
+padding:9px 16px;border-radius:22px;font-size:14px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 </style>
+
 </head>
 <body>
 
 <!-- splash -->
+
 <div class="splash" id="splash">
   <div style="font-size:54px">🌾</div>
   <h1>快樂農場</h1>
@@ -137,6 +140,7 @@
 </div>
 
 <!-- game shell -->
+
 <div id="shell" style="display:none;flex-direction:column;min-height:100vh">
   <div class="topbar">
     <span class="who" id="whoName">—</span>
@@ -182,13 +186,10 @@
 <script>
 /* =========================================================
    快樂農場 — 整合版（走動 + 經營）
-   引擎共用：移動/碰撞/鏡頭/對話/互動
-   場景=資料：farm / cafe / kitchen / shop / office
-   經濟狀態 S：共用、存 localStorage
    ========================================================= */
 const NS='happy_farm_';
 const HOUR=3600*1000, DAY=24*HOUR;
-const TS=16, VIEW_COLS=20, VIEW_ROWS=18;
+let TS=16; const VIEW_COLS=20, VIEW_ROWS=18;
 const cv=document.getElementById('game'), ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 
@@ -243,24 +244,42 @@ const MAPS={
    "FGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGF","FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
   ],
  office:[
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWW...........WWWWWW",
-   "WWW...........WWWWWW",
-   "WWW...........WWWWWW",
-   "WW............WWWWWW",
-   "W.................WW",
-   "W.................WW",
-   "W.................WW",
-   "W.................WW",
-   "W.WWWWWWWWW.......WW",
-   "W.WWWWWWWWW.......WW",
-   "WWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWWWW......................WWWWWWWWWWWW",
+   "WWWW........................WWWWWWWWWWWW",
+   "WWWW........................WWWWWWWWWWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..................................WWWW",
+   "WW..WWWWWWWWWWWWWWWWWW..............WWWW",
+   "WW..WWWWWWWWWWWWWWWWWW..............WWWW",
+   "WW..WWWWWWWWWWWWWWWWWW..............WWWW",
+   "WW..WWWWWWWWWWWWWWWWWW..............WWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+   "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
   ],
   cafe:[
    "BBBBBBBBBBBBBBBBBBBB","BBBBBBBBBBBBBBBBBBBB","B..................B",
@@ -290,7 +309,7 @@ const MAPS={
 const GRID={};
 for(const k in MAPS){ GRID[k]=MAPS[k].map(r=>r.padEnd(MAPS[k][0].length,r[0]).split('')); }
 
-/* ---------- scene definitions (objects + spawn + camera mode) ---------- */
+/* ---------- scene definitions ---------- */
 const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:15,y:22}, objects:[
     {id:'farm0',x:2,y:3,e:'🌱',nm:'農田',kind:'farm',plotIdx:0},
@@ -304,11 +323,11 @@ const SCENES={
     {id:'npc',x:10,y:22,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
       lines:['今天天氣不錯，適合下田。','作物記得澆水，會長得好。','西邊那池水可別掉下去囉。']},
   ]},
-  office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
-    {id:'ledger',x:7,y:11,e:'📒',nm:'帳簿',kind:'ledger'},
-    {id:'cat',x:13,y:12,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
+  office:{title:'辦公室', big:false, ts:8, spawn:{x:18,y:26}, objects:[
+
+    {id:'cat',x:26,y:24,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
       lines:['喵～（在曬太陽）','今天也辛苦了喵。','摸摸我（並不會回血）。']},
-    {id:'staff',x:5,y:5,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
+    {id:'staff',x:10,y:10,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
       lines:['老闆，要我顧農場嗎？','田裡的活交給我！']},
   ]},
   cafe:{title:'咖啡廳（前台）', big:false, spawn:{x:9,y:12}, objects:[
@@ -341,9 +360,13 @@ const held={up:false,down:false,left:false,right:false};
 const DIR={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
 const cam={x:0,y:0};
 let animFrame=0, animTimer=0, walkStep=0;
-const WALK_CYCLE=[0,1,0,2];   // 收步→跨左→收步→跨右（對應上面的第幾列）
-const WALK_SPEED=7;           // 每幾個畫面換一次姿勢，數字越小走越快
-
+const WALK_CYCLE=[0,1,0,2];
+const WALK_SPEED=7;
+let sitting=false;
+const CHAIR={scene:'office', x:8, y:28};
+let sleeping=false;
+const BED={scene:'office', x1:28, y1:16, x2:36, y2:20};
+const SIT_POS={ x:120, y:166, w:64, h:64 };
 function blankState(){
   const plots=[];for(let i=0;i<4;i++)plots.push(null);
   return {
@@ -370,7 +393,7 @@ function jitter(b,p){return Math.round((b*(1+(Math.random()*2-1)*p))*10)/10;}
 function seedKey(c,q){return c+'_'+q;}
 function seedCount(c,q){return S.seeds[seedKey(c,q)]||0;}
 
-/* ---------- market: mean reversion + shocks ---------- */
+/* ---------- market ---------- */
 function rollMarket(){
   for(const k in PRODUCTS){
     const p=PRODUCTS[k];const m=S.market[k]||{price:p.base};
@@ -386,12 +409,11 @@ function rollMarket(){
 function priceOf(k){return S.market[k]?S.market[k].price:PRODUCTS[k].base;}
 function priceDir(k){const m=S.market[k];if(!m)return 0;return m.price>PRODUCTS[k].base*1.05?1:m.price<PRODUCTS[k].base*0.95?-1:0;}
 
-/* ---------- tick: time progression ---------- */
+/* ---------- tick ---------- */
 function tick(){
   const now=Date.now();
   const newDay=Math.floor((now-S.startTs)/DAY)+1;
   if(newDay>S.day || !S.market.strawberry){ S.day=Math.max(S.day,newDay); if(S.marketDay!==S.day) rollMarket(); }
-  // employee wages
   if(S.employee){
     while(now-S.employee.lastPaidTs>=30*DAY){
       if(S.cash>=300){spend(300,'雇員月薪');S.employee.lastPaidTs+=30*DAY;addLog('💸 付雇員月薪 $300');}
@@ -399,12 +421,10 @@ function tick(){
     }
   }
   const emp=!!S.employee;
-  // crops
   S.plots.forEach(p=>{ if(!p)return;
     if(p.stage==='growing' && now-p.planted>=CROPS[p.crop].grow) p.stage='ready';
     if(emp && p.stage==='ready'){ addStore(p.crop,Math.round(baseYield(p)*0.6)); resetPlot(p); }
   });
-  // animals
   for(const type in S.animals){
     const def=ANIMALS[type];
     S.animals[type]=S.animals[type].filter(a=>{
@@ -449,7 +469,7 @@ function netWorth(){
   return n;
 }
 
-/* ---------- engine: scene accessors ---------- */
+/* ---------- engine ---------- */
 function grid(){return GRID[curScene];}
 function sceneDef(){return SCENES[curScene];}
 function mapCols(){return grid()[0].length;}
@@ -487,7 +507,7 @@ document.addEventListener('keyup',e=>{
   if(m[e.key])held[m[e.key]]=false;
 });
 
-/* ---------- kitchen prep state (per-session) ---------- */
+/* ---------- kitchen prep state ---------- */
 const prep={cut:0,knead:0,inOven:false,ovenStart:0};
 function curRecipe(){return RECIPES[S.curRecipe];}
 function kStep(){const r=curRecipe();if(prep.cut<r.steps[0].need)return 0;if(prep.knead<r.steps[1].taps)return 1;return 2;}
@@ -496,6 +516,7 @@ function kStep(){const r=curRecipe();if(prep.cut<r.steps[0].need)return 0;if(pre
 let dlgNpc=null, dlgIdx=0;
 function interact(ev){
   if(ev)ev.preventDefault();
+  if(sitting){ openLedger(); return; }
   const o=facingObject();
   if(!o){toast('面前沒有可互動的東西');return;}
   switch(o.kind){
@@ -520,7 +541,7 @@ function interact(ev){
   }
 }
 
-/* ---------- FARM actions ---------- */
+/* ---------- FARM ---------- */
 let sheetFarmIdx=null;
 function openFarm(i){
   sheetFarmIdx=i;const p=S.plots[i];
@@ -628,7 +649,6 @@ function kKnead(){const r=curRecipe();
 function kOven(){const r=curRecipe();
   if(prep.inOven){const t=Date.now()-prep.ovenStart;if(t<BAKE_MS){say(`還沒好，再等 ${Math.ceil((BAKE_MS-t)/1000)} 秒。`);return;}finishBake(t);}
   else{ if(prep.cut<r.steps[0].need||prep.knead<r.steps[1].taps){say('材料還沒備好。');return;}
-    // consume ingredients
     const st=r.steps[0]; S.store[st.ing]=(S.store[st.ing]||0)-st.need;
     prep.inOven=true;prep.ovenStart=Date.now();toast('🔥 開烤！10秒出爐，別超過14秒');say('烘烤中…時間到回烤箱出爐。');save();}
 }
@@ -721,7 +741,7 @@ function say(t){const box=document.getElementById('dialogue');box.classList.remo
   document.getElementById('dlgText').innerHTML=`<span class="name">${curScene==='kitchen'?'食譜':'提示'}</span>${t}`;
   clearTimeout(say._t);say._t=setTimeout(idleDlg,2600);}
 
-/* ---------- recipe bar (kitchen only) ---------- */
+/* ---------- recipe bar ---------- */
 function renderRecipeBar(){
   const bar=document.getElementById('recipeBar');
   if(curScene!=='kitchen'){bar.innerHTML='';return;}
@@ -738,40 +758,49 @@ let tickAccum=0;
 function update(){
   let dx=0,dy=0;
   if(held.up)dy-=1;if(held.down)dy+=1;if(held.left)dx-=1;if(held.right)dx+=1;
-  const moving = (dx||dy);                         // ← 新增：有沒有在動
+  const moving = (dx||dy);
   if(moving){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
-    const nx=player.x+dx*SPEED,ny=player.y+dy*SPEED;
-    const foot=0.8;
+    const sp=SPEED*16/TS;          // 格子小一半→步距補回來
+    const nx=player.x+dx*sp,ny=player.y+dy*sp;
+    const foot=0.8*16/TS;          // 腳底判定點也等比縮放
     if(walkable(nx,player.y+foot))player.x=nx;
     if(walkable(player.x,ny+foot))player.y=ny;}
 
-  // ← 新增：走路動畫
   if(moving){
     animTimer++;
     if(animTimer>=WALK_SPEED){ animTimer=0; walkStep=(walkStep+1)%WALK_CYCLE.length; }
     animFrame=WALK_CYCLE[walkStep];
   }else{
-    animFrame=0; animTimer=0; walkStep=0;          // 停下來→回到收步
+    animFrame=0; animTimer=0; walkStep=0;
   }
-
+document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
-  // ……後面原本的程式不動……
-  // oven ui
+  sitting = (curScene===CHAIR.scene
+    && Math.round(player.x)===CHAIR.x
+    && Math.round(player.y)===CHAIR.y);
+
+  sleeping = (curScene===BED.scene
+    && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2
+    && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2);
   const ob=document.getElementById('ovenbar');
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
     document.getElementById('ovenFill').style.width=Math.min(100,(t/BAKE_MS)*100)+'%';
     ob.classList.toggle('warn',t>=BAKE_MS&&t<=BURN_MS);ob.classList.toggle('burn',t>BURN_MS);
     document.getElementById('ovenTxt').textContent=t<BAKE_MS?`烘烤中 ${(t/1000).toFixed(1)}s`:t<=BURN_MS?'✅快出爐':'💀燒焦中';
   }else ob.classList.remove('show');
-  // hint + dialogue
   const near=facingObject();
-  document.getElementById('actBtn').className='actbtn'+(near?'':' dim');
   const hint=document.getElementById('hint');
-  if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
-  else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
-  else{dlgNpc=null;if(!say._t)idleDlg();hint.classList.remove('show');}
+  if(sitting){
+    document.getElementById('actBtn').className='actbtn';
+    hint.textContent='📒 翻開帳簿（互動鍵）／按方向鍵起身';
+    hint.classList.add('show');
+  }else{
+    document.getElementById('actBtn').className='actbtn'+(near?'':' dim');
+    if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
+    else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
+    else{dlgNpc=null;if(!say._t)idleDlg();hint.classList.remove('show');}
+  }
   renderRecipeBar();
-  // periodic tick (every ~2s) for time progression
   tickAccum++; if(tickAccum>=120){tickAccum=0;tick();refreshTop();save();}
 }
 function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
@@ -787,18 +816,22 @@ function tileColor(ch,x,y){
   }
 }
 /* ---------- 場景底圖 ---------- */
-const SCENE_BG = {};                          // 存各場景的圖
+const SCENE_BG = {};
 function loadBg(scene, src){
   const img = new Image();
   img.src = src;
   SCENE_BG[scene] = img;
 }
-const SCENE_FG = {};                       // 前景圖（畫在人物上面）
+const SCENE_FG = {};
 function loadFg(scene, src){ const img=new Image(); img.src=src; SCENE_FG[scene]=img; }
-loadFg('office', 'office_desk.png');       // 整張透明、只有桌子的那張
-loadBg('office', 'office.png');               // 辦公室用你的圖
+loadFg('office', 'office_desk.png');
+loadBg('office', 'office.png');
 const PLAYER_IMG = new Image();
-PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
+PLAYER_IMG.src = 'player.png';
+const SIT_IMG = new Image();
+SIT_IMG.src = 'sit.png';
+const SLEEP_IMG = new Image();
+SLEEP_IMG.src = 'sleep.png';
 function draw(){
   ctx.clearRect(0,0,cv.width,cv.height);
   const big=sceneDef().big;const ox=cam.x*TS,oy=cam.y*TS;
@@ -806,10 +839,8 @@ function draw(){
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
   const bg = SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
-    // 這個場景有底圖且載入好了 → 鋪滿整個舞台
     ctx.drawImage(bg, -ox, -oy, mapCols()*TS, mapRows()*TS);
   } else {
-    // 沒圖（或還沒載入）→ 用原本的色塊格子
     for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
       const ch=tileAt(x,y);
       ctx.fillStyle=cssVar(tileColor(ch,x,y));
@@ -817,7 +848,6 @@ function draw(){
     if(ch==='W'||ch==='F'||ch==='B'){ctx.fillStyle='#00000022';ctx.fillRect(x*TS-ox,y*TS-oy+TS-3,TS,3);}
     }
   }
-  // DEBUG：顯示碰撞格（對齊家具用，調好後把 DEBUG 改成 false）
   if (window.DEBUG_COLLISION) {
     for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
       if (blocked(tileAt(x,y))) {
@@ -836,47 +866,36 @@ function draw(){
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
   }
   const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
-  // 影子
-  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+4,7,3,0,0,Math.PI*2);ctx.fill();
-  
-  // === 將以下區塊替換為橫向精靈圖裁切邏輯 ===
-  // 影子
-  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+5,7,3,0,0,Math.PI*2);ctx.fill();
-  
- // 影子（配合 64x64 角色，稍微把影子放大一點點，比較好看）
-  ctx.fillStyle='#00000022';ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
-  
-  // === 64x64 橫向精靈圖裁切邏輯 ===
-  if (PLAYER_IMG.complete && PLAYER_IMG.naturalWidth) {
-    const spriteW = 64; // 素材單格寬度改成 64
-    const spriteH = 64; // 素材單格高度改成 64
 
-    // 根據圖片從左到右的順序：正面(down)=0, 左側(left)=1, 右側(right)=2, 背面(up)=3
-    const dirCols = { down: 0, left: 1, right: 2, up: 3 };
-    const colIndex = dirCols[player.facing] || 0;
-
-    const sx = colIndex * spriteW;        // X：方向（不變）
-    const sy = animFrame * spriteH;       // ← 改這行：Y 用動畫姿勢決定第幾列
-
-    // 遊戲畫面中顯示的大小（如果你覺得 64 放在地圖上太大，也可以把這兩個數值改成 48 或原來的 34，它會自動縮放）
-    const pw = 64; 
-    const ph = 64; 
-    
-    // 渲染角色
-    ctx.drawImage(
-      PLAYER_IMG, 
-      sx, sy, spriteW, spriteH,        // 從大圖中精準裁切出指定的 64x64 區塊
-      px - pw/2, py - ph + 14, pw, ph  // 渲染到遊戲地圖上（微調了垂直偏移量 +14，讓腳貼地）
-    );
+   if (sitting || sleeping) {
+    // 坐著/睡覺：這裡先不畫，人物消失（坐姿/睡姿圖留到最後畫）
   } else {
-    ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle'; // 稍微放大文字防呆
-    ctx.fillText('🧑‍🌾', px, py);
+    ctx.fillStyle='#00000022';
+    ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
+    if (PLAYER_IMG.complete && PLAYER_IMG.naturalWidth) {
+      const spriteW=64, spriteH=64;
+      const dirCols={ down:0, left:1, right:2, up:3 };
+      const colIndex=dirCols[player.facing]||0;
+      const sx=colIndex*spriteW;
+      const sy=animFrame*spriteH;
+      ctx.drawImage(PLAYER_IMG, sx, sy, spriteW, spriteH, px-32, py-64+14, 64, 64);
+    } else {
+      ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🧑‍🌾', px, py);
+    }
   }
 
-  // === 前景：桌子畫在人物之後 → 蓋在人物上面 ===
   const fg = SCENE_FG[curScene];
   if (fg && fg.complete && fg.naturalWidth) {
     ctx.drawImage(fg, -ox, -oy, mapCols()*TS, mapRows()*TS);
+  }
+
+  if (sitting && SIT_IMG.complete && SIT_IMG.naturalWidth) {
+    ctx.drawImage(SIT_IMG, -ox, -oy, mapCols()*TS, mapRows()*TS);
+  }
+
+  if (sleeping && SLEEP_IMG.complete && SLEEP_IMG.naturalWidth) {
+    ctx.drawImage(SLEEP_IMG, -ox, -oy, mapCols()*TS, mapRows()*TS);
   }
 }
 function loop(){if(S){update();draw();}requestAnimationFrame(loop);}
@@ -889,6 +908,7 @@ document.getElementById('mask').addEventListener('click',e=>{if(e.target.id==='m
 /* ---------- scene switch ---------- */
 function goScene(name){
   curScene=name;
+  TS=SCENES[name].ts||16;   // 套用此場景的格子大小
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===name));
@@ -909,7 +929,6 @@ function submitNick(){const v=document.getElementById('nickInput').value.trim();
 function startGame(n){
   user=n;const saved=load(n);S=saved||blankState();
   if(!saved){rollMarket();addLog('🌾 開張！起始 $50，送 1 貓 1 雞。');}
-  // migration safety
   if(!S.animals.cow)S.animals.cow=[];if(!S.animals.pig)S.animals.pig=[];
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
   document.getElementById('splash').style.display='none';
@@ -923,5 +942,6 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.sty
 renderSaveList();
 loop();
 </script>
+
 </body>
 </html>
