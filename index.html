@@ -783,10 +783,12 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     document.getElementById('actBtn').className='actbtn';
     hint.textContent='📒 翻開帳簿（互動鍵）／按方向鍵起身';
     hint.classList.add('show');
-  }else{
-    document.getElementById('actBtn').className='actbtn'+(near?'':' dim');
+ }else{
+    const zone = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
+    document.getElementById('actBtn').className='actbtn'+((near||zone)?'':' dim');
     if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
     else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
+    else if(zone){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${ANIMALS[zone.atype].e} ${zone.nm}・餵食/收成（互動鍵）`;hint.classList.add('show');}
     else{dlgNpc=null;if(!say._t)idleDlg();hint.classList.remove('show');}
   }
   renderRecipeBar();
