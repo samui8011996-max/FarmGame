@@ -291,25 +291,25 @@ farm:[
    "............................",
    "............................",
   ],
- office:[
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW", 
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WWWWWWWWWWWWWWWWWWWW",
-   "WW............WWWWWW",
-   "WW............WWWWWW",
-   "WW...........WWWWWW",
-   "WW............WWWWWW",
-   "W.................WW",
-   "W.................WW",
-   "W.................WW",
-   "W.................WW",
-   "W.WWWWWWWWW.......WW",
-   "W.WWWWWWWWW.......WW",
-   "WWWWWWWWWWWWWWWWWWWW",
+   office:[
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
+   "F..............FFFFFFFFFFF.....FFFFF...",
+   "FFF............FFFFFFFFF.......FFFFF...",
+   "FFF............FFFFFFFFF..........FF...",
+   "F.................................FF...",
+   "F....................FFFFFF.......FF...",
+   "F....................FFFFFFFFF....FF...",
+   "F.................FFFFFFFFFFFFFF..FF...",
+   "F.................FFFFFFFFFFFFFF..FF...",
+   "F.FFFFFFFFFF......FFFFFFFFFFFFFFFFFF...",
+   "F.FFFFFFFFFF......FFFFFFFFFFFFFFFFFF...",
+   "FFFFFFFFFFFFFFFFFFFF...................",
   ],
   cafe:[
    "BBBBBBBBBBBBBBBBBBBB","BBBBBBBBBBBBBBBBBBBB","B..................B",
@@ -565,11 +565,9 @@ function facingObject(){
   return sceneDef().objects.find(o=>o.x===fx&&o.y===fy)||null;
 }
 function updateCamera(){
-  if(sceneDef().big){
-    let cx=player.x-VIEW_COLS/2+0.5, cy=player.y-VIEW_ROWS/2+0.5;
-    cam.x=Math.max(0,Math.min(cx,mapCols()-VIEW_COLS));
-    cam.y=Math.max(0,Math.min(cy,mapRows()-VIEW_ROWS));
-  }else{ cam.x=0; cam.y=0; }
+  let cx=player.x-VIEW_COLS/2+0.5, cy=player.y-VIEW_ROWS/2+0.5;
+  cam.x=Math.max(0,Math.min(cx,mapCols()-VIEW_COLS));
+  cam.y=Math.max(0,Math.min(cy,mapRows()-VIEW_ROWS));
 }
 
 /* ---------- input ---------- */
