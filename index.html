@@ -239,26 +239,29 @@ const STORE_CAP=200;
 const BAKE_MS=10000, BURN_MS=14000;
 /* ---------- 農作物表（要加新作物就在這裡加一筆） ---------- */
 const FARM_CROPS={
-  strawberry:{ nm:'草莓', img:'strawberry.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
-    grow:30000, yield:3 },
+  strawberry:{ nm:'草莓', img:'strawberry.png', fw:32, fh:32,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:30000, yield:3, seed:3 },
+  corn:{ nm:'玉米', img:'corn.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:40000, yield:4, seed:2 },
   blueberry:{ nm:'藍莓', img:'blueberry.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
   tomato:{ nm:'番茄', img:'tomato.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
   papaya:{ nm:'木瓜', img:'papaya.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
   banana:{ nm:'香蕉', img:'banana.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
   guava:{ nm:'芭樂', img:'guava.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
   lemon:{ nm:'檸檬', img:'lemon.png', fw:64, fh:64,
-    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
 };
 for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段時間
@@ -423,11 +426,11 @@ function openTileFarm(key){
   const c=S.crops[key];
   if(!c){
     let btns='';
-    for(const id in FARM_CROPS){ const d=FARM_CROPS[id]; const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱';
-      btns+=`<button class="btn green" style="width:100%;margin-bottom:6px" onclick="plantTile('${key}','${id}')">${e} 播種${d.nm}</button>`; }
+    for(const id in FARM_CROPS){ const d=FARM_CROPS[id]; const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱'; const have=S.seeds[id]||0;
+      btns+=`<button class="btn green ${have<=0?'dis':''}" style="width:100%;margin-bottom:6px" onclick="plantTile('${key}','${id}')">${e} 播種${d.nm}（種子 ${have}）</button>`; }
+    btns+=`<button class="btn ghost" style="width:100%" onclick="closeSheet();goScene('shop')">🏪 去商店買種子</button>`;
     openSheet(`<div class="sheethead"><h3>🟫 空地</h3><button class="close" onclick="closeSheet()">✕</button></div>
-      <div class="small" style="margin-bottom:10px">選要種的作物。</div>${btns}`);
-    return;
+      <div class="small" style="margin-bottom:10px">選要種的作物（需要種子）。</div>${btns}`);
   }
   const def=FARM_CROPS[c.crop], last=def.stages.length-1, e=(PRODUCTS[c.crop]&&PRODUCTS[c.crop].e)||'🌱';
   if(c.stage>=last){
@@ -440,7 +443,12 @@ function openTileFarm(key){
       <button class="btn green ${c.watered?'dis':''}" style="width:100%" onclick="waterTile('${key}')">💧 澆水</button>`);
   }
 }
-function plantTile(key,crop){ S.crops[key]={crop,stage:0,watered:false,t:Date.now()}; closeSheet(); toast(`已播種${FARM_CROPS[crop].nm}，記得澆水`); save(); }
+function plantTile(key,crop){
+  if((S.seeds[crop]||0)<=0){ toast(`沒有${FARM_CROPS[crop].nm}種子，去商店買`); return; }
+  S.seeds[crop]--;
+  S.crops[key]={crop,stage:0,watered:false,t:Date.now()};
+  closeSheet(); toast(`已播種${FARM_CROPS[crop].nm}，記得澆水`); save();
+}
 function waterTile(key){ const c=S.crops[key]; if(!c)return; c.watered=true; c.t=Date.now(); closeSheet(); toast('💧 澆好水了'); save(); }
 function harvestTile(key){ const c=S.crops[key]; const def=FARM_CROPS[c.crop]; const y=def.yield; addStore(c.crop,y); delete S.crops[key]; closeSheet(); toast(`🧺 收成 ${y} 個${def.nm}`); save(); }
 function save(){ if(user) localStorage.setItem(NS+user,JSON.stringify(S)); }
@@ -740,12 +748,10 @@ function finishBake(t){
 /* ---------- SHOP ---------- */
 function openShopBuy(){
   let seeds='';
-  for(const k in CROPS){const c=CROPS[k];
-    seeds+=`<div class="row"><div class="e">${c.e}</div><div class="info"><div class="n">${c.nm}種子</div>
-      <div class="d">背包 普${seedCount(k,'normal')}/優${seedCount(k,'good')}/劣${seedCount(k,'bad')}</div></div>
-      <div style="display:flex;gap:4px"><button class="btn sm ghost" onclick="buySeed('${k}','bad')">劣$${Math.round(c.seed*.5)}</button>
-      <button class="btn sm" onclick="buySeed('${k}','normal')">普$${c.seed}</button>
-      <button class="btn sm gold" onclick="buySeed('${k}','good')">優$${Math.round(c.seed*1.8)}</button></div></div>`;}
+  for(const k in FARM_CROPS){const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
+    seeds+=`<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${d.nm}種子</div>
+      <div class="d">背包 ${S.seeds[k]||0}</div></div>
+      <div class="price">$${d.seed}</div><button class="btn sm" onclick="buyCropSeed('${k}')">買</button></div>`;}
   let animals='';
   for(const k in ANIMALS){const d=ANIMALS[k];const cnt=S.animals[k].length;
     animals+=`<div class="row"><div class="e">${d.e}</div><div class="info"><div class="n">${d.nm} <span class="small">${cnt}/10</span></div></div>
@@ -766,6 +772,7 @@ function openShopBuy(){
       <button class="btn sm" onclick="buyFert(1)">買1</button><button class="btn sm ghost" onclick="buyFert(5)">買5</button></div>${extras}`);
 }
 function buySeed(c,q){const cost=Math.round(CROPS[c].seed*QUAL_MUL[q]);if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${CROPS[c].nm}種子`);S.seeds[seedKey(c,q)]=(S.seeds[seedKey(c,q)]||0)+1;toast(`買了${CROPS[c].nm}種子`);openShopBuy();save();}
+function buyCropSeed(k){const cost=FARM_CROPS[k].seed; if(S.cash<cost){toast('現金不足');return;} spend(cost,`買${FARM_CROPS[k].nm}種子`); S.seeds[k]=(S.seeds[k]||0)+1; toast(`買了${FARM_CROPS[k].nm}種子`); openShopBuy(); save();}
 function buyAnimal(k){const d=ANIMALS[k];if(S.animals[k].length>=10){toast('已達上限');return;}if(S.cash<d.cub){toast('現金不足');return;}spend(d.cub,`買${d.nm}`);S.animals[k].push({born:Date.now(),fed:Date.now(),lastProd:Date.now()});toast(`買了${d.nm}，已進牧地`);openShopBuy();save();}
 function buyFeed(q){const c=Math.round((S._fe||1)*q);if(S.cash<c){toast('現金不足');return;}spend(c,`買飼料×${q}`);S.feed+=q;toast(`+${q}飼料`);openShopBuy();save();}
 function buyFert(q){const c=Math.round((S._fp||6)*q);if(S.cash<c){toast('現金不足');return;}spend(c,`買肥料×${q}`);S.fert+=q;toast(`+${q}肥料`);openShopBuy();save();}
@@ -792,7 +799,7 @@ function sellGood(k){const have=S.cafe.goods[k]||0;if(have<=0)return;const total
 
 /* ---------- BAG ---------- */
 function openBag(){
-  let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const[c,q]=k.split('_');return `<span class="seedchip">${CROPS[c].e}${CROPS[c].nm}·${q==='good'?'優':q==='bad'?'劣':'普'}×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
+  let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱'; const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
   let prod=Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>`<span class="seedchip">${PRODUCTS[k].e}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
   let goods=Object.keys(S.cafe.goods).filter(k=>S.cafe.goods[k]>0).map(k=>`<span class="seedchip">${RECIPES[k].e}${RECIPES[k].nm}×${S.cafe.goods[k]}</span>`).join('')||'<span class="small">無</span>';
   let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0).map(k=>`<span class="seedchip">${EXTRAS[k].e}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
