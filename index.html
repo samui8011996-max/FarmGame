@@ -200,39 +200,93 @@ const CROPS={
   papaya:{nm:'木瓜',e:'🫛',base:5,seed:2,grow:DAY,volat:'mid'},
   banana:{nm:'香蕉',e:'🍌',base:3,seed:1,grow:DAY,volat:'small'},
   guava:{nm:'芭樂',e:'🟢',base:3,seed:1,grow:DAY,volat:'small'},
+  lemon:{nm:'檸檬',e:'🍋',base:5,seed:2,grow:DAY,volat:'mid'},
 };
 const ANIMALS={
-  chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle:12*HOUR,mode:'produce'},
-  cow:{nm:'牛',e:'🐄',cub:25,feed:3,prod:'milk',cycle:12*HOUR,mode:'produce'},
-  pig:{nm:'豬',e:'🐖',cub:13,feed:2,prod:'pork',cycle:3*DAY,mode:'fatten'},
+  chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle:12,mode:'produce'},
+  cow:{nm:'牛',e:'🐄',cub:25,feed:3,prod:'milk',cycle:12,mode:'produce'},
+  pig:{nm:'豬',e:'🐖',cub:13,feed:2,prod:'pork',cycle:3,mode:'fatten'},
 };
 const PRODUCTS={
-  strawberry:{nm:'草莓',e:'🍓',base:8,volat:'big'}, blueberry:{nm:'藍莓',e:'🫐',base:8,volat:'mid'},
-  tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'}, papaya:{nm:'木瓜',e:'🫛',base:5,volat:'mid'},
-  banana:{nm:'香蕉',e:'🍌',base:3,volat:'small'}, guava:{nm:'芭樂',e:'🟢',base:3,volat:'small'},
-  egg:{nm:'蛋',e:'🥚',base:4,volat:'mid'}, milk:{nm:'奶',e:'🥛',base:8,volat:'mid'},
-  pork:{nm:'豬肉',e:'🥩',base:45,volat:'small'},
+  strawberry:{nm:'草莓',e:'🍓',base:8,volat:'big'},
+  blueberry:{nm:'藍莓',e:'🫐',base:8,volat:'mid'},
+  tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'},
+  papaya:{nm:'木瓜',e:'🫛',base:5,volat:'mid'},
+  banana:{nm:'香蕉',e:'🍌',base:3,volat:'small'},
+  guava:{nm:'芭樂',e:'🟢',base:3,volat:'small'},
+  lemon:{nm:'檸檬',e:'🍋',base:5,volat:'mid'},
+  egg:{nm:'egg',e:'📦',base:10,volat:'mid'},
+  milk:{nm:'milk',e:'📦',base:10,volat:'mid'},
+  pork:{nm:'pork',e:'📦',base:10,volat:'mid'},
 };
 const EXTRAS={flour:{nm:'麵粉',e:'🌾',price:2},sugar:{nm:'糖',e:'🧂',price:1}};
 const RECIPES={
   strawberry_tart:{nm:'草莓塔',e:'🍰',price:28,batch:30,
-    steps:[{key:'cut',label:'切草莓',ing:'strawberry',need:3},{key:'knead',label:'揉麵團',taps:5},{key:'bake',label:'進烤箱'}]},
+    steps:[
+      {key:'cut',label:'切材料',ing:'strawberry',need:2},
+      {key:'knead',label:'揉製',taps:4},
+      {key:'bake',label:'進烤箱'}
+    ]},
   banana_pudding:{nm:'香蕉布丁',e:'🍮',price:12,batch:30,
-    steps:[{key:'cut',label:'切香蕉',ing:'banana',need:2},{key:'mix',label:'攪拌',taps:4},{key:'bake',label:'進烤箱'}]},
+    steps:[
+      {key:'cut',label:'切材料',ing:'strawberry',need:2},
+      {key:'knead',label:'揉製',taps:4},
+      {key:'bake',label:'進烤箱'}
+    ]},
 };
 const QUAL_MUL={bad:0.5,normal:1,good:1.8};
 const STORE_CAP=200;
 const BAKE_MS=10000, BURN_MS=14000;
-
+/* ---------- 農作物表（要加新作物就在這裡加一筆） ---------- */
+const FARM_CROPS={
+  strawberry:{ nm:'草莓', img:'strawberry.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  blueberry:{ nm:'藍莓', img:'blueberry.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  tomato:{ nm:'番茄', img:'tomato.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  papaya:{ nm:'木瓜', img:'papaya.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  banana:{ nm:'香蕉', img:'banana.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  guava:{ nm:'芭樂', img:'guava.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+  lemon:{ nm:'檸檬', img:'lemon.png', fw:64, fh:64,
+    stages:['播種','發芽','成長','結果'], frame:[0,1,2,3],
+    grow:30000, yield:3 },
+};
+for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段時間
+  d._img=new Image(); d._img.src=d.img;
+  d.stageMs=d.grow/(d.stages.length-1);
+}
+function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.ceil(s/60)+'分':s+'秒';}     // 之後可加品質/施肥
 /* ---------- maps ---------- */
 const MAPS={
-  farm:[
-   "....................","....................","....................",
-   "....................","....................","....................",
-   "....................","....................","....................",
-   "....................","....................","....................",
-   "....................","....................","....................",
-   "....................","....................","....................",
+farm:[
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "....................FFFFFFFF",
+   "....................FFFFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "......................FFFFFF",
+   "............................",
+   "............................",
+   "............................",
+   "............................",
   ],
  office:[
    "WWWWWWWWWWWWWWWWWWWW",
@@ -284,12 +338,8 @@ for(const k in MAPS){ GRID[k]=MAPS[k].map(r=>r.padEnd(MAPS[k][0].length,r[0]).sp
 
 /* ---------- scene definitions (objects + spawn + camera mode) ---------- */
 const SCENES={
-  farm:{title:'農牧地', big:false, spawn:{x:10,y:14}, objects:[
-    {id:'farm0',x:3,y:13,e:'🌱',nm:'農田',kind:'farm',plotIdx:0},
-    {id:'farm1',x:4,y:13,e:'🌱',nm:'農田',kind:'farm',plotIdx:1},
-    {id:'farm2',x:3,y:14,e:'🌱',nm:'農田',kind:'farm',plotIdx:2},
-    {id:'farm3',x:4,y:14,e:'🌱',nm:'農田',kind:'farm',plotIdx:3},
-    {id:'npc',x:9,y:15,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
+  farm:{title:'農牧地', big:true, spawn:{x:14,y:16}, objects:[
+    {id:'npc',x:10,y:16,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
       lines:['今天天氣不錯，適合下田。','作物記得澆水，會長得好。']},
   ]},
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
@@ -321,10 +371,14 @@ const SCENES={
   ]},
   
 };
+
 const FARM_ZONES = [
-  {atype:'chicken', nm:'雞舍', x1:9,  y1:4, x2:13, y2:7},
-  {atype:'cow',     nm:'牛棚', x1:14, y1:4, x2:18, y2:7},
-  {atype:'pig',     nm:'豬圈', x1:14, y1:9, x2:18, y2:12},
+  {kind:'cow',     nm:'牛棚', x1:0,  y1:0, x2:19, y2:3 },
+  {kind:'pig',     nm:'豬圈', x1:20, y1:0, x2:27, y2:5 },
+  {kind:'chicken', nm:'雞舍', x1:22, y1:6, x2:27, y2:13},
+  {kind:'plot', nm:'農田', idx:0, x1:2,  y1:8, x2:5,  y2:13},
+  {kind:'plot', nm:'農田', idx:1, x1:8,  y1:6, x2:11, y2:11},
+  {kind:'plot', nm:'農田', idx:2, x1:14, y1:8, x2:17, y2:13},
 ];
 function farmZoneAt(x,y){
   const ix=Math.round(x),iy=Math.round(y);
@@ -349,7 +403,7 @@ function blankState(){
   const plots=[];for(let i=0;i<4;i++)plots.push(null);
   return {
     day:1, startTs:Date.now(), lastTick:Date.now(),
-    cash:50, plots, fert:0, feed:0, seeds:{},
+    cash:50, plots, fert:0, feed:0, seeds:{}, crops:{},
     animals:{chicken:[{born:Date.now(),fed:Date.now(),lastProd:Date.now()}],cow:[],pig:[]},
     store:{}, extras:{}, market:{}, marketDay:0,
     employee:null,
@@ -357,6 +411,38 @@ function blankState(){
     ledger:[], log:[], curRecipe:'strawberry_tart',
   };
 }
+const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素
+function farmTileHere(){
+  const ix=Math.round(player.x), iy=Math.round(player.y);
+  const ok=FARM_ZONES.some(z=>z.kind==='plot'&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
+  if(!ok) return null;
+  const cx=Math.floor(ix/CELL)*CELL, cy=Math.floor(iy/CELL)*CELL;   // 吸附到大格左上角
+  return cx+','+cy;
+}
+function openTileFarm(key){
+  const c=S.crops[key];
+  if(!c){
+    let btns='';
+    for(const id in FARM_CROPS){ const d=FARM_CROPS[id]; const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱';
+      btns+=`<button class="btn green" style="width:100%;margin-bottom:6px" onclick="plantTile('${key}','${id}')">${e} 播種${d.nm}</button>`; }
+    openSheet(`<div class="sheethead"><h3>🟫 空地</h3><button class="close" onclick="closeSheet()">✕</button></div>
+      <div class="small" style="margin-bottom:10px">選要種的作物。</div>${btns}`);
+    return;
+  }
+  const def=FARM_CROPS[c.crop], last=def.stages.length-1, e=(PRODUCTS[c.crop]&&PRODUCTS[c.crop].e)||'🌱';
+  if(c.stage>=last){
+    openSheet(`<div class="sheethead"><h3>${e} ${def.nm}（可收成）</h3><button class="close" onclick="closeSheet()">✕</button></div>
+      <button class="btn green" style="width:100%" onclick="harvestTile('${key}')">🧺 收成</button>`);
+  }else{
+    const left = c.watered ? `再 ${fmtSec(def.stageMs-(Date.now()-c.t))} 進下一階段` : '需要澆水才會成長';
+    openSheet(`<div class="sheethead"><h3>${e} ${def.nm}・${def.stages[c.stage]}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+      <div class="small" style="margin-bottom:12px">階段 ${c.stage+1}/${def.stages.length}・${left}</div>
+      <button class="btn green ${c.watered?'dis':''}" style="width:100%" onclick="waterTile('${key}')">💧 澆水</button>`);
+  }
+}
+function plantTile(key,crop){ S.crops[key]={crop,stage:0,watered:false,t:Date.now()}; closeSheet(); toast(`已播種${FARM_CROPS[crop].nm}，記得澆水`); save(); }
+function waterTile(key){ const c=S.crops[key]; if(!c)return; c.watered=true; c.t=Date.now(); closeSheet(); toast('💧 澆好水了'); save(); }
+function harvestTile(key){ const c=S.crops[key]; const def=FARM_CROPS[c.crop]; const y=def.yield; addStore(c.crop,y); delete S.crops[key]; closeSheet(); toast(`🧺 收成 ${y} 個${def.nm}`); save(); }
 function save(){ if(user) localStorage.setItem(NS+user,JSON.stringify(S)); }
 function load(u){ const r=localStorage.getItem(NS+u); return r?JSON.parse(r):null; }
 
@@ -400,11 +486,14 @@ function tick(){
     }
   }
   const emp=!!S.employee;
-  // crops
-  S.plots.forEach(p=>{ if(!p)return;
-    if(p.stage==='growing' && now-p.planted>=CROPS[p.crop].grow) p.stage='ready';
-    if(emp && p.stage==='ready'){ addStore(p.crop,Math.round(baseYield(p)*0.6)); resetPlot(p); }
-  });
+  // crops（每格、要澆水才長）
+ for(const key in S.crops){
+    const c=S.crops[key]; const def=FARM_CROPS[c.crop]; if(!def){delete S.crops[key];continue;}
+    const last=def.stages.length-1;
+    if(emp) c.watered=true;
+    if(c.stage<last && c.watered && now-c.t>=def.stageMs){ c.stage++; if(!emp)c.watered=false; c.t=now; }
+    if(emp && c.stage===last){ addStore(c.crop,Math.round(def.yield*0.6)); delete S.crops[key]; }
+  }
   // animals
   for(const type in S.animals){
     const def=ANIMALS[type];
@@ -499,7 +588,12 @@ function interact(ev){
   if(ev)ev.preventDefault();
   // 坐在書桌時：互動鍵 = 翻開帳簿
   if(sitting){ openLedger(); return; }
-  if(curScene==='farm'){ const z=farmZoneAt(player.x,player.y); if(z){ openAnimals(z.atype); return; } }
+  if(curScene==='farm'){
+    const key=farmTileHere();
+    if(key){ openTileFarm(key); return; }
+    const z=farmZoneAt(player.x,player.y);
+    if(z && z.kind!=='plot'){ openAnimals(z.kind); return; }
+  }
   const o=facingObject();
   if(!o){toast('面前沒有可互動的東西');return;}
   switch(o.kind){
@@ -784,11 +878,20 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     hint.textContent='📒 翻開帳簿（互動鍵）／按方向鍵起身';
     hint.classList.add('show');
  }else{
-    const zone = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
-    document.getElementById('actBtn').className='actbtn'+((near||zone)?'':' dim');
+    const onTile = curScene==='farm' ? farmTileHere() : null;
+    const zone   = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
+    const animal = zone && zone.kind!=='plot' ? zone : null;
+    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal)?'':' dim');
     if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
     else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
-    else if(zone){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${ANIMALS[zone.atype].e} ${zone.nm}・餵食/收成（互動鍵）`;hint.classList.add('show');}
+    else if(onTile){dlgNpc=null;if(!say._t)idleDlg();
+      const c=S.crops[onTile];
+      if(!c){ hint.textContent='🟫 播種（互動鍵）'; }
+      else { const def=FARM_CROPS[c.crop];
+        hint.textContent = c.stage>=def.stages.length-1 ? `🧺 收成${def.nm}（互動鍵）`
+          : `${def.nm}・${def.stages[c.stage]}${c.watered?'':'・需澆水'}（互動鍵）`; }
+      hint.classList.add('show');}
+    else if(animal){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${ANIMALS[animal.kind].e} ${animal.nm}・餵食/收成（互動鍵）`;hint.classList.add('show');}
     else{dlgNpc=null;if(!say._t)idleDlg();hint.classList.remove('show');}
   }
   renderRecipeBar();
@@ -833,7 +936,7 @@ function draw(){
   const bg = SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
     // 這個場景有底圖且載入好了 → 鋪滿整個舞台
-    ctx.drawImage(bg, -ox, -oy, mapCols()*TS, mapRows()*TS);
+    ctx.drawImage(bg, -ox, -oy, bg.naturalWidth, bg.naturalHeight);
   } else {
     // 沒圖（或還沒載入）→ 用原本的色塊格子
     for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
@@ -860,6 +963,17 @@ function draw(){
     if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':t>=BAKE_MS?'✅':'🔥';}
     if(curScene!=='farm'){ctx.fillStyle=cssVar('--counter');ctx.fillRect(o.x*TS-ox+1,o.y*TS-oy+1,TS-2,TS-2);}
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
+  }
+  if(curScene==='farm'){
+    const SZ=CELL*TS;
+    for(const key in S.crops){
+      const c=S.crops[key], def=FARM_CROPS[c.crop]; if(!def) continue;
+      if(!(def._img.complete && def._img.naturalWidth)) continue;
+      const [tx,ty]=key.split(',').map(Number);
+      const fr=def.frame[c.stage]||0;
+      ctx.drawImage(def._img, fr*def.fw,0,def.fw,def.fh, tx*TS-ox, ty*TS-oy, SZ, SZ);
+      if(!c.watered && c.stage<def.stages.length-1){ ctx.font='12px serif'; ctx.fillText('💧',(tx+CELL/2)*TS-ox,(ty)*TS-oy); }
+    }
   }
   const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
 
@@ -936,6 +1050,7 @@ function startGame(n){
   // migration safety
   if(!S.animals.cow)S.animals.cow=[];if(!S.animals.pig)S.animals.pig=[];
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
+  if(!S.crops)S.crops={};
   document.getElementById('splash').style.display='none';
   document.getElementById('shell').style.display='flex';
   goScene('farm');
