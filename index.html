@@ -331,14 +331,14 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFF......",
    "....................FFFFFFFF",
    "....................FFFF....",
-   "....................FFFF....",
-   "......................FF....",
-   "......................FF....",
-   "......................FF....",
-   "......................FF....",
-   "......................FF....",
-   "......................FFFFFF",
-   "......................FFFFFF",
+   "........FFFF........FFFF....",
+   "........FFFF..........FF....",
+   "..FFFF..FFFF..FFFF....FF....",
+   "..FFFF..FFFF..FFFF....FF....",
+   "..FFFF..FFFF..FFFF....FF....",
+   "..FFFF..FFFF..FFFF....FF....",
+   "..FFFF........FFFF....FFFFFF",
+   "..FFFF........FFFF....FFFFFF",
    "............................",
    "............................",
    "............................",
@@ -445,6 +445,7 @@ function farmZoneAt(x,y){
 let S=null, user=null, curScene='farm';
 const player={x:15,y:22,facing:'up'};
 const SPEED=0.13;
+const SENSE=2;   // 互動感應範圍（格），要更大就調大、太貪心就改 1
 const held={up:false,down:false,left:false,right:false};
 const DIR={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
 const cam={x:0,y:0};
@@ -478,6 +479,12 @@ function cellKeyAt(ix,iy){
   return cx+','+cy;
 }
 function farmTileHere(){ return cellKeyAt(Math.round(player.x),Math.round(player.y)); }
+function farmCellNear(){
+  let k=farmTileHere(); if(k) return k;                          // 先看站立格
+  const d=DIR[player.facing], bx=Math.round(player.x), by=Math.round(player.y);
+  for(let i=1;i<=SENSE;i++){ const kk=cellKeyAt(bx+d.x*i, by+d.y*i); if(kk) return kk; }
+  return null;                                                    // 面前 SENSE 格內找農格
+}
 function isCropTile(ix,iy){ return false; }
 function cropAt(cx,cy){ return curScene==='farm' && isCropTile(Math.floor(cx),Math.floor(cy)); }
 function openTileFarm(key){
@@ -619,8 +626,16 @@ function walkable(tx,ty){
   return true;
 }
 function facingObject(){
-  const fx=Math.round(player.x)+DIR[player.facing].x, fy=Math.round(player.y)+DIR[player.facing].y;
-  return sceneDef().objects.find(o=>o.x===fx&&o.y===fy)||null;
+  const bx=Math.round(player.x), by=Math.round(player.y), d=DIR[player.facing];
+  let best=null, bestScore=Infinity;
+  for(const o of sceneDef().objects){
+    const dx=o.x-bx, dy=o.y-by;
+    if(Math.max(Math.abs(dx),Math.abs(dy))>SENSE) continue;     // 在範圍內
+    const align=dx*d.x+dy*d.y;                                   // >0 = 在面前方向
+    const score=(Math.abs(dx)+Math.abs(dy))-align*0.6;           // 近的、面前的優先
+    if(score<bestScore){ bestScore=score; best=o; }
+  }
+  return best;
 }
 function updateCamera(){
   let cx=player.x-VIEW_COLS/2+0.5, cy=player.y-VIEW_ROWS/2+0.5;
@@ -652,8 +667,8 @@ function interact(ev){
   if(ev)ev.preventDefault();
   // 坐在書桌時：互動鍵 = 翻開帳簿
   if(sitting){ openLedger(); return; }
-  if(curScene==='farm'){
-    const key=farmTileHere();
+ if(curScene==='farm'){
+    const key=farmCellNear();
     if(key){ openTileFarm(key); return; }
     const z=farmZoneAt(player.x,player.y);
     if(z && z.kind!=='plot'){ openAnimals(z.kind); return; }
@@ -904,8 +919,8 @@ function update(){
   if(moving){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
     const nx=player.x+dx*SPEED,ny=player.y+dy*SPEED;
     const foot=0.8;
-    if(walkable(nx,player.y+foot) && !cropAt(nx,player.y))player.x=nx;
-    if(walkable(player.x,ny+foot) && !cropAt(player.x,ny))player.y=ny;}
+if(walkable(nx+0.5,player.y+foot))player.x=nx;
+    if(walkable(player.x+0.5,ny+foot))player.y=ny;}
 
   // ← 新增：走路動畫
   if(moving){
@@ -1065,7 +1080,7 @@ function draw(){
       const colIndex=dirCols[player.facing]||0;
       const sx=colIndex*spriteW;
       const sy=animFrame*spriteH;
-      ctx.drawImage(PLAYER_IMG, sx, sy, spriteW, spriteH, px-32, py-64+14, 64, 64);
+      ctx.drawImage(PLAYER_IMG, sx, sy, spriteW, spriteH, px-32, py-64+26, 64, 64);
     } else {
       ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText('🧑‍🌾', px, py);
