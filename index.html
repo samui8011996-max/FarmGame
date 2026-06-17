@@ -35,7 +35,7 @@
   .recipe-bar .step.done{background:var(--accent2);color:#fff;border-color:var(--accent2)}
   .recipe-bar .step.cur{background:var(--gold);color:#fff;border-color:var(--gold)}
 
-  .stagewrap{padding:0 12px}
+  .stagewrap{padding:0 12px;margin-top:2px}
   .stage{position:relative;width:100%;aspect-ratio:10/9;border:3px solid var(--fence);
     border-radius:10px;overflow:hidden;background:var(--grass);box-shadow:0 3px 0 var(--shadow)}
   #game{display:block;width:100%;height:100%;image-rendering:pixelated}
@@ -50,7 +50,7 @@
   .ovenbar .meter>i{display:block;height:100%;background:var(--accent2);width:0}
   .ovenbar.warn .meter>i{background:var(--gold)} .ovenbar.burn .meter>i{background:var(--danger)}
 
-  .dialogue{margin:8px 12px 4px;background:var(--card);border:2px solid var(--line2);border-radius:14px;
+  .dialogue{margin:4px 12px 0px;background:var(--card);border:2px solid var(--line2);border-radius:14px;
     padding:9px 12px;display:flex;align-items:center;gap:10px;min-height:60px;box-shadow:0 2px 0 var(--shadow)}
   .dialogue .avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(--paper2);
     border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:24px}
@@ -58,7 +58,7 @@
   .dialogue.idle{opacity:.65} .dialogue.idle .dlgtext{color:var(--ink2);font-size:13px}
   .dialogue .name{font-weight:700;color:var(--accent);margin-right:5px}
 
-  .controls{padding:8px 16px 8px;display:flex;align-items:flex-end;justify-content:space-between}
+  .controls{padding:8px 16px 8px;margin-top:4px;display:flex;align-items:flex-end;justify-content:space-between}
   .bag{width:52px;height:52px;border-radius:12px;background:var(--card);border:2px solid var(--line2);
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 0 var(--shadow)}
   .bag span{font-size:10px;color:var(--ink2);margin-top:-2px}
@@ -160,10 +160,10 @@
   <div class="controls">
     <div class="bag" onclick="openBag()">🎒<span>背包</span></div>
     <div class="dpad">
-      <button class="key k-up"    ontouchstart="press('up',event)"   ontouchend="release('up')"   onmousedown="press('up',event)"   onmouseup="release('up')"   onmouseleave="release('up')">↑</button>
-      <button class="key k-left"  ontouchstart="press('left',event)" ontouchend="release('left')" onmousedown="press('left',event)" onmouseup="release('left')" onmouseleave="release('left')">←</button>
-      <button class="key k-down"  ontouchstart="press('down',event)" ontouchend="release('down')" onmousedown="press('down',event)" onmouseup="release('down')" onmouseleave="release('down')">↓</button>
-      <button class="key k-right" ontouchstart="press('right',event)" ontouchend="release('right')" onmousedown="press('right',event)" onmouseup="release('right')" onmouseleave="release('right')">→</button>
+      <button class="key k-up"    ontouchstart="press('up',event)"   ontouchend="release('up')"   onmousedown="press('up',event)"   onmouseup="release('up')"   onmouseleave="release('up')"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 4L19 17H3L11 4Z" fill="#4a3b2a"/></svg></button>
+      <button class="key k-left"  ontouchstart="press('left',event)" ontouchend="release('left')" onmousedown="press('left',event)" onmouseup="release('left')" onmouseleave="release('left')"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 11L5 3L5 19L18 11Z" fill="#4a3b2a" transform="rotate(180 11 11)"/></svg></button>
+      <button class="key k-down"  ontouchstart="press('down',event)" ontouchend="release('down')" onmousedown="press('down',event)" onmouseup="release('down')" onmouseleave="release('down')"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 18L3 5H19L11 18Z" fill="#4a3b2a"/></svg></button>
+      <button class="key k-right" ontouchstart="press('right',event)" ontouchend="release('right')" onmousedown="press('right',event)" onmouseup="release('right')" onmouseleave="release('right')"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L17 3L17 19L4 11Z" fill="#4a3b2a"/></svg></button>
     </div>
     <button class="actbtn dim" id="actBtn" ontouchstart="interact(event)" onmousedown="interact(event)">互動</button>
   </div>
@@ -269,6 +269,13 @@ for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段
   d.stageMs=d.grow/(d.stages.length-1);
 }
 function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.ceil(s/60)+'分':s+'秒';}     // 之後可加品質/施肥
+
+/* ---------- 時代系統（第一步：解鎖門檻） ---------- */
+const CROP_ERA={ strawberry:17, tomato:17, guava:17, lemon:17, corn:17,
+                 blueberry:18, papaya:18, banana:19 };
+const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19 };
+function cropEra(k){ return CROP_ERA[k]||17; }
+function recipeEra(k){ return RECIPE_ERA[k]||17; }
 /* ---------- maps ---------- */
 const MAPS={
 farm:[
@@ -299,10 +306,10 @@ farm:[
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
-   "F..............FFFFFFFFFFFF...FFFFFF...",
-   "FFF............FFFFFFFFFF......FFFFF...",
-   "FFF............FFFFFFFFF..........FF...",
-   "FFF...............FF..............FF...",
+   "FF.............FFFFFFFFFFFF...FFFFFF...",
+   "FF.............FFFFFFFFFF......FFFFF...",
+   "FF.............FFFFFFFFF..........FF...",
+   "FF................FF..............FF...",
    "F....................FFFFFF.......FF...",
    "F....................FFFFFFFFF....FF...",
    "F.................FFFFFFFFFFFFFF..FF...",
@@ -405,7 +412,7 @@ const SIT_POS={ x:120, y:166, w:64, h:64 };   // 坐姿圖固定畫在這（地�
 function blankState(){
   const plots=[];for(let i=0;i<4;i++)plots.push(null);
   return {
-    day:1, startTs:Date.now(), lastTick:Date.now(),
+    day:1, era:17, startTs:Date.now(), lastTick:Date.now(),
     cash:50, plots, fert:0, feed:0, seeds:{}, crops:{},
     animals:{chicken:[{born:Date.now(),fed:Date.now(),lastProd:Date.now()}],cow:[],pig:[]},
     store:{}, extras:{}, market:{}, marketDay:0,
@@ -415,13 +422,15 @@ function blankState(){
   };
 }
 const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素
-function farmTileHere(){
-  const ix=Math.round(player.x), iy=Math.round(player.y);
+function cellKeyAt(ix,iy){
   const ok=FARM_ZONES.some(z=>z.kind==='plot'&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
   if(!ok) return null;
-  const cx=Math.floor(ix/CELL)*CELL, cy=Math.floor(iy/CELL)*CELL;   // 吸附到大格左上角
+  const cx=Math.floor(ix/CELL)*CELL, cy=Math.floor(iy/CELL)*CELL;
   return cx+','+cy;
 }
+function farmTileHere(){ return cellKeyAt(Math.round(player.x),Math.round(player.y)); }
+function isCropTile(ix,iy){ return false; }
+function cropAt(cx,cy){ return curScene==='farm' && isCropTile(Math.floor(cx),Math.floor(cy)); }
 function openTileFarm(key){
   const c=S.crops[key];
   if(!c){
@@ -712,7 +721,7 @@ function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}co
 /* ---------- KITCHEN ---------- */
 function openPickRecipe(){
   let body='';
-  for(const k in RECIPES){const r=RECIPES[k];const on=S.curRecipe===k;
+  for(const k in RECIPES){ if(recipeEra(k)>S.era) continue; const r=RECIPES[k];const on=S.curRecipe===k;
     const stepTxt=r.steps.map(s=>s.label).join('→');
     body+=`<div class="menucard${on?' on':''}" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${r.e}</div>
       <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div><div class="small">${stepTxt}</div></div>
@@ -746,7 +755,7 @@ function finishBake(t){
 /* ---------- SHOP ---------- */
 function openShopBuy(){
   let seeds='';
-  for(const k in FARM_CROPS){const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
+  for(const k in FARM_CROPS){ if(cropEra(k)>S.era) continue; const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
     seeds+=`<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${d.nm}種子</div>
       <div class="d">背包 ${S.seeds[k]||0}</div></div>
       <div class="price">$${d.seed}</div><button class="btn sm" onclick="buyCropSeed('${k}')">買</button></div>`;}
@@ -845,8 +854,8 @@ function update(){
   if(moving){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
     const nx=player.x+dx*SPEED,ny=player.y+dy*SPEED;
     const foot=0.8;
-    if(walkable(nx,player.y+foot))player.x=nx;
-    if(walkable(player.x,ny+foot))player.y=ny;}
+    if(walkable(nx,player.y+foot) && !cropAt(nx,player.y))player.x=nx;
+    if(walkable(player.x,ny+foot) && !cropAt(player.x,ny))player.y=ny;}
 
   // ← 新增：走路動畫
   if(moving){
@@ -883,7 +892,14 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     hint.textContent='📒 翻開帳簿（互動鍵）／按方向鍵起身';
     hint.classList.add('show');
  }else{
-    const onTile = curScene==='farm' ? farmTileHere() : null;
+    let onTile = null;
+    if(curScene==='farm'){
+      const fx=Math.round(player.x)+DIR[player.facing].x, fy=Math.round(player.y)+DIR[player.facing].y;
+      const front=cellKeyAt(fx,fy), here=farmTileHere();
+      if(front && S.crops[front]) onTile=front;
+      else if(here && !S.crops[here]) onTile=here;
+      else if(front) onTile=front;
+    }
     const zone   = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
     const animal = zone && zone.kind!=='plot' ? zone : null;
     document.getElementById('actBtn').className='actbtn'+((near||onTile||animal)?'':' dim');
@@ -935,7 +951,7 @@ const SLEEP_IMG = new Image();
 SLEEP_IMG.src = 'sleep.png';
 function draw(){
   ctx.clearRect(0,0,cv.width,cv.height);
-  const big=sceneDef().big;const ox=cam.x*TS,oy=cam.y*TS;
+  const big=sceneDef().big;const ox=Math.round(cam.x*TS),oy=Math.round(cam.y*TS);
   const sx=big?Math.floor(cam.x)-1:0, ex=big?Math.floor(cam.x)+VIEW_COLS+1:mapCols();
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
   const bg = SCENE_BG[curScene];
@@ -952,11 +968,16 @@ function draw(){
     }
   }
   // DEBUG：顯示碰撞格（對齊家具用，調好後把 DEBUG 改成 false）
-  if (window.DEBUG_COLLISION) {
-    for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
-      if (blocked(tileAt(x,y))) {
-        ctx.fillStyle = 'rgba(255,0,0,.35)';
-        ctx.fillRect(x*TS-ox, y*TS-oy, TS, TS);
+// DEBUG：作物格範圍（每框=一株=CELL×CELL）。Console 打 DEBUG_CROPCELL=true 開啟
+  if (window.DEBUG_CROPCELL && curScene==='farm') {
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(20,120,255,.95)';
+    ctx.font='9px monospace'; ctx.fillStyle='rgba(10,80,200,.95)'; ctx.textAlign='left'; ctx.textBaseline='top';
+    for(const z of FARM_ZONES){ if(z.kind!=='plot') continue;
+      for(let cy=Math.floor(z.y1/CELL)*CELL; cy<=z.y2; cy+=CELL)
+      for(let cx=Math.floor(z.x1/CELL)*CELL; cx<=z.x2; cx+=CELL){
+        const X=cx*TS-ox, Y=cy*TS-oy;
+        ctx.strokeRect(X+0.5,Y+0.5,CELL*TS,CELL*TS);
+        ctx.fillText(cx+','+cy, X+2, Y+1);
       }
     }
   }
@@ -980,7 +1001,7 @@ function draw(){
       if(!c.watered && c.stage<def.stages.length-1){ ctx.font='12px serif'; ctx.fillText('💧',(tx+CELL/2)*TS-ox,(ty)*TS-oy); }
     }
   }
-  const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
+  const px=Math.round(player.x*TS+TS/2-ox), py=Math.round(player.y*TS+TS/2-oy);
 
    if (sitting || sleeping) {
     // 坐著：這裡先不畫，人物消失（坐姿圖留到最後畫，蓋過桌子）
@@ -1000,7 +1021,14 @@ function draw(){
       ctx.fillText('🧑‍🌾', px, py);
     }
   }
-
+// DEBUG：人物碰撞點。Console 打 DEBUG_PLAYER=true 開啟
+  if(window.DEBUG_PLAYER){
+    const fx=Math.floor(player.x), fy=Math.floor(player.y+0.8);
+    ctx.strokeStyle='rgba(255,0,255,.95)'; ctx.lineWidth=1;
+    ctx.strokeRect(fx*TS-ox+0.5, fy*TS-oy+0.5, TS, TS);            // 碰撞所在的格
+    ctx.fillStyle='magenta';
+    ctx.beginPath(); ctx.arc(px, (player.y+0.8)*TS-oy, 2.5, 0, Math.PI*2); ctx.fill();  // 碰撞點
+  }
  // === 前景：桌子畫在人物之後 → 蓋在人物上面 ===
   const fg = SCENE_FG[curScene];
   if (fg && fg.complete && fg.naturalWidth) {
@@ -1055,7 +1083,7 @@ function startGame(n){
   // migration safety
   if(!S.animals.cow)S.animals.cow=[];if(!S.animals.pig)S.animals.pig=[];
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
-  if(!S.crops)S.crops={};
+  if(!S.crops)S.crops={};if(!S.era)S.era=17;
   document.getElementById('splash').style.display='none';
   document.getElementById('shell').style.display='flex';
   goScene('farm');
