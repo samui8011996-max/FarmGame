@@ -58,7 +58,7 @@
   .dialogue.idle{opacity:.65} .dialogue.idle .dlgtext{color:var(--ink2);font-size:13px}
   .dialogue .name{font-weight:700;color:var(--accent);margin-right:5px}
 
-  .controls{padding:8px 16px 8px;margin-top:4px;display:flex;align-items:flex-end;justify-content:space-between}
+  .controls{padding:8px 16px 54px;display:flex;align-items:flex-end;justify-content:space-between}
   .bag{width:52px;height:52px;border-radius:12px;background:var(--card);border:2px solid var(--line2);
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 0 var(--shadow)}
   .bag span{font-size:10px;color:var(--ink2);margin-top:-2px}
@@ -322,29 +322,92 @@ function buyDecor(slot,id){
   spend(opt.price,`裝潢：${opt.nm}`); S.decor[S.era][slot]=id;
   toast(`🎨 裝好了 ${opt.nm}`); openDecor(); save();
 }
+/* ---------- 升時代 ---------- */
+const ERA_REQ={
+  17:{ money:800,  childAff:30, next:18 },
+  18:{ money:3000, childAff:60, next:19 },
+};
+function eraStatus(){
+  const r=ERA_REQ[S.era];
+  if(!r) return {max:true};
+  const moneyOK = netWorth()>=r.money;
+  const decorOK = decorDone(S.era);
+  const childOK = !S.child || (S.child.affinity||0)>=r.childAff;   // 沒小孩先不擋
+  return { r, moneyOK, decorOK, childOK, ok: moneyOK&&decorOK&&childOK, max:false };
+}
+function openEra(){
+  const st=eraStatus();
+  if(st.max){
+    openSheet(`<div class="sheethead"><h3>📅 時代進程</h3><button class="close" onclick="closeSheet()">✕</button></div>
+      <div class="empty-note">已經是最後的 ${S.era} 世紀了。</div>`);
+    return;
+  }
+  const r=st.r;
+  const row=(ok,txt)=>`<div class="row"><div class="e">${ok?'✅':'⬜'}</div><div class="info"><div class="n">${txt}</div></div></div>`;
+  const childLine = S.child
+    ? row(st.childOK, `小孩好感 ${S.child.affinity||0} / ${r.childAff}`)
+    : row(true, `小孩好感（尚未有小孩，暫不限制）`);
+  openSheet(`<div class="sheethead"><h3>📅 邁向 ${r.next} 世紀</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">三項都達成即可推進，時代不可回頭。</div>
+    ${row(st.moneyOK, `淨資產 ${fmt(netWorth())} / ${r.money}`)}
+    ${row(st.decorOK, `本時代裝潢全部裝好`)}
+    ${childLine}
+    <div style="margin-top:12px"><button class="btn ${st.ok?'':'dis'}" style="width:100%" onclick="advanceEra()">${st.ok?'🚀 推進到下一個世紀':'條件未達成'}</button></div>`);
+}
+function advanceEra(){
+  const st=eraStatus(); if(st.max||!st.ok){toast('條件還沒達成');return;}
+  const from=S.era, to=st.r.next;
+  S.era=to;
+  let childMsg='';
+  if(S.child && typeof growChild==='function'){ growChild(); childMsg='孩子也長大了一些。'; }
+  addLog(`📅 邁入 ${to} 世紀！`);
+  closeSheet(); save(); refreshTop();
+  eraCutscene(from,to,childMsg);
+}
+function eraCutscene(from,to,extra){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:90;background:#3a2c1c;color:#f4ecd9;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;opacity:0;transition:opacity .6s;font-family:inherit';
+  ov.innerHTML=`<div style="font-size:46px;margin-bottom:10px">⏳</div>
+    <div style="font-size:22px;font-weight:700;letter-spacing:2px;margin-bottom:6px">時光流轉</div>
+    <div style="font-size:15px;opacity:.85">${from} 世紀 → ${to} 世紀</div>
+    <div style="font-size:14px;opacity:.8;margin-top:14px;max-width:300px;line-height:1.6">店面煥然一新，新的作物與甜點即將登場。${extra}</div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.style.opacity=1);
+  setTimeout(()=>{ ov.style.opacity=0; setTimeout(()=>ov.remove(),700); refreshTop(); toast(`🎉 歡迎來到 ${to} 世紀`); }, 2400);
+}
 /* ---------- maps ---------- */
 const MAPS={
   farm:[
-   "............................",
-   "............................",
-   "FFFFFFFFFFFFFFFFFFFFFF......",
-   "FFFFFFFFFFFFFFFFFFFFFF......",
-   "....................FFFFFFFF",
-   "....................FFFF....",
-   "........FFFF........FFFF....",
-   "........FFFF..........FF....",
-   "..FFFF..FFFF..FFFF....FF....",
-   "..FFFF..FFFF..FFFF....FF....",
-   "..FFFF..FFFF..FFFF....FF....",
-   "..FFFF..FFFF..FFFF....FF....",
-   "..FFFF........FFFF....FFFFFF",
-   "..FFFF........FFFF....FFFFFF",
-   "............................",
-   "............................",
-   "............................",
-   "............................",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   ".............F.....FFFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   ".............F......FFFFFFFFF",
+   "FFFFFFFFFFFFFF......FFFFFFFFF",
+   "....................FFFFFFFFF",
+   "....................FFFFFFFFF",
+   "........FFFF..........FFFFFFF",
+   "........FFFF..........FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF........FFFF....FFFFFFF",
+   "..FFFF........FFFF....FFFFFFF",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
   ],
-   office:[
+  office:[
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
@@ -353,15 +416,15 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...",
    "FF.............FFFFFFFFFFFF...FFFFFF...",
-   "FF.............FFFFFFFFFF......FFFFF...",
-   "FF.............FFFFFFFFF..........FF...",
-   "FF................FF..............FF...",
-   "F....................FFFFFF.......FF...",
-   "F....................FFFFFFFFF....FF...",
-   "F.................FFFFFFFFFFFFFF..FF...",
-   "F.................FFFFFFFFFFFFFF..FF...",
-   "F.FFFFFFFFFF......FFFFFFFFFFFFFFFFFF...",
-   "F.FFFFFFFFFF......FFFFFFFFFFFFFFFFFF...",
+   "FF.............FFFFFFFFFF......FFF.F...",
+   "FF.............FFFFFFFFF...........F...",
+   "FF.................................F...",
+   "F....................FFFFFF........F...",
+   "F....................FFFFFFFFF.....F...",
+   "F..................FFFFFFFFFFFFF...F...",
+   "F..................FFFFFFFFFFFFF...F...",
+   "F.FFFFFFFFFF.......FFFFFFFFFFFFFFFFF...",
+   "F.FFFFFFFFFF.......FFFFFFFFFFFFFFFFF...",
    "FFFFFFFFFFFFFFFFFFFF...................",
   ],
   cafe:[
@@ -400,6 +463,7 @@ const SCENES={
   ]},
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
    
+    {id:'era',x:7,y:13,e:'📅',nm:'時代進程',kind:'eraBoard'},
     {id:'cat',x:13,y:12,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
       lines:['喵～（在曬太陽）','今天也辛苦了喵。','摸摸我（並不會回血）。']},
     {id:'staff',x:5,y:5,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
@@ -430,12 +494,12 @@ const SCENES={
 };
 
 const FARM_ZONES = [
-  {kind:'cow',     nm:'牛棚', x1:0,  y1:0, x2:19, y2:3 },
-  {kind:'pig',     nm:'豬圈', x1:20, y1:0, x2:27, y2:5 },
-  {kind:'chicken', nm:'雞舍', x1:22, y1:6, x2:27, y2:13},
-  {kind:'plot', nm:'農田', idx:0, x1:2,  y1:8, x2:5,  y2:13},
-  {kind:'plot', nm:'農田', idx:1, x1:8,  y1:6, x2:11, y2:11},
-  {kind:'plot', nm:'農田', idx:2, x1:14, y1:8, x2:17, y2:13},
+  {kind:'plot', nm:'農田', x1:2, y1:18, x2:5, y2:23},
+  {kind:'plot', nm:'農田', x1:8, y1:16, x2:11, y2:21},
+  {kind:'plot', nm:'農田', x1:14, y1:18, x2:17, y2:23},
+  {kind:'chicken', nm:'雞舍', x1:21, y1:22, x2:28, y2:24},
+  {kind:'cow', nm:'牛棚', x1:0, y1:12, x2:14, y2:14},
+  {kind:'pig', nm:'豬圈', x1:19, y1:8, x2:21, y2:16},
 ];
 function farmZoneAt(x,y){
   const ix=Math.round(x),iy=Math.round(y);
@@ -466,7 +530,7 @@ function blankState(){
     store:{}, extras:{}, market:{}, marketDay:0,
     employee:null,
     cafe:{staff:false,till:0,menu:[],goods:{},lastRun:Date.now()},
-    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(),
+    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), decor:blankDecor(),
   };
 }
 const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素.
@@ -590,7 +654,7 @@ function runCafe(now){
   if(!S.cafe.staff||S.cafe.menu.length===0){S.cafe.lastRun=now;return;}
   let days=Math.min(7,Math.floor((now-(S.cafe.lastRun||now))/DAY));
  if(days<=0)return;
-  const cap=10+S.cafe.menu.length*6;
+  const cap=10+S.cafe.menu.length*6+decorCap();
   for(let d=0;d<days;d++){
     let total=0;for(const k of S.cafe.menu)total+=(S.cafe.goods[k]||0);
     if(total<=0)continue;
@@ -667,6 +731,8 @@ function interact(ev){
   if(ev)ev.preventDefault();
   // 坐在書桌時：互動鍵 = 翻開帳簿
   if(sitting){ openLedger(); return; }
+  if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
+  if(!sleeping && curScene===BED.scene && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2 && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2){ askSleep(); return; }
  if(curScene==='farm'){
     const key=farmCellNear();
     if(key){ openTileFarm(key); return; }
@@ -683,6 +749,7 @@ function interact(ev){
     case 'employee': return openEmployee();
     case 'menu': return openMenu();
     case 'decor': return openDecor();
+    case 'eraBoard': return openEra();
     case 'till': return collectTill();
     case 'brew': return toast('☕ （試作）泡咖啡：之後接咖啡商品');
     case 'shopBuy': return openShopBuy();
@@ -756,6 +823,20 @@ function sellPig(idx){const price=priceOf('pork');earn(price,'賣豬肉');S.anim
 function openLedger(){
   const rows=S.ledger.length?S.ledger.slice(0,14).map(x=>`<div class="row"><div style="flex:1">${x.l}</div><div class="${x.a>=0?'up':'down'}">${x.a>=0?'+':''}$${fmt(x.a)}</div></div>`).join(''):'<div class="empty-note">還沒有紀錄</div>';
   openSheet(`<div class="sheethead"><h3>📒 帳簿（最近）</h3><button class="close" onclick="closeSheet()">✕</button></div>${rows}`);
+}
+function askSit(){
+  openSheet(`<div class="sheethead"><h3>🪑 要坐下嗎？</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:12px">坐著時按互動鍵可翻開帳簿。</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" style="flex:1" onclick="closeSheet()">先不要</button>
+      <button class="btn green" style="flex:1" onclick="sitting=true;closeSheet()">坐下</button></div>`);
+}
+function askSleep(){
+  openSheet(`<div class="sheethead"><h3>🛏️ 確定要睡覺嗎？</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:12px">躺下休息一下。</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" style="flex:1" onclick="closeSheet()">先不要</button>
+      <button class="btn green" style="flex:1" onclick="sleeping=true;closeSheet()">睡覺</button></div>`);
 }
 function openEmployee(){
   const b = S.employee
@@ -918,7 +999,7 @@ function update(){
   const moving = (dx||dy);                         // ← 新增：有沒有在動
   if(moving){const len=Math.hypot(dx,dy);dx/=len;dy/=len;
     const nx=player.x+dx*SPEED,ny=player.y+dy*SPEED;
-    const foot=0.8;
+    const foot=0.5;
 if(walkable(nx+0.5,player.y+foot))player.x=nx;
     if(walkable(player.x+0.5,ny+foot))player.y=ny;}
 
@@ -932,16 +1013,12 @@ if(walkable(nx+0.5,player.y+foot))player.x=nx;
   }
 document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
-  // 坐下偵測：站在椅子那格就坐下，走開就站起來
-  sitting = (curScene===CHAIR.scene
-    && Math.round(player.x)===CHAIR.x
-    && Math.round(player.y)===CHAIR.y);
-  // ……後面原本的程式不動……
-
-  // 睡覺偵測：走進床的範圍（矩形）就睡，走出就起來
-  sleeping = (curScene===BED.scene
+  const onChair = (curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y);
+  const onBed = (curScene===BED.scene
     && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2
     && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2);
+  if(!onChair) sitting=false;   // 離開椅子→起身
+  if(!onBed) sleeping=false;    // 離開床→起來
   // oven ui
   const ob=document.getElementById('ovenbar');
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
@@ -951,10 +1028,15 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
   }else ob.classList.remove('show');
   // hint + dialogue
   const near=facingObject();
+  
   const hint=document.getElementById('hint');
   if(sitting){
     document.getElementById('actBtn').className='actbtn';
     hint.textContent='📒 翻開帳簿（互動鍵）／按方向鍵起身';
+    hint.classList.add('show');
+ }else if(sleeping){
+    document.getElementById('actBtn').className='actbtn dim';
+    hint.textContent='😴 睡覺中・按方向鍵起床';
     hint.classList.add('show');
  }else{
     let onTile = null;
@@ -967,7 +1049,7 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     }
     const zone   = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
     const animal = zone && zone.kind!=='plot' ? zone : null;
-    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal)?'':' dim');
+    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal||onChair||onBed)?'':' dim');
     if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
     else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
     else if(onTile){dlgNpc=null;if(!say._t)idleDlg();
@@ -978,6 +1060,8 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
           : `${def.nm}・${def.stages[c.stage]}${c.watered?'':'・需澆水'}（互動鍵）`; }
       hint.classList.add('show');}
     else if(animal){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${ANIMALS[animal.kind].e} ${animal.nm}・餵食/收成（互動鍵）`;hint.classList.add('show');}
+    else if(onChair){dlgNpc=null;if(!say._t)idleDlg();hint.textContent='🪑 坐下（互動鍵）';hint.classList.add('show');}
+    else if(onBed){dlgNpc=null;if(!say._t)idleDlg();hint.textContent='🛏️ 睡覺（互動鍵）';hint.classList.add('show');}
     else{dlgNpc=null;if(!say._t)idleDlg();hint.classList.remove('show');}
   }
   renderRecipeBar();
@@ -1007,6 +1091,7 @@ const SCENE_FG = {};                       // 前景圖（畫在人物上面）
 function loadFg(scene, src){ const img=new Image(); img.src=src; SCENE_FG[scene]=img; }
 loadFg('office', 'office_desk.png');       // 整張透明、只有桌子的那張
 loadBg('office', 'office.png');               // 辦公室用你的圖
+loadBg('cafe_18', 'cafe_18.png');
 loadBg('farm', 'farm.png');
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
@@ -1019,7 +1104,7 @@ function draw(){
   const big=sceneDef().big;const ox=Math.round(cam.x*TS),oy=Math.round(cam.y*TS);
   const sx=big?Math.floor(cam.x)-1:0, ex=big?Math.floor(cam.x)+VIEW_COLS+1:mapCols();
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
-  const bg = SCENE_BG[curScene];
+  const bg = SCENE_BG[curScene+'_'+S.era] || SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
     // 這個場景有底圖且載入好了 → 鋪滿整個舞台
     ctx.drawImage(bg, -ox, -oy, bg.naturalWidth, bg.naturalHeight);
@@ -1080,19 +1165,17 @@ function draw(){
       const colIndex=dirCols[player.facing]||0;
       const sx=colIndex*spriteW;
       const sy=animFrame*spriteH;
-      ctx.drawImage(PLAYER_IMG, sx, sy, spriteW, spriteH, px-32, py-64+26, 64, 64);
+      ctx.drawImage(PLAYER_IMG, sx, sy, spriteW, spriteH, px-32, py-64+14, 64, 64);
     } else {
       ctx.font='24px serif';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText('🧑‍🌾', px, py);
     }
   }
 // DEBUG：人物碰撞點。Console 打 DEBUG_PLAYER=true 開啟
-  if(window.DEBUG_PLAYER){
-    const fx=Math.floor(player.x), fy=Math.floor(player.y+0.8);
-    ctx.strokeStyle='rgba(255,0,255,.95)'; ctx.lineWidth=1;
-    ctx.strokeRect(fx*TS-ox+0.5, fy*TS-oy+0.5, TS, TS);            // 碰撞所在的格
-    ctx.fillStyle='magenta';
-    ctx.beginPath(); ctx.arc(px, (player.y+0.8)*TS-oy, 2.5, 0, Math.PI*2); ctx.fill();  // 碰撞點
+ if(window.DEBUG_SENSE){
+    const bx=Math.round(player.x), by=Math.round(player.y);
+    ctx.strokeStyle='rgba(0,180,80,.85)'; ctx.lineWidth=1;
+    ctx.strokeRect((bx-SENSE)*TS-ox+0.5,(by-SENSE)*TS-oy+0.5,(SENSE*2+1)*TS,(SENSE*2+1)*TS);
   }
  // === 前景：桌子畫在人物之後 → 蓋在人物上面 ===
   const fg = SCENE_FG[curScene];
@@ -1150,6 +1233,8 @@ function startGame(n){
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
   if(!S.crops)S.crops={};
   if(!S.era)S.era=17;
+  if(!S.decor)S.decor=blankDecor();
+  else for(const era in DECOR){ S.decor[era]=S.decor[era]||{}; for(const slot in DECOR[era]) if(!(slot in S.decor[era])) S.decor[era][slot]=null; }
   if(!S.decor)S.decor=blankDecor();
   else for(const era in DECOR){ S.decor[era]=S.decor[era]||{}; for(const slot in DECOR[era]) if(!(slot in S.decor[era])) S.decor[era][slot]=null; }
   document.getElementById('splash').style.display='none';
