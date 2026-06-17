@@ -276,23 +276,69 @@ const CROP_ERA={ strawberry:17, tomato:17, guava:17, lemon:17, corn:17,
 const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
+/* ---------- 裝潢系統 ---------- */
+const DECOR={
+  17:{
+    sign:   [{id:'wood_sign',   nm:'木製招牌',  price:40,  cap:4,  buff:'每日客流上限 +4'}],
+    counter:[{id:'wood_counter',nm:'原木吧檯',  price:60,          buff:'基礎吧檯'}],
+    floor:  [{id:'stone_floor', nm:'石板地牆',  price:50,          buff:'基礎裝潢'}],
+  },
+  18:{
+    sign:   [{id:'carved_sign', nm:'雕花招牌',  price:120, cap:8,  buff:'每日客流上限 +8'}],
+    counter:[{id:'tile_counter',nm:'磁磚吧檯',  price:160,         buff:'洛可可風'}],
+    floor:  [{id:'rococo_floor',nm:'洛可可磁磚',price:140,         buff:'氛圍提升'}],
+  },
+  19:{
+    sign:   [{id:'brass_sign',  nm:'黃銅招牌',  price:300, cap:14, buff:'每日客流上限 +14'}],
+    counter:[{id:'iron_counter',nm:'工業吧檯',  price:360,         buff:'維多利亞風'}],
+    floor:  [{id:'marble_floor',nm:'大理石地牆',price:320,         buff:'氛圍提升'}],
+    light:  [{id:'chandelier',  nm:'水晶吊燈',  price:400,         buff:'解鎖夜間營業'}],
+  },
+};
+function blankDecor(){ const o={}; for(const era in DECOR){ o[era]={}; for(const slot in DECOR[era]) o[era][slot]=null; } return o; }
+function decorDone(era){ const cat=DECOR[era]||{}; return Object.keys(cat).every(s=>S.decor[era]&&S.decor[era][s]); }
+function decorCap(){ const cat=DECOR[S.era]; if(!cat||!cat.sign)return 0; const id=S.decor[S.era].sign; if(!id)return 0; const o=cat.sign.find(x=>x.id===id); return o&&o.cap?o.cap:0; }
+function slotName(s){ return {sign:'招牌',counter:'吧檯／廚具',floor:'地板＋牆面',light:'燈光'}[s]||s; }
+function openDecor(){
+  const era=S.era, cat=DECOR[era]||{}; let body='';
+  for(const slot in cat){
+    body+=`<b class="small">${slotName(slot)}</b>`;
+    for(const opt of cat[slot]){
+      const owned=S.decor[era][slot]===opt.id;
+      body+=`<div class="row"><div class="e">🎨</div>
+        <div class="info"><div class="n">${opt.nm}</div><div class="d">${opt.buff}</div></div>
+        <div class="price">$${opt.price}</div>
+        <button class="btn sm ${owned?'green dis':''}" onclick="${owned?'':`buyDecor('${slot}','${opt.id}')`}">${owned?'已裝':'安裝'}</button></div>`;
+    }
+  }
+  const done=decorDone(era);
+  openSheet(`<div class="sheethead"><h3>🎨 裝潢店面・${era}世紀</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">💰 現金 $${fmt(S.cash)}・本時代裝潢 ${done?'<b style="color:var(--accent2)">已完成</b>':'未完成（升時代需全部裝好）'}</div>${body}`);
+}
+function buyDecor(slot,id){
+  const opt=(DECOR[S.era][slot]||[]).find(o=>o.id===id); if(!opt)return;
+  if(S.decor[S.era][slot]===id){toast('已經裝好了');return;}
+  if(S.cash<opt.price){toast('現金不足');return;}
+  spend(opt.price,`裝潢：${opt.nm}`); S.decor[S.era][slot]=id;
+  toast(`🎨 裝好了 ${opt.nm}`); openDecor(); save();
+}
 /* ---------- maps ---------- */
 const MAPS={
-farm:[
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "....................FFFFFFFF",
-   "....................FFFFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
-   "......................FFFFFF",
+  farm:[
+   "............................",
+   "............................",
+   "FFFFFFFFFFFFFFFFFFFFFF......",
+   "FFFFFFFFFFFFFFFFFFFFFF......",
+   ".....................FFFFFFF",
+   ".....................FFF....",
+   ".......FFFFF...........F....",
+   ".......FFFFF...........F....",
+   ".FFFFF.FFFFF.FFFFF.....F....",
+   ".FFFFF.FFFFF.FFFFF.....F....",
+   ".FFFFF.FFFFF.FFFFF.....F....",
+   ".FFFFF.FFFFF.FFFFF.....F....",
+   ".FFFFF.......FFFFF.....FFFFF",
+   ".FFFFF.......FFFFF.....FFFFF",
    "............................",
    "............................",
    "............................",
@@ -363,6 +409,7 @@ const SCENES={
     {id:'counter',x:9,y:3,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew'},
     {id:'menu',x:6,y:9,e:'📋',nm:'上架菜單',kind:'menu'},
     {id:'till',x:12,y:9,e:'💰',nm:'收銀台',kind:'till'},
+    {id:'decor',x:15,y:9,e:'🎨',nm:'裝潢店面',kind:'decor'},
     {id:'kdoor',x:9,y:14,e:'🚪',nm:'進廚房',kind:'gotoKitchen'},
   ]},
   kitchen:{title:'廚房', big:false, spawn:{x:9,y:10}, objects:[
@@ -418,10 +465,12 @@ function blankState(){
     store:{}, extras:{}, market:{}, marketDay:0,
     employee:null,
     cafe:{staff:false,till:0,menu:[],goods:{},lastRun:Date.now()},
-    ledger:[], log:[], curRecipe:'strawberry_tart',
+    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(),
   };
 }
-const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素
+const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素.
+
+
 function cellKeyAt(ix,iy){
   const ok=FARM_ZONES.some(z=>z.kind==='plot'&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
   if(!ok) return null;
@@ -533,7 +582,7 @@ function resetPlot(p){p.crop=null;p.stage='empty';p.fert=false;p.qual=null;p.wat
 function runCafe(now){
   if(!S.cafe.staff||S.cafe.menu.length===0){S.cafe.lastRun=now;return;}
   let days=Math.min(7,Math.floor((now-(S.cafe.lastRun||now))/DAY));
-  if(days<=0)return;
+ if(days<=0)return;
   const cap=10+S.cafe.menu.length*6;
   for(let d=0;d<days;d++){
     let total=0;for(const k of S.cafe.menu)total+=(S.cafe.goods[k]||0);
@@ -618,6 +667,7 @@ function interact(ev){
     case 'ledger': return openLedger();
     case 'employee': return openEmployee();
     case 'menu': return openMenu();
+    case 'decor': return openDecor();
     case 'till': return collectTill();
     case 'brew': return toast('☕ （試作）泡咖啡：之後接咖啡商品');
     case 'shopBuy': return openShopBuy();
@@ -1083,7 +1133,10 @@ function startGame(n){
   // migration safety
   if(!S.animals.cow)S.animals.cow=[];if(!S.animals.pig)S.animals.pig=[];
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
-  if(!S.crops)S.crops={};if(!S.era)S.era=17;
+  if(!S.crops)S.crops={};
+  if(!S.era)S.era=17;
+  if(!S.decor)S.decor=blankDecor();
+  else for(const era in DECOR){ S.decor[era]=S.decor[era]||{}; for(const slot in DECOR[era]) if(!(slot in S.decor[era])) S.decor[era][slot]=null; }
   document.getElementById('splash').style.display='none';
   document.getElementById('shell').style.display='flex';
   goScene('farm');
