@@ -210,6 +210,7 @@ const ANIMALS={
 const PRODUCTS={
   strawberry:{nm:'草莓',e:'🍓',base:8,volat:'big'},
   blueberry:{nm:'藍莓',e:'🫐',base:8,volat:'mid'},
+  corn:{nm:'玉米',e:'🌽',base:4,volat:'small'},
   tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'},
   papaya:{nm:'木瓜',e:'🫛',base:5,volat:'mid'},
   banana:{nm:'香蕉',e:'🍌',base:3,volat:'small'},
@@ -242,25 +243,25 @@ const FARM_CROPS={
   strawberry:{ nm:'草莓', img:'strawberry.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3, seed:3 },
-  corn:{ nm:'玉米', img:'corn.png', fw:64, fh:64,
+  corn:{ nm:'玉米', img:'corn.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:40000, yield:4, seed:2 },
-  blueberry:{ nm:'藍莓', img:'blueberry.png', fw:64, fh:64,
+  blueberry:{ nm:'藍莓', img:'blueberry.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
-  tomato:{ nm:'番茄', img:'tomato.png', fw:64, fh:64,
+  tomato:{ nm:'番茄', img:'tomato.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
-  papaya:{ nm:'木瓜', img:'papaya.png', fw:64, fh:64,
+  papaya:{ nm:'木瓜', img:'papaya.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
-  banana:{ nm:'香蕉', img:'banana.png', fw:64, fh:64,
+  banana:{ nm:'香蕉', img:'banana.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
-  guava:{ nm:'芭樂', img:'guava.png', fw:64, fh:64,
+  guava:{ nm:'芭樂', img:'guava.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
-  lemon:{ nm:'檸檬', img:'lemon.png', fw:64, fh:64,
+  lemon:{ nm:'檸檬', img:'lemon.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3 },
 };
@@ -375,6 +376,64 @@ function eraCutscene(from,to,extra){
   requestAnimationFrame(()=>ov.style.opacity=1);
   setTimeout(()=>{ ov.style.opacity=0; setTimeout(()=>ov.remove(),700); refreshTop(); toast(`🎉 歡迎來到 ${to} 世紀`); }, 2400);
 }
+/* ---------- 小孩系統 ---------- */
+const CHILD_STAGES=[
+  {key:'baby',   nm:'嬰兒', e:'👶', need:'餵奶／哄睡'},
+  {key:'toddler',nm:'幼兒', e:'🧒', need:'陪玩'},
+  {key:'child',  nm:'兒童', e:'🧑', need:'陪玩／幫忙'},
+  {key:'teen',   nm:'少年', e:'🧑‍🎓', need:'陪伴'},
+];
+const CHILD_CRY_MS=45000, CHILD_CARE_CD=12000, CHILD_CARE_GAIN=2;
+function openChild(){
+  const c=S.child; if(!c) return openAdoptChild();
+  const st=CHILD_STAGES[c.stage];
+  const status=c.crying?'😢 正在哭，需要安撫':'😊 心情不錯';
+  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name||'孩子'}・${st.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:6px">好感 ${c.affinity}・需要：${st.need}</div>
+    <div class="small" style="margin-bottom:12px">${status}</div>
+    <button class="btn green" style="width:100%" onclick="careChild()">${c.crying?'🍼 安撫':'🧸 陪玩'}</button>
+    <div class="small" style="margin-top:10px;color:var(--ink2)">孩子會隨著時代一起長大。</div>`);
+}
+function openAdoptChild(){
+  openSheet(`<div class="sheethead"><h3>👶 搖籃</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:12px">空蕩蕩的搖籃。要迎接一個孩子嗎？照顧好感會影響能不能邁入下個時代。</div>
+    <input id="childName" placeholder="孩子的名字" maxlength="8" style="width:100%;padding:11px;border:2px solid var(--line2);border-radius:10px;background:var(--card);font-family:inherit;font-size:15px;margin-bottom:10px">
+    <button class="btn" style="width:100%" onclick="adoptChild()">迎接孩子</button>`);
+}
+function adoptChild(){
+  const nm=(document.getElementById('childName').value||'').trim();
+  S.child={ name:nm, stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
+  addLog(`👶 迎接了孩子${nm?'「'+nm+'」':''}`);
+  toast('👶 新成員加入！'); save(); openChild();
+}
+function childReward(){
+  if(Math.random()>0.35) return null;
+  const pool=[];
+  for(const k in FARM_CROPS) if(cropEra(k)<=S.era) pool.push({t:'seed',k});
+  pool.push({t:'extra',k:'flour'},{t:'extra',k:'sugar'});
+  const p=pool[Math.floor(Math.random()*pool.length)];
+  if(p.t==='seed'){ S.seeds[p.k]=(S.seeds[p.k]||0)+1; return `${FARM_CROPS[p.k].nm}種子`; }
+  S.extras[p.k]=(S.extras[p.k]||0)+1; return EXTRAS[p.k].nm;
+}
+function careChild(){
+  const c=S.child; if(!c) return openAdoptChild();
+  const now=Date.now(), st=CHILD_STAGES[c.stage];
+  if(c.crying){
+    c.crying=false; c.lastCare=now; c.affinity+=CHILD_CARE_GAIN;
+    const item=childReward();
+    toast(`${st.e} 哄好了，好感 +${CHILD_CARE_GAIN}${item?'，獲得'+item:''}`);
+  }else if(now-c.lastCare>=CHILD_CARE_CD){
+    c.lastCare=now; c.affinity+=1;
+    const item=childReward();
+    toast(`${st.e} 玩得很開心，好感 +1${item?'，獲得'+item:''}`);
+  }else{ toast('孩子正在玩，待會再來'); return; }
+  openChild(); save();
+}
+function growChild(){
+  const c=S.child; if(!c) return;
+  if(c.stage<CHILD_STAGES.length-1) c.stage++;
+  c.crying=false; c.lastCare=Date.now();
+}
 /* ---------- maps ---------- */
 const MAPS={
   farm:[
@@ -464,6 +523,7 @@ const SCENES={
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
    
     {id:'era',x:7,y:13,e:'📅',nm:'時代進程',kind:'eraBoard'},
+    {id:'crib',x:11,y:13,e:'👶',nm:'搖籃／孩子',kind:'child'},
     {id:'cat',x:13,y:12,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
       lines:['喵～（在曬太陽）','今天也辛苦了喵。','摸摸我（並不會回血）。']},
     {id:'staff',x:5,y:5,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
@@ -530,7 +590,7 @@ function blankState(){
     store:{}, extras:{}, market:{}, marketDay:0,
     employee:null,
     cafe:{staff:false,till:0,menu:[],goods:{},lastRun:Date.now()},
-    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), decor:blankDecor(),
+    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), child:null, decor:blankDecor(),
   };
 }
 const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素.
@@ -555,7 +615,11 @@ function openTileFarm(key){
   const c=S.crops[key];
   if(!c){
     let btns='';
-    for(const id in FARM_CROPS){ const d=FARM_CROPS[id]; const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱'; const have=S.seeds[id]||0;
+    for(const id in FARM_CROPS){ 
+    if(cropEra(id) > S.era) continue;  // ← 加這行
+    const d=FARM_CROPS[id];
+    const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱'; const have=S.seeds[id]||0;
+
       btns+=`<button class="btn green ${have<=0?'dis':''}" style="width:100%;margin-bottom:6px" onclick="plantTile('${key}','${id}')">${e} 播種${d.nm}（種子 ${have}）</button>`; }
     btns+=`<button class="btn ghost" style="width:100%" onclick="closeSheet();goScene('shop')">🏪 去商店買種子</button>`;
     openSheet(`<div class="sheethead"><h3>🟫 空地</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -645,6 +709,7 @@ function tick(){
       return true;
     });
   }
+if(S.child && !S.child.crying && now-S.child.lastCare>CHILD_CRY_MS) S.child.crying=true;
   runCafe(now);
   S.lastTick=now;
 }
@@ -750,6 +815,7 @@ function interact(ev){
     case 'menu': return openMenu();
     case 'decor': return openDecor();
     case 'eraBoard': return openEra();
+    case 'child': return openChild();
     case 'till': return collectTill();
     case 'brew': return toast('☕ （試作）泡咖啡：之後接咖啡商品');
     case 'shopBuy': return openShopBuy();
@@ -1136,7 +1202,8 @@ function draw(){
     let icon=o.e;
     if(o.kind==='farm'){const p=S.plots[o.plotIdx];icon=!p||p.stage==='empty'||!p.stage?'🟫':p.stage==='growing'?'🌱':CROPS[p.crop].e;}
     if(o.kind==='animals'){const n=S.animals[o.atype].length;if(n===0)icon='⬜';}
-    if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':t>=BAKE_MS?'✅':'🔥';}
+if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':t>=BAKE_MS?'✅':'🔥';}
+    if(o.kind==='child'&&S.child){ icon=S.child.crying?'😢':CHILD_STAGES[S.child.stage].e; }
     if(curScene!=='farm'){ctx.fillStyle=cssVar('--counter');ctx.fillRect(o.x*TS-ox+1,o.y*TS-oy+1,TS-2,TS-2);}
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
   }
