@@ -335,7 +335,9 @@ function eraStatus(){
   if(!r) return {max:true};
   const moneyOK = netWorth()>=r.money;
   const decorOK = decorDone(S.era);
-  const childOK = !S.child || (S.child.affinity||0)>=r.childAff;   // 沒小孩先不擋
+  const childOK = S.era===18
+    ? (S.childLeftHome===true)                              // 升 19 世紀：孩子必須已長大離家
+    : (!S.child || (S.child.affinity||0)>=r.childAff);      // 其他時代：好感達標（沒小孩不擋）
   return { r, moneyOK, decorOK, childOK, ok: moneyOK&&decorOK&&childOK, max:false };
 }
 function openEra(){
@@ -347,9 +349,11 @@ function openEra(){
   }
   const r=st.r;
   const row=(ok,txt)=>`<div class="row"><div class="e">${ok?'✅':'⬜'}</div><div class="info"><div class="n">${txt}</div></div></div>`;
-  const childLine = S.child
-    ? row(st.childOK, `小孩好感 ${S.child.affinity||0} / ${r.childAff}`)
-    : row(true, `小孩好感（尚未有小孩，暫不限制）`);
+  const childLine = (S.era===18)
+    ? row(!!S.childLeftHome, S.childLeftHome?`孩子已長大離家`:`孩子尚未離家（需養到少年期結束）`)
+    : (S.child
+        ? row(st.childOK, `小孩好感 ${S.child.affinity||0} / ${r.childAff}`)
+        : row(true, `小孩好感（尚未有小孩，暫不限制）`));
   openSheet(`<div class="sheethead"><h3>📅 邁向 ${r.next} 世紀</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:8px">三項都達成即可推進，時代不可回頭。</div>
     ${row(st.moneyOK, `淨資產 ${fmt(netWorth())} / ${r.money}`)}
@@ -396,7 +400,7 @@ function openChild(){
     <div class="small" style="margin-bottom:6px">好感 ${c.affinity}・需要：${st.need}</div>
     <div class="small" style="margin-bottom:12px">${status}</div>
     <button class="btn green" style="width:100%" onclick="careChild()">${c.crying?'🍼 安撫':'🧸 陪玩'}</button>
-    <div class="small" style="margin-top:10px;color:var(--ink2)">孩子會隨著時代一起長大。</div>`);
+    <div class="small" style="margin-top:10px;color:var(--ink2)">陪玩累積好感就會長大；幼兒之後要進入 18 世紀才會繼續長，少年期養到底就會離家。</div>`);
 }
 function openAdoptChild(){
   openSheet(`<div class="sheethead"><h3>👶 搖籃</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -431,12 +435,28 @@ function careChild(){
     const item=childReward();
     toast(`${st.e} 玩得很開心，好感 +1${item?'，獲得'+item:''}`);
   }else{ toast('孩子正在玩，待會再來'); return; }
-  openChild(); save();
+  growChild(); save();
+  if(S.child) openChild();
 }
+const CHILD_GROW_AFF=[10,20,30,40];          // 升上去所需好感：嬰兒→幼兒→兒童→少年→離家
+function childCap(){ return S.era>=18 ? 3 : 1; }  // 17 世紀最多到幼兒(1)；18 世紀起可到少年(3)
 function growChild(){
   const c=S.child; if(!c) return;
-  if(c.stage<CHILD_STAGES.length-1) c.stage++;
-  c.crying=false; c.lastCare=Date.now();
+  const cap=childCap();
+  while(c.stage<cap && c.affinity>=CHILD_GROW_AFF[c.stage]){
+    c.stage++; c.crying=false; c.lastCare=Date.now();
+    toast(`🎉 ${c.name||'孩子'}長大成${CHILD_STAGES[c.stage].nm}了！`);
+  }
+  if(S.era>=18 && c.stage===3 && c.affinity>=CHILD_GROW_AFF[3]) childLeaveHome();
+}
+function childLeaveHome(){
+  const c=S.child; if(!c) return;
+  const nm=c.name||'孩子';
+  S.child=null; S.childLeftHome=true;
+  if(typeof officeNpcs!=='undefined' && officeNpcs['crib']) delete officeNpcs['crib'];
+  addLog(`🎓 ${nm}長大成人，離家追尋自己的人生了。`);
+  closeSheet(); save(); refreshTop();
+  toast(`🎓 ${nm}離家了，一路順風。`);
 }
 /* ---------- 港口＋商人 ---------- */
 const MERCHANTS={
@@ -568,6 +588,7 @@ function openPartner(){
   openSheet(`<div class="sheethead"><h3>${m.e} ${m.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:4px">你的伴侶。專長：${jobNm}。</div>
     <div class="small" style="margin-bottom:10px">💕 親密度 ${p.intimacy||0}</div>
+    <button class="btn" style="width:100%;margin-bottom:8px" onclick="chatPartner()">💬 聊天</button>
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <button class="btn green sm" style="flex:1" onclick="intimate('kiss')">💋 親親</button>
       <button class="btn green sm" style="flex:1" onclick="intimate('hug')">🤗 抱抱</button>
@@ -590,6 +611,10 @@ const SKINS={
   victoria: { nm:'維多利亞裝', walk:'player_victoria.png', price:200, era:19 },
 };
 function applySkin(id){ const s=SKINS[id]||SKINS.default; PLAYER_IMG.src=s.walk; SIT_IMG.src=s.sit||'sit.png'; SLEEP_IMG.src=s.sleep||'sleep.png'; }
+function applyCookSkin(){
+  if(curScene==='kitchen' && S.cookBy==='partner' && S.partner) PLAYER_IMG.src='partner_'+S.partner.id+'.png';
+  else applySkin(S.wardrobe.wearing);
+}
 function openWardrobe(){
   let body='';
   for(const id in SKINS){ const s=SKINS[id];
@@ -622,7 +647,7 @@ function eatDish(k){
 const POISON_YIELD=10;
 function setCookBy(who){
   if(who==='partner' && !S.partner){ toast('沒有伴侶，只能由主角製作（產出毒物）'); return; }
-  S.cookBy=who; toast(who==='partner'?'交給伴侶做：產出食物':'主角親手做：產出毒物'); openPickRecipe(); save();
+  S.cookBy=who; applyCookSkin(); toast(who==='partner'?'交給伴侶做：產出食物':'主角親手做：產出毒物'); openPickRecipe(); save();
 }
 /* ---------- 怪物（蛇） ---------- */
 let monsters=[];
@@ -638,23 +663,29 @@ function randFarmTile(){
 }
 function snakeWalkable(x,y){ const ix=Math.floor(x),iy=Math.floor(y),C=GRID.farm[0].length,R=GRID.farm.length;
   if(ix<0||iy<0||ix>=C||iy>=R) return false; return !blocked(GRID.farm[iy][ix]); }
-function spawnSnake(){ const p=randFarmTile(); if(!p) return; monsters.push({x:p.x,y:p.y,hp:4,lastBite:0,wanderT:0,wx:0,wy:0}); }
+function spawnSnake(){ const p=randFarmTile(); if(!p) return; monsters.push({x:p.x,y:p.y,hp:4,lastBite:0,wanderT:0,wx:0,wy:0,facing:'down',frame:0,aTimer:0,aStep:0,moving:false}); }
 function spawnSnakes(){ monsters=[]; shots=[]; for(let i=0;i<MONSTER_CAP;i++) spawnSnake(); lastSpawn=Date.now(); }
 function updateMonsters(){
   const now=Date.now();
   if(monsters.length<MONSTER_CAP && now-lastSpawn>SPAWN_MS){ lastSpawn=now; spawnSnake(); }
   for(const m of monsters){
+    const px0=m.x, py0=m.y;
     const dx=player.x-m.x, dy=player.y-m.y, dist=Math.hypot(dx,dy)||0.001;
     if(dist<=AGGRO){
       const nx=m.x+(dx/dist)*SNAKE_SPEED, ny=m.y+(dy/dist)*SNAKE_SPEED;
       if(snakeWalkable(nx,m.y)) m.x=nx;
       if(snakeWalkable(m.x,ny)) m.y=ny;
+      m.facing = Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
       if(dist<=BITE_RANGE && now-m.lastBite>=BITE_CD){ m.lastBite=now; damagePlayer(SNAKE_DMG); }
     }else{
       if(now>m.wanderT){ m.wanderT=now+1000+Math.random()*1500; const a=Math.random()*Math.PI*2; m.wx=Math.cos(a); m.wy=Math.sin(a); }
       if(snakeWalkable(m.x+m.wx*SNAKE_SPEED*0.5, m.y)) m.x+=m.wx*SNAKE_SPEED*0.5;
       if(snakeWalkable(m.x, m.y+m.wy*SNAKE_SPEED*0.5)) m.y+=m.wy*SNAKE_SPEED*0.5;
+      m.facing = Math.abs(m.wx)>Math.abs(m.wy) ? (m.wx>0?'right':'left') : (m.wy>0?'down':'up');
     }
+    m.moving = (Math.abs(m.x-px0)>0.0005 || Math.abs(m.y-py0)>0.0005);
+    if(m.moving){ if(++m.aTimer>=WALK_SPEED){ m.aTimer=0; m.aStep=(m.aStep+1)%WALK_CYCLE.length; } m.frame=WALK_CYCLE[m.aStep]; }
+    else { m.frame=0; m.aTimer=0; m.aStep=0; }
   }
 }
 /* ---------- 投擲毒物 ---------- */
@@ -722,6 +753,26 @@ const CHAT_TOPICS=[
       {t:'看情況吧。',       mood:'neutral', aff:0},
       {t:'其實還好。',       mood:'sad', aff:-1} ]},
 ];
+/* ---------- 伴侶聊天（對話）---------- */
+const PARTNER_TOPICS=[
+  { q:'今天想跟我聊什麼呢？', a:[
+      {t:'我只是想看看你。',   mood:'shy',    g:2, reply:'…突然這樣說，會害羞的。'},
+      {t:'店裡生意還不錯。',   mood:'happy',  g:1, reply:'有你在，一切都會順利。'},
+      {t:'有點累。',           mood:'sad',    g:0, reply:'辛苦了，靠過來休息一下吧。'} ]},
+  { q:'你今天看起來不太一樣呢。', a:[
+      {t:'因為我一直在想你啊。', mood:'love',   g:2, reply:'真拿你沒辦法…我也是。'},
+      {t:'可能是換了衣服吧。',   mood:'neutral',g:1, reply:'嗯，很適合你。'},
+      {t:'有嗎？我沒注意。',     mood:'happy',  g:0, reply:'哈哈，你總是這樣。'} ]},
+];
+function chatPartner(){
+  const p=S.partner; if(!p) return;
+  const topic=PARTNER_TOPICS[Math.floor(Math.random()*PARTNER_TOPICS.length)];
+  const choices=topic.a.map(opt=>({ t:opt.t, run:()=>{
+    p.intimacy=(p.intimacy||0)+opt.g; save();
+    showDialogue(p.id, opt.mood, `${opt.reply}${opt.g?`（親密度 +${opt.g}）`:''}`, [ {t:'好', run:()=>openPartner()} ]);
+  }}));
+  showDialogue(p.id, 'neutral', topic.q, choices);
+}
 /* ---------- 伴侶親密互動 ---------- */
 const INTIMACY_CD=10000;
 function intimate(kind){
@@ -1287,12 +1338,13 @@ function interact(ev){
   if(sitting){ openLedger(); return; }
   if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
   if(!sleeping && curScene===BED.scene && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2 && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2){ askSleep(); return; }
- if(curScene==='farm'){
-    const key=farmCellNear();
-    if(key){ openTileFarm(key); return; }
-    const z=farmZoneAt(player.x,player.y);
-    if(z && z.kind!=='plot'){ openAnimals(z.kind); return; }
-  }
+ if(curScene==='farm'){ ctx.globalAlpha=1; ctx.textAlign='center';ctx.textBaseline='middle';
+    const _si=npcImg('snake.png'), _dc={down:0,left:1,right:2,up:3};
+    for(const m of monsters){ const mx=m.x*TS+TS/2-ox, my=m.y*TS+TS/2-oy;
+      if(_si&&_si.complete&&_si.naturalWidth){ const cols=Math.max(1,Math.round(_si.naturalWidth/64)), rows=Math.max(1,Math.round(_si.naturalHeight/64));
+        ctx.drawImage(_si, Math.min(_dc[m.facing]||0,cols-1)*64, Math.min(m.frame||0,rows-1)*64, 64,64, mx-32,my-64+14,64,64); }
+      else { ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.fillText('🐍', mx, my); } }
+    ctx.fillStyle='#000'; ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
   const o=facingObject();
   if(!o){toast('面前沒有可互動的東西');return;}
   switch(o.kind){
@@ -1760,8 +1812,10 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
   if(intimCG){
     if(Date.now()<intimCG.until){
       if(curScene==='office'){ const _im=intimCG.img;
-        if(_im&&_im.complete&&_im.naturalWidth){ ctx.globalAlpha=1;
-          ctx.drawImage(_im, intimCG.x*TS+TS/2-ox-32, intimCG.y*TS+TS/2-oy-64+14, 64,64); } }
+        if(_im&&_im.complete&&_im.naturalWidth){
+          const fh=_im.naturalHeight, fc=Math.max(1,Math.round(_im.naturalWidth/fh)), fi=Math.floor(Date.now()/350)%fc;
+          ctx.globalAlpha=1;
+          ctx.drawImage(_im, fi*fh,0, fh,fh, intimCG.x*TS+TS/2-ox-32, intimCG.y*TS+TS/2-oy-64+14, 64,64); } }
       return;
     } else intimCG=null;
   }
@@ -1826,7 +1880,7 @@ function goScene(name){
     buildPortNpcs(); }
   if(name==='office'){ syncPartnerObject(); buildOfficeNpcs(); }
   if(name==='farm') spawnSnakes();
-  curScene=name;
+  curScene=name; applyCookSkin();
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===name));
