@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>快樂農場</title>
 <style>
+  *{ -webkit-tap-highlight-color:transparent; }
+  html,body{ -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+  input,textarea,[contenteditable]{ -webkit-user-select:text; user-select:text; }
   :root{
     --paper:#f4ecd9; --paper2:#ece0c4; --ink:#4a3b2a; --ink2:#7a6a52;
     --line:#d8c8a6; --line2:#c9b58c; --accent:#c97b4a; --accent2:#7a9b5c;
@@ -132,6 +135,7 @@
   <p>輸入你的暱稱開始經營</p>
   <input id="nickInput" placeholder="你的暱稱" maxlength="12" autocomplete="off">
   <button class="btn" style="width:100%;max-width:300px;padding:13px" onclick="submitNick()">開始經營</button>
+  <button onclick="wipeSave()" style="margin-top:16px;background:none;border:none;color:var(--danger);font-size:12px;text-decoration:underline;opacity:.7;font-family:inherit">🗑️ 刪除舊存檔</button>
   <div id="saveList" style="margin-top:16px"></div>
   <p class="small" style="margin-top:18px">進度自動存在這台裝置</p>
 </div>
@@ -390,29 +394,62 @@ const CHILD_STAGES=[
   {key:'teen',   nm:'少年', e:'🧑‍🎓', need:'陪伴'},
 ];
 const CHILD_CRY_MS=45000, CHILD_CARE_CD=12000, CHILD_CARE_GAIN=2;
+/* 阿爾弗雷德的對話：依「成長階段 × 世紀」不同語氣。沒寫到的世紀會退回 any 或 17。 */
+const CHILD_LINES={
+  baby:{ any:['（咿咿呀呀地朝你笑）','（緊緊抓著你的手指不放）','啊…嗚…（口水流了一臉）'] },
+  toddler:{
+    17:['亞瑟，抱抱！','泥土土…髒髒！','小雞…在那邊跑！'],
+    18:['亞瑟，我要吃甜點！','今天客人好多喔～','我也要穿漂漂的衣服！'],
+    19:['亞瑟！那個會冒煙耶！','好多馬車跑來跑去～','咚咚咚…好大聲！'],
+  },
+  child:{
+    17:['今天田裡的草莓紅了耶！','我可以幫忙餵雞嗎？','海的味道鹹鹹的，我喜歡。'],
+    18:['客人說我們家的塔最好吃！','長大以後，我也要顧店！','今天港口來了好多船呢。'],
+    19:['我在書上看到會跑的鐵馬！','城裡的燈，晚上也不會熄耶。','機器好厲害…它都不會累嗎？'],
+  },
+  teen:{
+    17:['謝謝你把我養大。','這片土地，是我們一起耕出來的。','我想，我已經能獨當一面了。'],
+    18:['總有一天，我想開一間自己的店。','你教我的事，我都記得。','別把我當小孩了，我能照顧好自己。'],
+    19:['海的另一邊，會是什麼樣子呢？','世界變得好快…我想出去看看。','接下來，換我來照顧你了。'],
+  },
+};
+function childLines(){
+  const c=S.child; if(!c) return ['……'];
+  const byStage=CHILD_LINES[CHILD_STAGES[c.stage].key]||{};
+  return byStage[S.era] || byStage.any || byStage[17] || ['……'];
+}
+function talkChild(){
+  const c=S.child; if(!c) return;
+  freezeNpcById('crib');
+  const st=CHILD_STAGES[c.stage], pool=childLines();
+  const line=pool[Math.floor(Math.random()*pool.length)];
+  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div style="text-align:center;margin:2px 0 10px;font-size:56px">${st.e}</div>
+    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${line}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" style="flex:1" onclick="talkChild()">再聊聊</button>
+      <button class="btn green" style="flex:1" onclick="openChild()">返回</button></div>`);
+}
 function openChild(){
-  const c=S.child; if(!c) return openAdoptChild();
+  if(!S.child){
+    if(S.childLeftHome){
+      openSheet(`<div class="sheethead"><h3>👶 搖籃</h3><button class="close" onclick="closeSheet()">✕</button></div>
+        <div class="empty-note">阿爾弗雷德已經長大離家了。</div>`);
+      return;
+    }
+    S.child={ name:'阿爾弗雷德·F·瓊斯', stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
+    addLog('👶 阿爾弗雷德·F·瓊斯 來到了這個家'); save();
+  }
   freezeNpcById('crib');
-  freezeNpcById('crib');
+  const c=S.child;
   const st=CHILD_STAGES[c.stage];
   const status=c.crying?'😢 正在哭，需要安撫':'😊 心情不錯';
-  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name||'孩子'}・${st.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name}・${st.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:6px">好感 ${c.affinity}・需要：${st.need}</div>
     <div class="small" style="margin-bottom:12px">${status}</div>
-    <button class="btn green" style="width:100%" onclick="careChild()">${c.crying?'🍼 安撫':'🧸 陪玩'}</button>
+    <button class="btn green" style="width:100%;margin-bottom:8px" onclick="careChild()">${c.crying?'🍼 安撫':'🧸 陪玩'}</button>
+    <button class="btn" style="width:100%" onclick="talkChild()">💬 聊聊天</button>
     <div class="small" style="margin-top:10px;color:var(--ink2)">陪玩累積好感就會長大；幼兒之後要進入 18 世紀才會繼續長，少年期養到底就會離家。</div>`);
-}
-function openAdoptChild(){
-  openSheet(`<div class="sheethead"><h3>👶 搖籃</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div class="small" style="margin-bottom:12px">空蕩蕩的搖籃。要迎接一個孩子嗎？照顧好感會影響能不能邁入下個時代。</div>
-    <input id="childName" placeholder="孩子的名字" maxlength="8" style="width:100%;padding:11px;border:2px solid var(--line2);border-radius:10px;background:var(--card);font-family:inherit;font-size:15px;margin-bottom:10px">
-    <button class="btn" style="width:100%" onclick="adoptChild()">迎接孩子</button>`);
-}
-function adoptChild(){
-  const nm=(document.getElementById('childName').value||'').trim();
-  S.child={ name:nm, stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
-  addLog(`👶 迎接了孩子${nm?'「'+nm+'」':''}`);
-  toast('👶 新成員加入！'); save(); openChild();
 }
 function childReward(){
   if(Math.random()>0.35) return null;
@@ -424,7 +461,7 @@ function childReward(){
   S.extras[p.k]=(S.extras[p.k]||0)+1; return EXTRAS[p.k].nm;
 }
 function careChild(){
-  const c=S.child; if(!c) return openAdoptChild();
+  const c=S.child; if(!c) return openChild();
   const now=Date.now(), st=CHILD_STAGES[c.stage];
   if(c.crying){
     c.crying=false; c.lastCare=now; c.affinity+=CHILD_CARE_GAIN;
@@ -435,7 +472,7 @@ function careChild(){
     const item=childReward();
     toast(`${st.e} 玩得很開心，好感 +1${item?'，獲得'+item:''}`);
   }else{ toast('孩子正在玩，待會再來'); return; }
-  growChild(); save();
+  growChild(); if(curScene==='office') buildOfficeNpcs(); save();
   if(S.child) openChild();
 }
 const CHILD_GROW_AFF=[10,20,30,40];          // 升上去所需好感：嬰兒→幼兒→兒童→少年→離家
@@ -460,20 +497,23 @@ function childLeaveHome(){
 }
 /* ---------- 港口＋商人 ---------- */
 const MERCHANTS={
-  rosa:{ nm:'蘿莎', e:'🧝‍♀️', job:'cafe',
+  Francis:{ nm:'弗朗西斯·波諾弗瓦', e:'🧝‍♀️', job:'cafe',
     lines:['這批貨可是遠渡重洋來的。','你的甜點店，我聽說過呢。','下次入港不知是何時了。'],
     goods:[ {kind:'seed', k:'blueberry', price:6}, {kind:'extra', k:'sugar', price:10, qty:10} ] },
-  bruno:{ nm:'布魯諾', e:'🧔', job:'farm',
+  Pedro:{ nm:'佩德羅·費爾南德斯·卡里埃多', e:'🧔', job:'farm',
     lines:['海上的日子，靠的就是好貨。','種子？我這的最耐長。','錢給夠，什麼都好談。'],
     goods:[ {kind:'seed', k:'corn', price:3}, {kind:'seed', k:'tomato', price:2} ] },
-  lin:{ nm:'阿琳', e:'👩‍🦰', job:'bake',
+  Antonio:{ nm:'安東尼奧·費爾南德斯·卡里埃多', e:'👩‍🦰', job:'bake',
     lines:['香料是甜點的靈魂喔。','嚐過異國的味道嗎？','我認得出識貨的人。'],
     goods:[ {kind:'extra', k:'flour', price:20, qty:10}, {kind:'seed', k:'papaya', price:5} ] },
+  vincent:{ nm:'文森', e:'🤵', job:'rich', era:19,
+    lines:['錢嘛，我從來不缺。','跟著我，你不會吃苦的。','這點小東西，當見面禮。'],
+    goods:[ {kind:'extra', k:'sugar', price:4, qty:30}, {kind:'seed', k:'banana', price:6} ] },
 };
 const PORT_SLOTS=[{x:5,y:4},{x:9,y:4},{x:13,y:4}];
 const PORT_REFRESH_MS=60000;
 function refreshPort(){
-  const ids=Object.keys(MERCHANTS).filter(id=>!(S.partner&&S.partner.id===id)).sort(()=>Math.random()-0.5);
+  const ids=Object.keys(MERCHANTS).filter(id=>!(S.partner&&S.partner.id===id) && (MERCHANTS[id].era||18)<=S.era).sort(()=>Math.random()-0.5);
   const n=1+Math.floor(Math.random()*3);
   S.port.merchants=ids.slice(0,n);
   S.port.lastTs=Date.now();
@@ -557,20 +597,22 @@ function buyMerchantGood(id,gi){
 }
 /* ---------- 戀愛＋伴侶 ---------- */
 const ROMANCE_AFF=15;
+const BREAKUP_INTIMACY=-10;   // 親密度低於此值 → 分手變回朋友
+function familyReady(){ return (S.child && S.child.stage>=1) || S.childLeftHome; }   // 養過孩子（現有或已離家）
 function isPartnerWorking(){ return !!(S.partner && S.partner.working); }
 function partnerBuff(job){ return (isPartnerWorking() && S.partner.job===job) ? 1 : 0; }
 function romanceHtml(id,rel){
   if(S.partner&&S.partner.id===id) return `<div class="small" style="margin-bottom:10px;color:var(--accent2)">💞 你的伴侶（住在家裡）</div>`;
   if(S.partner) return '';
-  if(rel.aff>=ROMANCE_AFF && S.child && S.child.stage>=1)
+  if(rel.aff>=ROMANCE_AFF && familyReady())
     return `<button class="btn gold" style="width:100%;margin-bottom:10px" onclick="cohabit('${id}')">💞 邀請同居</button>`;
-  const why = !S.child ? '需要先有孩子' : S.child.stage<1 ? '孩子要養到幼兒以上' : `好感達到 ${ROMANCE_AFF}（目前 ${rel.aff}）`;
+  const why = !familyReady() ? (S.child ? '孩子要養到幼兒以上' : '需要先養育過孩子') : `好感達到 ${ROMANCE_AFF}（目前 ${rel.aff}）`;
   return `<div class="small" style="margin-bottom:10px;color:var(--ink2)">💞 同居條件：${why}</div>`;
 }
 function cohabit(id){
   const rel=S.port.relations[id];
   if(rel.aff<ROMANCE_AFF){toast('好感還不夠');return;}
-  if(!S.child||S.child.stage<1){toast('要先有孩子並養到幼兒');return;}
+  if(!familyReady()){toast('要先養育過孩子（養到幼兒以上）');return;}
   if(S.partner){toast('你已經有伴侶了');return;}
   const m=MERCHANTS[id];
   S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0};
@@ -583,7 +625,7 @@ function openPartner(){
   freezeNpcById('partner');
   freezeNpcById('partner');
   const m=MERCHANTS[p.id];
-  const jobNm={cafe:'顧店（客流上限 +15）',farm:'顧農場（作物自動照料）',bake:'幫忙烘焙（自動產出甜點）'}[p.job];
+  const jobNm={cafe:'顧店（客流上限 +15）',farm:'顧農場（作物自動照料）',bake:'幫忙烘焙（自動產出甜點）',rich:'出資贊助（定時給零用金）'}[p.job];
   const inOffice=curScene==='office';
   openSheet(`<div class="sheethead"><h3>${m.e} ${m.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:4px">你的伴侶。專長：${jobNm}。</div>
@@ -720,9 +762,10 @@ function updateShots(){
 }
 /* ---------- 對話系統（選項＋表情） ---------- */
 const CHARS={
-  rosa:  { nm:'蘿莎', face:{ neutral:'rosa_neutral.png', happy:'rosa_happy.png', shy:'rosa_shy.png', love:'rosa_love.png', sad:'😢' } },
-  bruno: { nm:'布魯諾', face:{ neutral:'🧔',   happy:'😄', shy:'😅', love:'😍', sad:'😟' } },
-  lin:   { nm:'阿琳',   face:{ neutral:'👩‍🦰', happy:'😊', shy:'😳', love:'🥰', sad:'😢' } },
+  Francis:{ nm:'弗朗西斯·波諾弗瓦', face:{ neutral:'Francis_neutral.png', happy:'Francis_happy.png', shy:'Francis_shy.png', love:'Francis_love.png', sad:'😢' } },
+  Pedro: { nm:'佩德羅·費爾南德斯·卡里埃多', face:{ neutral:'🧔',   happy:'😄', shy:'😅', love:'😍', sad:'😟' } },
+  Antonio:{ nm:'安東尼奧·費爾南德斯·卡里埃多',   face:{ neutral:'👩‍🦰', happy:'😊', shy:'😳', love:'🥰', sad:'😢' } },
+  vincent:{ nm:'文森',   face:{ neutral:'🤵', happy:'😎', shy:'😏', love:'😍', sad:'😞' } },
 };
 function charFace(id,mood){ const c=CHARS[id]; if(!c) return '🙂'; return c.face[mood]||c.face.neutral||'🙂'; }
 function charName(id){ return (CHARS[id]&&CHARS[id].nm)||(MERCHANTS[id]&&MERCHANTS[id].nm)||id; }
@@ -756,22 +799,42 @@ const CHAT_TOPICS=[
 /* ---------- 伴侶聊天（對話）---------- */
 const PARTNER_TOPICS=[
   { q:'今天想跟我聊什麼呢？', a:[
-      {t:'我只是想看看你。',   mood:'shy',    g:2, reply:'…突然這樣說，會害羞的。'},
-      {t:'店裡生意還不錯。',   mood:'happy',  g:1, reply:'有你在，一切都會順利。'},
-      {t:'有點累。',           mood:'sad',    g:0, reply:'辛苦了，靠過來休息一下吧。'} ]},
+      {t:'我只是想看看你。',   mood:'shy',    g:2,  reply:'…突然這樣說，會害羞的。'},
+      {t:'店裡生意還不錯。',   mood:'happy',  g:1,  reply:'有你在，一切都會順利。'},
+      {t:'沒什麼好聊的。',     mood:'sad',    g:-3, reply:'…這樣啊。（看起來有點受傷）'} ]},
   { q:'你今天看起來不太一樣呢。', a:[
-      {t:'因為我一直在想你啊。', mood:'love',   g:2, reply:'真拿你沒辦法…我也是。'},
-      {t:'可能是換了衣服吧。',   mood:'neutral',g:1, reply:'嗯，很適合你。'},
-      {t:'有嗎？我沒注意。',     mood:'happy',  g:0, reply:'哈哈，你總是這樣。'} ]},
+      {t:'因為我一直在想你啊。', mood:'love',   g:2,  reply:'真拿你沒辦法…我也是。'},
+      {t:'可能是換了衣服吧。',   mood:'neutral',g:1,  reply:'嗯，很適合你。'},
+      {t:'有差嗎？我沒在看你。', mood:'sad',    g:-3, reply:'…我知道了。（沉默了一下）'} ]},
+  { q:'最近我們是不是有點少說話？', a:[
+      {t:'抱歉，我會多陪你。',   mood:'shy',    g:2,  reply:'…嗯，我等你。'},
+      {t:'會嗎？我覺得還好。',   mood:'neutral',g:0,  reply:'…也許吧。'},
+      {t:'忙都忙死了，別煩我。', mood:'sad',    g:-4, reply:'…對不起打擾你了。（轉過身去）'} ]},
 ];
 function chatPartner(){
   const p=S.partner; if(!p) return;
   const topic=PARTNER_TOPICS[Math.floor(Math.random()*PARTNER_TOPICS.length)];
   const choices=topic.a.map(opt=>({ t:opt.t, run:()=>{
-    p.intimacy=(p.intimacy||0)+opt.g; save();
-    showDialogue(p.id, opt.mood, `${opt.reply}${opt.g?`（親密度 +${opt.g}）`:''}`, [ {t:'好', run:()=>openPartner()} ]);
+    p.intimacy=(p.intimacy||0)+opt.g;
+    if(p.intimacy<=BREAKUP_INTIMACY){ breakupPartner(); return; }
+    save();
+    const tag = opt.g===0 ? '' : `（親密度 ${opt.g>0?'+':''}${opt.g}）`;
+    showDialogue(p.id, opt.mood, `${opt.reply}${tag}`, [ {t:'好', run:()=>openPartner()} ]);
   }}));
   showDialogue(p.id, 'neutral', topic.q, choices);
+}
+function breakupPartner(){
+  const p=S.partner; if(!p) return;
+  const id=p.id, nm=(MERCHANTS[id]||{}).nm||'對方';
+  S.partner=null;
+  if(S.port.relations[id]) S.port.relations[id].aff=Math.min(S.port.relations[id].aff, ROMANCE_AFF-7);
+  else S.port.relations[id]={aff:8,met:true,lastChat:0};
+  syncPartnerObject();
+  if(typeof officeNpcs!=='undefined' && officeNpcs['partner']) delete officeNpcs['partner'];
+  applyCookSkin();
+  addLog(`💔 和 ${nm} 漸行漸遠，回到朋友關係。`);
+  showDialogue(id,'sad', `…也許我們比較適合當朋友。（${nm}收拾好行李離開了）`, [ {t:'好', run:()=>closeSheet()} ]);
+  save();
 }
 /* ---------- 伴侶親密互動 ---------- */
 const INTIMACY_CD=10000;
@@ -807,9 +870,9 @@ function buildOfficeNpcs(){
     officeNpcs['partner']={ x:5,y:11, tx:5,ty:11, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
       zone:PARTNER_ZONE, img:npcImg('partner_'+S.partner.id+'.png'), fallback:(MERCHANTS[S.partner.id]||{}).e||'🙂' };
   }
-  if(S.child && S.child.stage>=1){   // 嬰兒(stage 0)不動
+  if(S.child && S.child.stage>=1){   // 嬰兒(stage 0)不動，固定在搖籃
     officeNpcs['crib']={ x:14,y:11, tx:14,ty:11, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
-      zone:CHILD_ZONE, img:npcImg('child.png'), fallback:CHILD_STAGES[S.child.stage].e };
+      zone:CHILD_ZONE, img:npcImg('child_'+CHILD_STAGES[S.child.stage].key+'.png'), fallback:CHILD_STAGES[S.child.stage].e };
   }
 }
 function pickNpcTarget(n){
@@ -954,6 +1017,15 @@ function unfreezeNpcs(){
 }
 let intimCG=null;
 function showIntimCG(src,tx,ty,ms){ intimCG={ img:npcImg(src), x:tx, y:ty, until:Date.now()+(ms||2000) }; }
+function wipeSave(){
+  if(!confirm('確定要刪除存檔嗎？此動作無法復原。')) return;
+  try{
+    const ks=[];
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.indexOf('happy_farm_')===0) ks.push(k); }
+    ks.forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+  location.reload();
+}
 /* ---------- maps ---------- */
 const MAPS={
   farm:[
@@ -1045,18 +1117,18 @@ for(const k in MAPS){ GRID[k]=MAPS[k].map(r=>r.padEnd(MAPS[k][0].length,r[0]).sp
 /* ---------- scene definitions (objects + spawn + camera mode) ---------- */
 const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:14,y:16}, objects:[
-    {id:'npc',x:10,y:16,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
+    {id:'npc',x:5,y:14,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
       lines:['今天天氣不錯，適合下田。','作物記得澆水，會長得好。']},
+        {id:'staff',x:3,y:14,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
+      lines:['老闆，要我顧農場嗎？','田裡的活交給我！']},
   ]},
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
    
-    {id:'era',x:7,y:13,e:'📅',nm:'時代進程',kind:'eraBoard'},
-    {id:'crib',x:11,y:13,e:'👶',nm:'搖籃／孩子',kind:'child'},
-    {id:'wardrobe',x:3,y:11,e:'🧥',nm:'衣櫃',kind:'wardrobe'},
-    {id:'cat',x:13,y:12,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
+    {id:'era',x:2,y:9,e:'📅',nm:'時代進程',kind:'eraBoard'},
+    {id:'crib',x:22,y:8,e:'',nm:'阿爾弗雷德',kind:'child'},
+    {id:'wardrobe',x:13,y:6,e:'🧥',nm:'衣櫃',kind:'wardrobe'},
+    {id:'cat',x:9,y:9,e:'🐱',nm:'貓',kind:'npc',npc:true,avatar:'🐱',
       lines:['喵～（在曬太陽）','今天也辛苦了喵。','摸摸我（並不會回血）。']},
-    {id:'staff',x:5,y:5,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
-      lines:['老闆，要我顧農場嗎？','田裡的活交給我！']},
   ]},
   cafe:{title:'咖啡廳（前台）', big:false, spawn:{x:9,y:12}, objects:[
     {id:'counter',x:9,y:3,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew'},
@@ -1246,6 +1318,7 @@ function tick(){
   }
 if(S.child && !S.child.crying && now-S.child.lastCare>CHILD_CRY_MS) S.child.crying=true;
   if(isPartnerWorking() && S.partner.job==='bake'){ const PB=20000; while(now-(S.partner.lastBake||now)>=PB){ S.partner.lastBake=(S.partner.lastBake||now)+PB; if(RECIPES[S.curRecipe]) S.cafe.goods[S.curRecipe]=(S.cafe.goods[S.curRecipe]||0)+5; } }
+  if(isPartnerWorking() && S.partner.job==='rich'){ const RB=30000; while(now-(S.partner.lastBake||now)>=RB){ S.partner.lastBake=(S.partner.lastBake||now)+RB; earn(40,'伴侶的零用金'); } }
   runCafe(now);
   S.lastTick=now;
 }
@@ -1338,15 +1411,18 @@ function interact(ev){
   if(sitting){ openLedger(); return; }
   if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
   if(!sleeping && curScene===BED.scene && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2 && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2){ askSleep(); return; }
- if(curScene==='farm'){ ctx.globalAlpha=1; ctx.textAlign='center';ctx.textBaseline='middle';
-    const _si=npcImg('snake.png'), _dc={down:0,left:1,right:2,up:3};
-    for(const m of monsters){ const mx=m.x*TS+TS/2-ox, my=m.y*TS+TS/2-oy;
-      if(_si&&_si.complete&&_si.naturalWidth){ const cols=Math.max(1,Math.round(_si.naturalWidth/64)), rows=Math.max(1,Math.round(_si.naturalHeight/64));
-        ctx.drawImage(_si, Math.min(_dc[m.facing]||0,cols-1)*64, Math.min(m.frame||0,rows-1)*64, 64,64, mx-32,my-64+14,64,64); }
-      else { ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.fillText('🐍', mx, my); } }
-    ctx.fillStyle='#000'; ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
-  const o=facingObject();
-  if(!o){toast('面前沒有可互動的東西');return;}
+ const o=facingObject();
+  if(!o){
+    if(curScene==='farm'){
+      const fx=Math.round(player.x)+DIR[player.facing].x, fy=Math.round(player.y)+DIR[player.facing].y;
+      const front=cellKeyAt(fx,fy), here=farmTileHere();
+      const onTile=(front&&S.crops[front])?front:(here&&!S.crops[here])?here:(front||null);
+      if(onTile){ openTileFarm(onTile); return; }
+      const zone=farmZoneAt(player.x,player.y);
+      if(zone && zone.kind!=='plot'){ openAnimals(zone.kind); return; }
+    }
+    toast('面前沒有可互動的東西'); return;
+  }
   switch(o.kind){
     case 'npc': if(o.lines){dlgIdx=(dlgIdx+1)%o.lines.length;showDlg(o);} return;
     case 'farm': return openFarm(o.plotIdx);
@@ -1741,8 +1817,13 @@ const SCENE_FG = {};                       // 前景圖（畫在人物上面）
 function loadFg(scene, src){ const img=new Image(); img.src=src; SCENE_FG[scene]=img; }
 loadFg('office', 'office_desk.png');       // 整張透明、只有桌子的那張
 loadBg('office', 'office.png');               // 辦公室用你的圖
+
+loadBg('office_grown', 'office_grown.png');   // 孩子長成幼兒後的辦公室
+loadBg('office_18', 'office_18.png');         // 18 世紀辦公室（沒放就退回 office.png）
+loadBg('cafe_17', 'cafe_17.png');             // 17 世紀café（不放的話 17 世紀是色塊）
 loadBg('cafe_18', 'cafe_18.png');
 loadBg('farm', 'farm.png');
+loadBg('farm_18', 'farm_18.png');             // 18 世紀農牧地（沒放就退回 farm.png）
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
 const SIT_IMG = new Image();
@@ -1754,7 +1835,9 @@ function draw(){
   const big=sceneDef().big;const ox=Math.round(cam.x*TS),oy=Math.round(cam.y*TS);
   const sx=big?Math.floor(cam.x)-1:0, ex=big?Math.floor(cam.x)+VIEW_COLS+1:mapCols();
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
-  const bg = SCENE_BG[curScene+'_'+S.era] || SCENE_BG[curScene];
+  let _bgScene=curScene;
+  if(curScene==='office' && ((S.child && S.child.stage>=1) || S.childLeftHome)) _bgScene='office_grown';
+  const bg = SCENE_BG[_bgScene+'_'+S.era] || SCENE_BG[_bgScene] || SCENE_BG[curScene+'_'+S.era] || SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
     // 這個場景有底圖且載入好了 → 鋪滿整個舞台
     ctx.drawImage(bg, -ox, -oy, bg.naturalWidth, bg.naturalHeight);
@@ -1789,6 +1872,14 @@ function draw(){
     if(o.kind==='animals'){const n=S.animals[o.atype].length;if(n===0)icon='⬜';}
 if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':t>=BAKE_MS?'✅':'🔥';}
     if(o.kind==='child'&&S.child){ icon=S.child.crying?'😢':CHILD_STAGES[S.child.stage].e; }
+    if(o.kind==='child' && S.child && S.child.stage===0){
+      const bi=npcImg('child_baby.png');
+      if(bi&&bi.complete&&bi.naturalWidth){
+        const rows=Math.max(1,Math.round(bi.naturalHeight/64)), ry=Math.min(S.child.crying?1:0,rows-1);
+        ctx.globalAlpha=1; ctx.drawImage(bi, 0, ry*64, 64,64, o.x*TS-ox+TS/2-32, o.y*TS-oy+TS/2-64+14, 64,64);
+        continue;
+      }
+    }
     if(curScene!=='farm'){ctx.fillStyle=cssVar('--counter');ctx.fillRect(o.x*TS-ox+1,o.y*TS-oy+1,TS-2,TS-2);}
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
   }
@@ -1803,9 +1894,13 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
       if(!c.watered && c.stage<def.stages.length-1){ ctx.font='12px serif'; ctx.fillText('💧',(tx+CELL/2)*TS-ox,(ty)*TS-oy); }
     }
   }
-  if(curScene==='farm'){ ctx.font='18px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    for(const m of monsters){ ctx.fillText('🐍', m.x*TS+TS/2-ox, m.y*TS+TS/2-oy); }
-    ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
+  if(curScene==='farm'){ ctx.globalAlpha=1; ctx.textAlign='center';ctx.textBaseline='middle';
+    const _si=npcImg('snake.png'), _dc={down:0,left:1,right:2,up:3};
+    for(const m of monsters){ const mx=m.x*TS+TS/2-ox, my=m.y*TS+TS/2-oy;
+      if(_si&&_si.complete&&_si.naturalWidth){ const cols=Math.max(1,Math.round(_si.naturalWidth/64)), rows=Math.max(1,Math.round(_si.naturalHeight/64));
+        ctx.drawImage(_si, Math.min(_dc[m.facing]||0,cols-1)*64, Math.min(m.frame||0,rows-1)*64, 64,64, mx-32,my-64+14,64,64); }
+      else { ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.fillText('🐍', mx, my); } }
+    ctx.fillStyle='#000'; ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
   const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
@@ -1851,11 +1946,7 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
     ctx.drawImage(fg, -ox, -oy, mapCols()*TS, mapRows()*TS);
   }
 
-  // === 坐姿圖：畫在最上面，連桌子都蓋過去 ===
-  if (sitting && SIT_IMG.complete && SIT_IMG.naturalWidth) {
-    ctx.drawImage(SIT_IMG, -ox, -oy, mapCols()*TS, mapRows()*TS);
-  }
-  
+
 // === 坐姿圖：畫在最上面，連桌子都蓋過去 ===
   if (sitting && SIT_IMG.complete && SIT_IMG.naturalWidth) {
     ctx.drawImage(SIT_IMG, -ox, -oy, mapCols()*TS, mapRows()*TS);
@@ -1907,6 +1998,7 @@ function startGame(n){
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
   if(!S.crops)S.crops={};if(!S.era)S.era=17;if(!S.port)S.port={merchants:[],relations:{},lastTs:0};if(!S.maxHp)S.maxHp=20;if(S.hp===undefined)S.hp=S.maxHp;if(S.toxins===undefined)S.toxins=0;if(!S.cookBy)S.cookBy='self';
   if(!S.wardrobe)S.wardrobe={owned:['default'],wearing:'default'};
+  if(!S.child && !S.childLeftHome) S.child={ name:'阿爾弗雷德·F·瓊斯', stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
   applySkin(S.wardrobe.wearing);
   if(S.partner && S.partner.intimacy===undefined){ S.partner.intimacy=0; S.partner.lastIntim=0; }
   if(!S.era)S.era=17;
