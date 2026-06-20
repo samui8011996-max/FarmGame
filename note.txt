@@ -1,0 +1,27 @@
+// 資源
+S.cash=99999; S.toxins=99; save();
+
+// 跳時代
+S.era=18; save();   // 港口開、伴侶系統
+S.era=19; save();   // 文森、維多利亞裝
+
+// 小孩
+S.child={stage:1,affinity:0,lastCare:Date.now(),crying:false,bornTs:Date.now()}; save();   // 直接給幼兒
+S.childLeftHome=true; S.child=null; save();   // 直接標記已離家（解 19 世紀門檻）
+
+// 伴侶（Francis）
+S.partner={id:'Francis',job:'cafe',working:false,lastBake:Date.now(),intimacy:0,lastIntim:0}; save();
+S.port.relations.Francis={aff:20,met:true,lastChat:0}; save();   // 港口好感衝滿
+
+// 分手測試：壓低親密度再去聊天選冷淡
+S.partner.intimacy=-9; save();
+
+// 強制文森出現在港口
+S.era=19; S.port.merchants=['vincent']; S.port.lastTs=Date.now(); S.port.relations.vincent={aff:20,met:true,lastChat:0}; save(); goScene('port');
+
+// 看目前狀態
+console.log('era',S.era,'partner',S.partner,'child',S.child,'left',S.childLeftHome,'cash',S.cash,'toxins',S.toxins);
+
+// 除錯顯示框
+DEBUG_SENSE=true;      // 互動感應範圍
+DEBUG_CROPCELL=true;   // 農田格座標

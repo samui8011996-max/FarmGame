@@ -192,7 +192,7 @@
 
 <div class="mask" id="mask"><div class="sheet" id="sheet"></div></div>
 <div id="toast"></div>
-
+<script src="dialogue.js"></script>
 <script>
 /* =========================================================
    快樂農場 — 整合版（走動 + 經營）
@@ -394,42 +394,76 @@ const CHILD_STAGES=[
   {key:'teen',   nm:'少年', e:'🧑‍🎓', need:'陪伴'},
 ];
 const CHILD_CRY_MS=45000, CHILD_CARE_CD=12000, CHILD_CARE_GAIN=2;
-/* 阿爾弗雷德的對話：依「成長階段 × 世紀」不同語氣。沒寫到的世紀會退回 any 或 17。 */
-const CHILD_LINES={
-  baby:{ any:['（咿咿呀呀地朝你笑）','（緊緊抓著你的手指不放）','啊…嗚…（口水流了一臉）'] },
-  toddler:{
-    17:['亞瑟，抱抱！','泥土土…髒髒！','小雞…在那邊跑！'],
-    18:['亞瑟，我要吃甜點！','今天客人好多喔～','我也要穿漂漂的衣服！'],
-    19:['亞瑟！那個會冒煙耶！','好多馬車跑來跑去～','咚咚咚…好大聲！'],
-  },
-  child:{
-    17:['今天田裡的草莓紅了耶！','我可以幫忙餵雞嗎？','海的味道鹹鹹的，我喜歡。'],
-    18:['客人說我們家的塔最好吃！','長大以後，我也要顧店！','今天港口來了好多船呢。'],
-    19:['我在書上看到會跑的鐵馬！','城裡的燈，晚上也不會熄耶。','機器好厲害…它都不會累嗎？'],
-  },
-  teen:{
-    17:['謝謝你把我養大。','這片土地，是我們一起耕出來的。','我想，我已經能獨當一面了。'],
-    18:['總有一天，我想開一間自己的店。','你教我的事，我都記得。','別把我當小孩了，我能照顧好自己。'],
-    19:['海的另一邊，會是什麼樣子呢？','世界變得好快…我想出去看看。','接下來，換我來照顧你了。'],
-  },
-};
+
 function childLines(){
   const c=S.child; if(!c) return ['……'];
-  const byStage=CHILD_LINES[CHILD_STAGES[c.stage].key]||{};
   return byStage[S.era] || byStage.any || byStage[17] || ['……'];
 }
+
+let _childChoices=[];
+function childSay(text, choices){
+  const c=S.child; if(!c) return;
+  const st=CHILD_STAGES[c.stage];
+  _childChoices=choices||[];
+  const btns=_childChoices.map((ch,i)=>`<button class="btn ${ch.cls||''}" style="width:100%;margin-bottom:6px" onclick="childChoice(${i})">${ch.t}</button>`).join('');
+  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div style="text-align:center;margin:2px 0 10px;font-size:56px">${st.e}</div>
+    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${text}</div>${btns}`);
+}
+function childChoice(i){ const ch=_childChoices[i]; if(ch&&ch.run) ch.run(); }
 function talkChild(){
   const c=S.child; if(!c) return;
   freezeNpcById('crib');
-  const st=CHILD_STAGES[c.stage], pool=childLines();
-  const line=pool[Math.floor(Math.random()*pool.length)];
-  openSheet(`<div class="sheethead"><h3>${st.e} ${c.name}</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div style="text-align:center;margin:2px 0 10px;font-size:56px">${st.e}</div>
-    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${line}</div>
-    <div style="display:flex;gap:8px">
-      <button class="btn ghost" style="flex:1" onclick="talkChild()">再聊聊</button>
-      <button class="btn green" style="flex:1" onclick="openChild()">返回</button></div>`);
+  const pool=CHILD_TOPICS[CHILD_STAGES[c.stage].key]||[];
+  if(!pool.length){ childSay('……',[{t:'返回', cls:'green', run:()=>openChild()}]); return; }
+  const topic=pool[Math.floor(Math.random()*pool.length)];
+  const choices=topic.a.map(opt=>({ t:opt.t, run:()=>{
+    const cap=childAffCap(), before=c.affinity;
+    c.affinity=Math.min(cap, c.affinity+(opt.g||0));
+    const gained=c.affinity-before;
+    growChild(); if(curScene==='office') buildOfficeNpcs(); save();
+    if(!S.child) return;
+    const tag = (opt.g>0) ? (gained>0?`（好感 +${gained}）`:'（這個時代好感已封頂）') : '';
+    childSay(`${opt.r}${tag}`, [
+      {t:'再聊聊', run:()=>talkChild()},
+      {t:'結束', cls:'green', run:()=>openChild()} ]);
+  }}));
+  childSay(topic.q, choices);
 }
+/* ---------- 腳本式對話：多句、頭像會換、最後才選擇 ---------- */
+let _convoCid=null, _dlgBtns=[];
+function dlgBtn(i){ const b=_dlgBtns[i]; if(b&&b.run) b.run(); }
+function speakerFace(ln){
+  if(ln.who==='me'){ const m={neutral:'🙂',happy:'😊',warm:'🥰',think:'🤔',soft:'😌',sad:'😟',laugh:'😄'}; return m[ln.mood]||'🙂'; }
+  if(ln.who==='child'){ return S.child?CHILD_STAGES[S.child.stage].e:'🧒'; }
+  return charFace(_convoCid, ln.mood);
+}
+function speakerName(ln){
+  if(ln.who==='me') return '我';
+  if(ln.who==='child') return (S.child&&S.child.name)||'孩子';
+  return charName(_convoCid);
+}
+function dlgLine(ln, buttons){
+  const face=speakerFace(ln);
+  const faceHtml = /\.(png|jpe?g|gif|webp)$/i.test(face)
+    ? `<img src="${face}" style="width:96px;height:96px;object-fit:contain;image-rendering:pixelated">`
+    : `<span style="font-size:56px">${face}</span>`;
+  _dlgBtns=buttons;
+  const btns=buttons.map((b,i)=>`<button class="btn ${b.cls||''}" style="width:100%;margin-bottom:6px" onclick="dlgBtn(${i})">${b.t}</button>`).join('');
+  openSheet(`<div class="sheethead"><h3>${speakerName(ln)}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div style="text-align:center;margin:2px 0 10px">${faceHtml}</div>
+    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${ln.t}</div>${btns}`);
+}
+function runScript(lines, endButtons){
+  let i=0;
+  const step=()=>{ const ln=lines[i];
+    if(i<lines.length-1) dlgLine(ln, [ {t:'▶ 繼續', run:()=>{ i++; step(); }} ]);
+    else dlgLine(ln, endButtons);
+  };
+  if(lines && lines.length) step();
+}
+
+
 function openChild(){
   if(!S.child){
     if(S.childLeftHome){
@@ -462,25 +496,29 @@ function childReward(){
 }
 function careChild(){
   const c=S.child; if(!c) return openChild();
-  const now=Date.now(), st=CHILD_STAGES[c.stage];
+  const now=Date.now(), st=CHILD_STAGES[c.stage], cap=childAffCap();
+  if(!c.crying && c.affinity>=cap && c.stage>=childCap()){
+    toast('這個時代他已經長到極限了，推進世紀才能繼續成長'); return;
+  }
   if(c.crying){
-    c.crying=false; c.lastCare=now; c.affinity+=CHILD_CARE_GAIN;
+    c.crying=false; c.lastCare=now; c.affinity=Math.min(cap, c.affinity+CHILD_CARE_GAIN);
     const item=childReward();
     toast(`${st.e} 哄好了，好感 +${CHILD_CARE_GAIN}${item?'，獲得'+item:''}`);
   }else if(now-c.lastCare>=CHILD_CARE_CD){
-    c.lastCare=now; c.affinity+=1;
+    c.lastCare=now; c.affinity=Math.min(cap, c.affinity+1);
     const item=childReward();
     toast(`${st.e} 玩得很開心，好感 +1${item?'，獲得'+item:''}`);
   }else{ toast('孩子正在玩，待會再來'); return; }
   growChild(); if(curScene==='office') buildOfficeNpcs(); save();
   if(S.child) openChild();
 }
-const CHILD_GROW_AFF=[10,20,30,40];          // 升上去所需好感：嬰兒→幼兒→兒童→少年→離家
+const CHILD_GROW_AFF=[10,45,70,100];         // 升上去所需好感：嬰兒→幼兒→兒童→少年→離家
 function childCap(){ return S.era>=18 ? 3 : 1; }  // 17 世紀最多到幼兒(1)；18 世紀起可到少年(3)
+function childAffCap(){ return S.era>=18 ? 999 : 40; }  // 17 世紀好感封頂 40；進 18 世紀才放開繼續長大
 function growChild(){
   const c=S.child; if(!c) return;
   const cap=childCap();
-  while(c.stage<cap && c.affinity>=CHILD_GROW_AFF[c.stage]){
+  if(c.stage<cap && c.affinity>=CHILD_GROW_AFF[c.stage]){   // 一次只升一階，保證會經過兒童
     c.stage++; c.crying=false; c.lastCare=Date.now();
     toast(`🎉 ${c.name||'孩子'}長大成${CHILD_STAGES[c.stage].nm}了！`);
   }
@@ -615,7 +653,7 @@ function cohabit(id){
   if(!familyReady()){toast('要先養育過孩子（養到幼兒以上）');return;}
   if(S.partner){toast('你已經有伴侶了');return;}
   const m=MERCHANTS[id];
-  S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0};
+  S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0, wardrobe:{owned:['default'],wearing:'default'}};
   S.port.merchants=S.port.merchants.filter(x=>x!==id); buildPortObjects();
   addLog(`💞 和 ${m.nm} 開始同居`);
   closeSheet(); toast(`💞 ${m.nm} 搬進來一起住了`); save(); goScene('office');
@@ -636,7 +674,8 @@ function openPartner(){
       <button class="btn green sm" style="flex:1" onclick="intimate('hug')">🤗 抱抱</button>
     </div>
     <button class="btn gold" style="width:100%;margin-bottom:12px${inOffice?'':';opacity:.45'}" onclick="intimate('spicy')">🔥 做點可疑的事${inOffice?'':'（限辦公室）'}</button>
-    <button class="btn ${p.working?'ghost':'green'}" style="width:100%" onclick="togglePartnerWork()">${p.working?'上班中・讓他休息':'讓他到甜點店上班'}</button>`);
+    <button class="btn ${p.working?'ghost':'green'}" style="width:100%;margin-bottom:8px" onclick="togglePartnerWork()">${p.working?'上班中・讓他休息':'讓他到甜點店上班'}</button>
+    <button class="btn ghost" style="width:100%" onclick="openPartnerWardrobe()">👗 換裝</button>`);   
 }
 function togglePartnerWork(){ S.partner.working=!S.partner.working; if(S.partner.working)S.partner.lastBake=Date.now(); toast(S.partner.working?'開始上班':'休息中'); openPartner(); save(); }
 function syncPartnerObject(){
@@ -655,7 +694,50 @@ const SKINS={
 function applySkin(id){ const s=SKINS[id]||SKINS.default; PLAYER_IMG.src=s.walk; SIT_IMG.src=s.sit||'sit.png'; SLEEP_IMG.src=s.sleep||'sleep.png'; }
 function applyCookSkin(){
   if(curScene==='kitchen' && S.cookBy==='partner' && S.partner) PLAYER_IMG.src='partner_'+S.partner.id+'.png';
+  if(curScene==='kitchen' && S.cookBy==='partner' && S.partner) PLAYER_IMG.src=partnerSpriteSrc();
   else applySkin(S.wardrobe.wearing);
+}
+/* ---------- 伴侶衣櫃 ---------- */
+const PARTNER_SKINS={
+  default:  { nm:'預設',       price:0 },
+  rococo:   { nm:'洛可可裝',   price:80,  era:18 },
+  victoria: { nm:'維多利亞裝', price:200, era:19 },
+};
+function partnerSpriteSrc(){
+  if(!S.partner) return 'player.png';
+  const id=S.partner.id, w=(S.partner.wardrobe&&S.partner.wardrobe.wearing)||'default';
+  return 'partner_'+id+(w!=='default'?'_'+w:'')+'.png';
+}
+function openPartnerWardrobe(){
+  if(!S.partner){ toast('還沒有伴侶'); return; }
+  freezeNpcById('partner');
+  const w=S.partner.wardrobe, nm=(MERCHANTS[S.partner.id]||{}).nm||'伴侶';
+  let body='';
+  for(const id in PARTNER_SKINS){ const s=PARTNER_SKINS[id];
+    const owned=w.owned.includes(id), wearing=w.wearing===id, locked=s.era&&S.era<s.era;
+    let btn;
+    if(wearing) btn=`<button class="btn sm green dis">穿著中</button>`;
+    else if(owned) btn=`<button class="btn sm" onclick="wearPartnerSkin('${id}')">穿上</button>`;
+    else if(locked) btn=`<button class="btn sm dis">${s.era}世紀解鎖</button>`;
+    else btn=`<button class="btn sm gold" onclick="buyPartnerSkin('${id}')">購買 $${s.price}</button>`;
+    body+=`<div class="row"><div class="e">🧥</div><div class="info"><div class="n">${s.nm}</div><div class="d">${owned?'已擁有':locked?'尚未解鎖':'$'+s.price}</div></div>${btn}</div>`;
+  }
+  openSheet(`<div class="sheethead"><h3>👗 ${nm} 的衣櫃</h3><button class="close" onclick="openPartner()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">幫伴侶換上喜歡的造型。</div>${body}`);
+}
+function buyPartnerSkin(id){
+  const s=PARTNER_SKINS[id]; if(!s||!S.partner) return;
+  if(s.era&&S.era<s.era){ toast('時代還沒到'); return; }
+  if(S.cash<s.price){ toast('現金不足'); return; }
+  spend(s.price,`伴侶造型：${s.nm}`); S.partner.wardrobe.owned.push(id);
+  toast(`買了 ${s.nm}`); openPartnerWardrobe(); save();
+}
+function wearPartnerSkin(id){
+  if(!S.partner || !S.partner.wardrobe.owned.includes(id)) return;
+  S.partner.wardrobe.wearing=id;
+  if(officeNpcs['partner']) officeNpcs['partner'].img=npcImg(partnerSpriteSrc());  // 不重建、不會傳送回原點
+  applyCookSkin();
+  toast(`換上 ${PARTNER_SKINS[id].nm}`); openPartnerWardrobe(); save();
 }
 function openWardrobe(){
   let body='';
@@ -671,6 +753,7 @@ function openWardrobe(){
   openSheet(`<div class="sheethead"><h3>🧥 衣櫃</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:8px">換上喜歡的造型。</div>${body}`);
 }
+
 function buySkin(id){ const s=SKINS[id]; if(s.era&&S.era<s.era){toast('時代還沒到');return;} if(S.cash<s.price){toast('現金不足');return;} spend(s.price,`購買造型：${s.nm}`); S.wardrobe.owned.push(id); toast(`買了 ${s.nm}`); openWardrobe(); save(); }
 function wearSkin(id){ if(!S.wardrobe.owned.includes(id))return; S.wardrobe.wearing=id; applySkin(id); toast(`換上 ${SKINS[id].nm}`); openWardrobe(); save(); }
 /* ---------- HP／戰鬥基礎 ---------- */
@@ -694,7 +777,7 @@ function setCookBy(who){
 /* ---------- 怪物（蛇） ---------- */
 let monsters=[];
 let lastSpawn=Date.now();
-const MONSTER_CAP=3, SNAKE_SPEED=0.07, AGGRO=5, BITE_RANGE=0.7, BITE_CD=1200, SNAKE_DMG=2, SPAWN_MS=6000;
+const MONSTER_CAP=2, SNAKE_SPEED=0.07, AGGRO=5, BITE_RANGE=0.7, BITE_CD=1200, SNAKE_DMG=2, SPAWN_MS=12000;
 function randFarmTile(){
   const C=GRID.farm[0].length, R=GRID.farm.length;
   for(let i=0;i<30;i++){
@@ -782,46 +865,24 @@ function showDialogue(charId, mood, text, choices){
     <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${text}</div>${btns}`);
 }
 function dlgChoice(i){ const c=_dlgChoices[i]; if(c&&c.run) c.run(); }
-const CHAT_TOPICS=[
-  { q:'最近過得如何？', a:[
-      {t:'其實我有點想你。', mood:'shy', aff:2},
-      {t:'還過得去啦。',     mood:'neutral', aff:1},
-      {t:'忙到沒空想這些。', mood:'sad', aff:0} ]},
-  { q:'今天的海很美呢，你說是吧？', a:[
-      {t:'有你在更美。',     mood:'love', aff:2},
-      {t:'嗯，是不錯。',     mood:'happy', aff:1},
-      {t:'我比較喜歡陸地。', mood:'neutral', aff:0} ]},
-  { q:'你喜歡我帶來的貨嗎？', a:[
-      {t:'你挑的我都喜歡。', mood:'happy', aff:2},
-      {t:'看情況吧。',       mood:'neutral', aff:0},
-      {t:'其實還好。',       mood:'sad', aff:-1} ]},
-];
-/* ---------- 伴侶聊天（對話）---------- */
-const PARTNER_TOPICS=[
-  { q:'今天想跟我聊什麼呢？', a:[
-      {t:'我只是想看看你。',   mood:'shy',    g:2,  reply:'…突然這樣說，會害羞的。'},
-      {t:'店裡生意還不錯。',   mood:'happy',  g:1,  reply:'有你在，一切都會順利。'},
-      {t:'沒什麼好聊的。',     mood:'sad',    g:-3, reply:'…這樣啊。（看起來有點受傷）'} ]},
-  { q:'你今天看起來不太一樣呢。', a:[
-      {t:'因為我一直在想你啊。', mood:'love',   g:2,  reply:'真拿你沒辦法…我也是。'},
-      {t:'可能是換了衣服吧。',   mood:'neutral',g:1,  reply:'嗯，很適合你。'},
-      {t:'有差嗎？我沒在看你。', mood:'sad',    g:-3, reply:'…我知道了。（沉默了一下）'} ]},
-  { q:'最近我們是不是有點少說話？', a:[
-      {t:'抱歉，我會多陪你。',   mood:'shy',    g:2,  reply:'…嗯，我等你。'},
-      {t:'會嗎？我覺得還好。',   mood:'neutral',g:0,  reply:'…也許吧。'},
-      {t:'忙都忙死了，別煩我。', mood:'sad',    g:-4, reply:'…對不起打擾你了。（轉過身去）'} ]},
-];
+
+
 function chatPartner(){
   const p=S.partner; if(!p) return;
-  const topic=PARTNER_TOPICS[Math.floor(Math.random()*PARTNER_TOPICS.length)];
-  const choices=topic.a.map(opt=>({ t:opt.t, run:()=>{
-    p.intimacy=(p.intimacy||0)+opt.g;
-    if(p.intimacy<=BREAKUP_INTIMACY){ breakupPartner(); return; }
-    save();
-    const tag = opt.g===0 ? '' : `（親密度 ${opt.g>0?'+':''}${opt.g}）`;
-    showDialogue(p.id, opt.mood, `${opt.reply}${tag}`, [ {t:'好', run:()=>openPartner()} ]);
-  }}));
-  showDialogue(p.id, 'neutral', topic.q, choices);
+  freezeNpcById('partner'); _convoCid=p.id;
+  const convo=PARTNER_CONVOS[Math.floor(Math.random()*PARTNER_CONVOS.length)];
+  runScript(convo.lines, convo.choices.map(opt=>({ t:opt.t, run:()=>partnerPick(opt) })));
+}
+function partnerPick(opt){
+  const p=S.partner; if(!p) return;
+  p.intimacy=(p.intimacy||0)+(opt.g||0);
+  if(p.intimacy<=BREAKUP_INTIMACY){ breakupPartner(); return; }
+  save(); _convoCid=p.id;
+  const tag = opt.g===0 ? '' : `（親密度 ${opt.g>0?'+':''}${opt.g}）`;
+  const rep=opt.r||{who:'partner',mood:'happy',t:'嗯。'};
+  dlgLine({who:rep.who,mood:rep.mood,t:rep.t+tag}, [
+    {t:'再聊聊', run:()=>chatPartner()},
+    {t:'結束', cls:'green', run:()=>openPartner()} ]);
 }
 function breakupPartner(){
   const p=S.partner; if(!p) return;
@@ -838,6 +899,8 @@ function breakupPartner(){
 }
 /* ---------- 伴侶親密互動 ---------- */
 const INTIMACY_CD=10000;
+let partnerAfterglow=null;     // {kind, until} 親密後的暫時心情
+const AFTERGLOW_MS=20000;      // 特殊台詞持續多久（毫秒），自己調
 function intimate(kind){
   const p=S.partner; if(!p) return;
   if(kind==='spicy' && curScene!=='office'){ toast('這種事只能在辦公室做啦'); return; }
@@ -853,13 +916,16 @@ function intimate(kind){
   const ty = cfg.bed ? Math.round((BED.y1+BED.y2)/2) : player.y;
   showIntimCG(cfg.img, tx, ty, 2000);
   toast(`💕 親密度 +${cfg.g}`);
+  partnerAfterglow={ kind, until:Date.now()+AFTERGLOW_MS };
+  dlgNpc=null;   // 強制下一幀重新顯示台詞，馬上就會看到特殊台詞
   setTimeout(unfreezeNpcs, 2000);
+  
 }
 /* ---------- 辦公室 NPC（伴侶／小孩 範圍走動） ---------- */
 const NPC_IMG={};
 function npcImg(src){ if(!NPC_IMG[src]){ const i=new Image(); i.src=src; NPC_IMG[src]=i; } return NPC_IMG[src]; }
 const PARTNER_ZONE={x1:2,y1:10,x2:9,y2:13};   // 伴侶活動範圍（辦公室格座標）
-const CHILD_ZONE  ={x1:12,y1:10,x2:17,y2:13}; // 小孩活動範圍
+const CHILD_ZONE  ={x1:26,y1:8,x2:32,y2:11}; // 小孩房活動範圍（29,10 一帶）
 const NPC_SPEED=0.05;
 let officeNpcs={};
 function officeWalkable(x,y){ const ix=Math.floor(x),iy=Math.floor(y),g=GRID.office;
@@ -868,10 +934,10 @@ function buildOfficeNpcs(){
   officeNpcs={};
   if(S.partner){
     officeNpcs['partner']={ x:5,y:11, tx:5,ty:11, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
-      zone:PARTNER_ZONE, img:npcImg('partner_'+S.partner.id+'.png'), fallback:(MERCHANTS[S.partner.id]||{}).e||'🙂' };
+      zone:PARTNER_ZONE, img:npcImg(partnerSpriteSrc()), fallback:(MERCHANTS[S.partner.id]||{}).e||'🙂' };
   }
   if(S.child && S.child.stage>=1){   // 嬰兒(stage 0)不動，固定在搖籃
-    officeNpcs['crib']={ x:14,y:11, tx:14,ty:11, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
+    officeNpcs['crib']={ x:29,y:10, tx:29,ty:10, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
       zone:CHILD_ZONE, img:npcImg('child_'+CHILD_STAGES[S.child.stage].key+'.png'), fallback:CHILD_STAGES[S.child.stage].e };
   }
 }
@@ -1686,7 +1752,10 @@ function openBag(){
 /* ---------- dialogue ---------- */
 function showDlg(o){document.getElementById('dialogue').classList.remove('idle');
   document.getElementById('dlgAvatar').textContent=o.avatar||o.e;
-  const line=o.lines?o.lines[dlgIdx%o.lines.length]:'……';
+  const glow = o.id==='partner' && partnerAfterglow && Date.now()<partnerAfterglow.until && AFTERGLOW_LINES[partnerAfterglow.kind];
+  let line;
+  if(glow){ const pool=AFTERGLOW_LINES[partnerAfterglow.kind]; line=pool[Math.floor(Math.random()*pool.length)]; }
+  else { const pool=o.lines; line=pool?pool[dlgIdx%pool.length]:'……'; }
   document.getElementById('dlgText').innerHTML=`<span class="name">${o.nm}</span>${line}`;}
 function idleDlg(){document.getElementById('dialogue').classList.add('idle');
   document.getElementById('dlgAvatar').textContent='🙂';
@@ -1817,13 +1886,12 @@ const SCENE_FG = {};                       // 前景圖（畫在人物上面）
 function loadFg(scene, src){ const img=new Image(); img.src=src; SCENE_FG[scene]=img; }
 loadFg('office', 'office_desk.png');       // 整張透明、只有桌子的那張
 loadBg('office', 'office.png');               // 辦公室用你的圖
-
 loadBg('office_grown', 'office_grown.png');   // 孩子長成幼兒後的辦公室
 loadBg('office_18', 'office_18.png');         // 18 世紀辦公室（沒放就退回 office.png）
 loadBg('cafe_17', 'cafe_17.png');             // 17 世紀café（不放的話 17 世紀是色塊）
 loadBg('cafe_18', 'cafe_18.png');
 loadBg('farm', 'farm.png');
-loadBg('farm_18', 'farm_18.png');             // 18 世紀農牧地（沒放就退回 farm.png）
+//loadBg('farm_18', 'farm_18.png');             // 18 世紀農牧地（沒放就退回 farm.png）
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
 const SIT_IMG = new Image();
@@ -1911,6 +1979,8 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
           const fh=_im.naturalHeight, fc=Math.max(1,Math.round(_im.naturalWidth/fh)), fi=Math.floor(Date.now()/350)%fc;
           ctx.globalAlpha=1;
           ctx.drawImage(_im, fi*fh,0, fh,fh, intimCG.x*TS+TS/2-ox-32, intimCG.y*TS+TS/2-oy-64+14, 64,64); } }
+      const _fg=SCENE_FG[curScene];                                              // ← 補畫前景，桌子才不會消失
+      if(_fg && _fg.complete && _fg.naturalWidth) ctx.drawImage(_fg, -ox, -oy, mapCols()*TS, mapRows()*TS);
       return;
     } else intimCG=null;
   }
@@ -2001,6 +2071,7 @@ function startGame(n){
   if(!S.child && !S.childLeftHome) S.child={ name:'阿爾弗雷德·F·瓊斯', stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
   applySkin(S.wardrobe.wearing);
   if(S.partner && S.partner.intimacy===undefined){ S.partner.intimacy=0; S.partner.lastIntim=0; }
+  if(S.partner && !S.partner.wardrobe){ S.partner.wardrobe={owned:['default'],wearing:'default'}; }
   if(!S.era)S.era=17;
   if(!S.decor)S.decor=blankDecor();
   else for(const era in DECOR){ S.decor[era]=S.decor[era]||{}; for(const slot in DECOR[era]) if(!(slot in S.decor[era])) S.decor[era][slot]=null; }
@@ -2008,7 +2079,7 @@ function startGame(n){
   else for(const era in DECOR){ S.decor[era]=S.decor[era]||{}; for(const slot in DECOR[era]) if(!(slot in S.decor[era])) S.decor[era][slot]=null; }
   document.getElementById('splash').style.display='none';
   document.getElementById('shell').style.display='flex';
-  goScene('farm');
+  goScene('office');
 }
 document.getElementById('nickInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitNick();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S){tick();refreshTop();save();}});
