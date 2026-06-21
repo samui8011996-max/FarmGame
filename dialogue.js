@@ -231,7 +231,37 @@ const PARTNER_CONVOS=[
       {t:'牽起他的手',g:2,r:{who:'partner',mood:'shy',t:'（回握住你，沒有放開）'}},
       {t:'生意歸生意啦',g:-3,r:{who:'partner',mood:'sad',t:'…嗯，你說得對。（收回了手）'}} ] },
 ];
-
+/* 分手過場：親密度跌到谷底時，搬走前的最後幾句（給 breakupPartner 用）
+   who:'partner' 用 CHARS 表情、who:'me' 用主角表情。沒對應 id 就吃 _default。 */
+const BREAKUP_CONVOS={
+  Francis:[
+    {who:'partner',mood:'sad',t:'…我們之間，好像有什麼東西慢慢涼掉了，你也感覺到了吧？'},
+    {who:'me',mood:'sad',t:'「……」'},
+    {who:'partner',mood:'sad',t:'我向來能把任何人哄得服服貼貼，唯獨對你，越用力越覺得空。'},
+    {who:'partner',mood:'neutral',t:'與其留下來看彼此勉強，不如讓我優雅地退場吧。'},
+    {who:'partner',mood:'sad',t:'…謝謝你曾經願意讓我住進這個家。再會了。'},
+  ],
+  Pedro:[
+    {who:'partner',mood:'neutral',t:'我這人嘴笨，看不懂的眼色就是看不懂。'},
+    {who:'me',mood:'sad',t:'「……」'},
+    {who:'partner',mood:'sad',t:'可你最近看我的眼神，連我這種跑船的都讀得出來。'},
+    {who:'partner',mood:'neutral',t:'感情這東西勉強不來，硬留著只會兩個人都難看。'},
+    {who:'partner',mood:'sad',t:'…貨我收一收，這就走。你多保重。'},
+  ],
+  Antonio:[
+    {who:'partner',mood:'sad',t:'（臉上的笑，第一次怎麼也撐不起來）'},
+    {who:'me',mood:'sad',t:'「……」'},
+    {who:'partner',mood:'sad',t:'我一直笑著，是想讓你也開心…可你已經笑不出來了，對吧。'},
+    {who:'partner',mood:'neutral',t:'再這樣下去，連我都要認不出那個快樂的自己了。'},
+    {who:'partner',mood:'sad',t:'…我先走囉。這個家，謝謝你讓我快樂過一陣子。'},
+  ],
+  _default:[
+    {who:'partner',mood:'sad',t:'…我們之間，是不是走到頭了？'},
+    {who:'me',mood:'sad',t:'「……」'},
+    {who:'partner',mood:'neutral',t:'與其互相消耗，不如就到這裡吧。'},
+    {who:'partner',mood:'sad',t:'…再見了，多保重。'},
+  ],
+};
 /* 商人聊天主題（給 chatMerchant 用） */
 const CHAT_TOPICS=[
   { q:'最近過得如何？', a:[
@@ -302,3 +332,42 @@ const CHILD_PARTNER_LINES={
 const CHILD_GONE_LINES=[
   '（搖籃空空的，阿爾弗雷德已經長大離家了）',
 ];
+/* 伴侶路過台詞（給 partnerWalkLines / showDlg 用）
+   base：平時隨機浮現；jealous：家裡有阿爾弗雷德、且到幼兒以上才會摻入。 */
+const PARTNER_WALK_LINES={
+  Francis:{
+    base:['今天店裡也很熱鬧呢。','和你在一起的時光，總是過得特別快。','需要我幫忙的話，儘管開口。'],
+    jealous:[
+      '那孩子…又躲開我了。我的笑容有那麼可怕嗎？',
+      '阿爾弗雷德好像不太喜歡我，是我哪裡做得不夠好嗎…',
+      '我特地做的點心，他一口也沒碰…唉，得再想想辦法。',
+      '我不奢求他立刻接受我，慢慢來就好…大概吧。',
+    ],
+  },
+  Pedro:{
+    base:['今天店裡也很熱鬧呢。','在陸地上待久了，居然也習慣了。','有什麼粗活，交給我就行。'],
+    jealous:[
+      '那小子看我的眼神，比海風還冷哪。',
+      '阿爾弗雷德好像把我當外人…也是，我這張臉是不太討喜。',
+      '我不太會哄孩子…他願意正眼看我一次，我就滿足了。',
+      '我跟那孩子，遲早得找個機會好好談談。',
+    ],
+  },
+  Antonio:{
+    base:['今天店裡也很熱鬧呢。','和你在一起，每天都像過節一樣。','想吃什麼跟我說，我做給你。'],
+    jealous:[
+      '我對阿爾弗雷德笑了一整天，他還是不理我…有點受傷呢。',
+      '那孩子是不是不喜歡我呀？我明明很努力想跟他親近的。',
+      '我搬進來以後，他好像更黏你了…我會不會太礙事了。',
+      '沒關係，我會一直笑著，等他願意接受我的那天。',
+    ],
+  },
+  _default:{
+    base:['今天店裡也很熱鬧呢。','和你在一起真好。','需要我幫忙嗎？'],
+    jealous:[
+      '阿爾弗雷德好像不太喜歡我…',
+      '那孩子總是躲著我，我該怎麼辦才好。',
+      '我會慢慢努力，讓他願意接受我的。',
+    ],
+  },
+};
