@@ -111,9 +111,9 @@ const CHILD_CONVOS={
   baby:[
     { lines:[
       {who:'child',mood:'neutral',t:'（在搖籃裡咿咿呀呀，朝你伸出小手）'},
-      {who:'me',mood:'warm',t:'「怎麼啦？是想要爸爸抱抱嗎？」'},
+      {who:'me',mood:'warm',t:'「怎麼啦？是想要亞瑟抱抱嗎？」'},
       {who:'child',mood:'happy',t:'（看到你靠近，手腳開心地揮動）'},
-      {who:'me',mood:'soft',t:'「乖乖～爸爸在這裡呢。」'},
+      {who:'me',mood:'soft',t:'「乖乖～亞瑟在這裡呢。」'},
       {who:'child',mood:'happy',t:'（咯咯地笑，眼睛瞇成一條線）'} ],
       choices:[
         {t:'抱起來輕輕搖',g:2,r:{who:'child',mood:'happy',t:'（在你懷裡滿足地哼哼，慢慢閉上眼）'}},
@@ -123,7 +123,7 @@ const CHILD_CONVOS={
       {who:'child',mood:'sad',t:'唔…嗚…（小聲地皺起眉）'},
       {who:'me',mood:'think',t:'「是不是肚子餓了？還是想睡了呢？」'},
       {who:'child',mood:'sad',t:'（扁著嘴，眼眶有點濕）'},
-      {who:'me',mood:'soft',t:'「別怕別怕，爸爸抱你。」'},
+      {who:'me',mood:'soft',t:'「別怕別怕，亞瑟抱你。」'},
       {who:'child',mood:'neutral',t:'（漸漸不哭了，盯著你看）'} ],
       choices:[
         {t:'輕拍背哄睡',g:2,r:{who:'child',mood:'happy',t:'（靠在你肩上，呼吸慢慢平穩）'}},
@@ -132,17 +132,17 @@ const CHILD_CONVOS={
   ],
   toddler:[
     { lines:[
-      {who:'child',mood:'happy',t:'爸爸！你看你看！我會自己疊積木了！'},
+      {who:'child',mood:'happy',t:'亞瑟！你看你看！我會自己疊積木了！'},
       {who:'me',mood:'happy',t:'「哇，疊得好高！是我們家的小建築師嗎？」'},
       {who:'child',mood:'shy',t:'嘿嘿…還會更高喔！可是剛剛倒了一次。'},
-      {who:'me',mood:'warm',t:'「沒關係，倒了再疊就好，爸爸陪你。」'},
+      {who:'me',mood:'warm',t:'「沒關係，倒了再疊就好，亞瑟陪你。」'},
       {who:'child',mood:'happy',t:'真的嗎？那你要看我疊喔！'} ],
       choices:[
         {t:'坐下來專心看他疊',g:2,r:{who:'child',mood:'happy',t:'（疊好還轉頭看你有沒有在看）'}},
-        {t:'幫他扶最底層',g:2,r:{who:'child',mood:'happy',t:'有爸爸幫忙，這次沒倒耶！'}},
+        {t:'幫他扶最底層',g:2,r:{who:'child',mood:'happy',t:'有亞瑟幫忙，這次沒倒耶！'}},
         {t:'等一下下喔',g:1,r:{who:'child',mood:'sad',t:'…喔。（自己默默疊了起來）'}} ] },
     { lines:[
-      {who:'child',mood:'neutral',t:'爸爸，那個圓圓亮亮的…是什麼呀？'},
+      {who:'child',mood:'neutral',t:'亞瑟，那個圓圓亮亮的…是什麼呀？'},
       {who:'me',mood:'soft',t:'「那是月亮喔，每天晚上都會出來陪我們。」'},
       {who:'child',mood:'happy',t:'月…亮！它會不會掉下來？'},
       {who:'me',mood:'laugh',t:'「不會啦，它住在很高很高的天上呢。」'},
@@ -154,7 +154,7 @@ const CHILD_CONVOS={
   ],
   child:[
     { lines:[
-      {who:'child',mood:'happy',t:'爸爸，今天田裡的草莓紅了好多！'},
+      {who:'child',mood:'happy',t:'亞瑟，今天田裡的草莓紅了好多！'},
       {who:'me',mood:'happy',t:'「是嗎？那今天就靠你當小幫手了。」'},
       {who:'child',mood:'shy',t:'交給我！…可是哪些是熟的，我有點分不出來。'},
       {who:'me',mood:'soft',t:'「紅得均勻、摸起來軟一點的就是。來，我教你。」'},
@@ -164,10 +164,10 @@ const CHILD_CONVOS={
         {t:'再多看幾顆練習',g:2,r:{who:'child',mood:'shy',t:'嗯嗯…我會記住的！'}},
         {t:'差一點，再試試',g:1,r:{who:'child',mood:'neutral',t:'…好，我再仔細看看。'}} ] },
     { lines:[
-      {who:'child',mood:'think',t:'爸爸…海的另一邊，到底有什麼呢？'},
+      {who:'child',mood:'think',t:'亞瑟…海的另一邊，到底有什麼呢？'},
       {who:'me',mood:'soft',t:'「有別的國家、別的人，還有我們沒看過的東西。」'},
       {who:'child',mood:'happy',t:'哇——！那你去過嗎？是什麼樣子？'},
-      {who:'me',mood:'warm',t:'「爸爸也只聽說過。也許哪天，我們一起去看看？」'},
+      {who:'me',mood:'warm',t:'「亞瑟也只聽說過。也許哪天，我們一起去看看？」'},
       {who:'child',mood:'shy',t:'真的可以嗎？那我要開始存錢了！'} ],
       choices:[
         {t:'好，我們約定好了',g:2,r:{who:'child',mood:'happy',t:'打勾勾！不可以反悔喔！'}},
@@ -176,17 +176,17 @@ const CHILD_CONVOS={
   ],
   teen:[
     { lines:[
-      {who:'child',mood:'neutral',t:'爸爸，我最近一直在想一件事。'},
+      {who:'child',mood:'neutral',t:'亞瑟，我最近一直在想一件事。'},
       {who:'me',mood:'think',t:'「怎麼了？難得看你這麼認真。」'},
       {who:'child',mood:'soft',t:'這些年…謝謝你。一個人把我帶大，不容易。'},
-      {who:'me',mood:'warm',t:'「傻孩子，能看著你長大，是爸爸最驕傲的事。」'},
+      {who:'me',mood:'warm',t:'「傻孩子，能看著你長大，是亞瑟最驕傲的事。」'},
       {who:'child',mood:'shy',t:'…那如果有天我說想出去闖闖，你會生氣嗎？'} ],
       choices:[
-        {t:'去吧，爸爸永遠支持你',g:2,r:{who:'child',mood:'happy',t:'…謝謝你。有這句話，我什麼都不怕了。'}},
+        {t:'去吧，亞瑟永遠支持你',g:2,r:{who:'child',mood:'happy',t:'…謝謝你。有這句話，我什麼都不怕了。'}},
         {t:'去多遠都要記得回家',g:2,r:{who:'child',mood:'soft',t:'我會的，這裡永遠是我的根。'}},
         {t:'外面很苦，你確定嗎',g:1,r:{who:'child',mood:'neutral',t:'我確定。我想證明你沒有白養我。'}} ] },
     { lines:[
-      {who:'child',mood:'happy',t:'爸爸，我今天把帳算完了，一塊錢都沒差！'},
+      {who:'child',mood:'happy',t:'亞瑟，我今天把帳算完了，一塊錢都沒差！'},
       {who:'me',mood:'happy',t:'「哦？連我都常算錯，你比我還可靠。」'},
       {who:'child',mood:'shy',t:'嘿…我從小看你做，早記在心裡了。'},
       {who:'me',mood:'warm',t:'「不知不覺，你已經能獨當一面了啊。」'},
