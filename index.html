@@ -1172,9 +1172,9 @@ const MAPS={
    "F................................FFF..F",
    "F.......................FFF......FFF..F",
    "F..................FFFFFFFFFFFFF...F..F",
-   "F..................FFFFFFFFFFFFF...FF.F",
-   "FFFFFFFFFFFFF......FFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFF......FFFFFFFFFFFFFFFFFFFF",
+   "F................FFFFFFFFFFFFFFF...FF.F",
+   "FFFFFFFFFFFFF....FFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFF....FFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
   ],
   cafe:[
@@ -1186,11 +1186,24 @@ const MAPS={
    "B........KK........B","B..................B","BBBBBBBBBBBBBBBBBBBB","BBBBBBBBBBBBBBBBBBBB",
   ],
   kitchen:[
-   "WWWWWWWWWWWWWWWWWWWW","W..................W","W..................W","W..................W",
-   "W..................W","W..................W","W..................W","W..................W",
-   "W..................W","W..................W","W..................W","W..................W",
-   "W..................W","W..................W","W..................W","W..................W",
-   "WWWWWWWWWDDWWWWWWWWW","WWWWWWWWWWWWWWWWWWWW",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "F................FFF",
+   "F................FFF",
+   "F.........FFFFFFFFFF",
+   "F.........FFFFFFFFFF",
+   "F.........FFFFFFFFFF",
+   "F.........FFFFFFFFFF",
+   "F..................F",
+   "F...FFFFFFFFFF.....F",
+   "F...FFFFFFFFFF.....F",
+   "F...FFFFFFFFFF.....F",
+   "FFFFFFFFFFFFFFFFFFFF",
   ],
   shop:[
    "WWWWWWWWWWWWWWWWWWWW","WWWWWWWWWWWWWWWWWWWW","W..................W",
@@ -1223,10 +1236,10 @@ const SCENES={
   ]},
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
    
-    {id:'era',x:2,y:9,e:'📅',nm:'時代進程',kind:'eraBoard'},
-    {id:'crib',x:22,y:8,e:'',nm:'阿爾弗雷德',kind:'child',npc:true,avatar:'🧒'},
-    {id:'wardrobe',x:12,y:6,e:'🧥',nm:'衣櫃',kind:'wardrobe'},
-    {id:'cat',x:37,y:7,e:'🐱',nm:'妖精桑',kind:'npc',npc:true,avatar:'🐱',
+    {id:'era',x:18,y:14,e:'📅',nm:'時代進程',kind:'eraBoard',hide:true},
+    {id:'crib',x:22,y:8,e:'',nm:'阿爾弗雷德',kind:'child',npc:true,avatar:'🧒',hide:true},
+    {id:'wardrobe',x:12,y:6,e:'🧥',nm:'衣櫃',kind:'wardrobe',hide:true},
+    {id:'cat',x:37,y:7,e:'🐱',nm:'妖精桑',kind:'npc',npc:true,avatar:'🐱',hide:true,
       lines:['（在曬太陽）','今天也辛苦了。','摸摸我（並不會回血）。']},
   ]},
   cafe:{title:'咖啡廳（前台）', big:false, spawn:{x:9,y:12}, objects:[
@@ -1236,12 +1249,12 @@ const SCENES={
     {id:'decor',x:15,y:9,e:'🎨',nm:'裝潢店面',kind:'decor'},
     {id:'kdoor',x:9,y:14,e:'🚪',nm:'進廚房',kind:'gotoKitchen'},
   ]},
-  kitchen:{title:'廚房', big:false, spawn:{x:9,y:10}, objects:[
-    {id:'board',x:4,y:4,e:'🔪',nm:'備料台（放食材）',kind:'cut'},
-    {id:'table',x:9,y:4,e:'🫓',nm:'桌子（揉/拌）',kind:'knead'},
-    {id:'oven',x:14,y:4,e:'🔥',nm:'烤箱',kind:'oven'},
-    {id:'recipepick',x:9,y:8,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe'},
-    {id:'cdoor',x:9,y:16,e:'🚪',nm:'回前台',kind:'gotoCafe'},
+  kitchen:{title:'廚房', big:false, spawn:{x:2,y:8}, objects:[
+    {id:'board',x:13,y:9,e:'🔪',nm:'備料台（放食材）',kind:'cut',hide:true},
+    {id:'table',x:18,y:7,e:'🫓',nm:'桌子（揉/拌）',kind:'knead',hide:true},
+    {id:'oven',x:9,y:6,e:'🔥',nm:'烤箱',kind:'oven',hide:true},
+    {id:'recipepick',x:5,y:14,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
+    {id:'cdoor',x:2,y:6,e:'🚪',nm:'回前台',kind:'gotoCafe',hide:true},
   ]},
   shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
     {id:'buy',x:5,y:3,e:'🧺',nm:'採購（買）',kind:'shopBuy'},
@@ -1959,12 +1972,20 @@ loadBg('cafe_17', 'cafe_17.png');             // 17 世紀café（不放的話 1
 loadBg('cafe_18', 'cafe_18.png');
 loadBg('farm', 'farm.png');
 loadBg('farm_18', 'farm_18.png');             // 18 世紀農牧地（沒放就退回 farm.png）
+loadFg('kitchen', 'kitchen_fg.png');       // 廚房前景（只畫要蓋過人物的部分，其餘透明）  
+loadFg('cafe', 'cafe_fg.png'); 
+loadBg('kitchen', 'kitchen.png');             // 廚房底圖
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
 const SIT_IMG = new Image();
 SIT_IMG.src = 'sit.png';   // 坐著的樣子（背面）
 const SLEEP_IMG = new Image();
-SLEEP_IMG.src = 'sleep.png';
+SLEEP_IMG.src = 'sleep.png';   // 睡覺的樣子
+const BAKE_IMG=[new Image(),new Image()];   // 烤東西的地圖動畫（兩楨，輪流畫）
+BAKE_IMG[0].src='bake1.png';
+BAKE_IMG[1].src='bake2.png';
+BAKE_IMG[0].src='bake1.png';
+BAKE_IMG[1].src='bake2.png';
 function draw(){
   ctx.clearRect(0,0,cv.width,cv.height);
   const big=sceneDef().big;const ox=Math.round(cam.x*TS),oy=Math.round(cam.y*TS);
@@ -2023,6 +2044,7 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
         continue;
       }
     }
+    if(o.hide){ continue; }   // 標了 hide:true 的物件不畫圖示／底色（互動仍有效）
     if(curScene!=='farm'){ctx.fillStyle=cssVar('--counter');ctx.fillRect(o.x*TS-ox+1,o.y*TS-oy+1,TS-2,TS-2);}
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
   }
@@ -2046,6 +2068,11 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
     ctx.fillStyle='#000'; ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
+  // === 烤箱運作：兩楨地圖動畫（畫在人物下面）===
+  if (curScene==='kitchen' && prep.inOven){
+    const bf=BAKE_IMG[Math.floor(Date.now()/350)%BAKE_IMG.length];
+    if (bf && bf.complete && bf.naturalWidth) ctx.drawImage(bf, -ox, -oy, mapCols()*TS, mapRows()*TS);
+  }
   const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
   if(intimCG){
     if(Date.now()<intimCG.until){
