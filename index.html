@@ -1200,9 +1200,9 @@ const MAPS={
    "F.........FFFFFFFFFF",
    "F.........FFFFFFFFFF",
    "F..................F",
-   "F...FFFFFFFFFF.....F",
-   "F...FFFFFFFFFF.....F",
-   "F...FFFFFFFFFF.....F",
+   "F.................FF",
+   "FFF.FFFFFFFFFFFFFFFF",
+   "FFF.FFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFF",
   ],
   shop:[
@@ -1253,7 +1253,7 @@ const SCENES={
     {id:'board',x:13,y:9,e:'🔪',nm:'備料台（放食材）',kind:'cut',hide:true},
     {id:'table',x:18,y:7,e:'🫓',nm:'桌子（揉/拌）',kind:'knead',hide:true},
     {id:'oven',x:9,y:6,e:'🔥',nm:'烤箱',kind:'oven',hide:true},
-    {id:'recipepick',x:5,y:14,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
+    {id:'recipepick',x:1,y:15,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
     {id:'cdoor',x:2,y:6,e:'🚪',nm:'回前台',kind:'gotoCafe',hide:true},
   ]},
   shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
@@ -1725,7 +1725,7 @@ function kOven(){ const r=curRecipe();
 }
 /* ---------- 桌上取貨：做好的先擺桌上，走過去碰到才收 ---------- */
 const KITCHEN_TABLE_SLOTS=[   // 第一種在 10,14；每多一「種」往左 2 格(=32px)；最多 5 種
-  {x:10,y:15},{x:8,y:14},{x:6,y:14},{x:4,y:14},{x:2,y:14},
+  {x:10,y:15},{x:8,y:15},{x:6,y:15},{x:4,y:15},{x:2,y:15},
 ];
 const TOXIN_PER_COMPLEXITY=1;   // 毒物量 = 料理複雜度 × 這個倍率，想更毒就調大
 function recipeComplexity(k){
@@ -1748,7 +1748,7 @@ function updateKitchenPickups(){
   if(!S.kitchenPickups || !S.kitchenPickups.length) return;
   for(let i=S.kitchenPickups.length-1;i>=0;i--){
     const p=S.kitchenPickups[i];
-    if(Math.hypot(player.x-p.x, player.y-p.y) <= 1.2){   // 走到旁邊就收（範圍想大調大）
+   if(Math.hypot(player.x-p.x, player.y-p.y) <=2){   // 走到旁邊就收（範圍想大調大）
       if(p.kind==='food'){ S.cafe.goods[p.recipe]=(S.cafe.goods[p.recipe]||0)+p.count; toast(`🍰 收下 ${RECIPES[p.recipe].nm} ×${p.count}`); }
       else { S.toxins=(S.toxins||0)+p.count; toast(`🧪 收下毒物 ×${p.count}`); }
       S.kitchenPickups.splice(i,1); save();
@@ -2115,7 +2115,11 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
       if(_si&&_si.complete&&_si.naturalWidth){ const cols=Math.max(1,Math.round(_si.naturalWidth/64)), rows=Math.max(1,Math.round(_si.naturalHeight/64));
         ctx.drawImage(_si, Math.min(_dc[m.facing]||0,cols-1)*64, Math.min(m.frame||0,rows-1)*64, 64,64, mx-32,my-64+14,64,64); }
       else { ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.fillText('🐍', mx, my); } }
-    ctx.fillStyle='#000'; ctx.font='14px serif'; for(const s of shots){ ctx.fillText('🧪', s.x*TS+TS/2-ox, s.y*TS+TS/2-oy); } }
+    const _ti=npcImg('throw_toxin.png');
+    for(const s of shots){ const sx=s.x*TS+TS/2-ox, sy=s.y*TS+TS/2-oy;
+      if(_ti&&_ti.complete&&_ti.naturalWidth){ ctx.drawImage(_ti, 0,0,_ti.naturalWidth,_ti.naturalHeight, sx-16, sy-16, 32,32); }
+      else { ctx.fillStyle='#000'; ctx.font='14px serif'; ctx.fillText('🧪', sx, sy); } }
+  }
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
   // === 烤箱運作：兩楨地圖動畫（畫在人物下面）===

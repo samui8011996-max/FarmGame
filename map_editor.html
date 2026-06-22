@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>地圖碰撞編輯器</title>
+<style>
+  :root{
+    --paper:#f4ecd9; --paper2:#ece0c4; --ink:#4a3b2a; --ink2:#7a6a52;
+    --line:#d8c8a6; --line2:#c9b58c; --accent:#c97b4a; --accent2:#7a9b5c;
+    --gold:#caa24a; --danger:#c25a4a; --card:#fbf6e9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif;font-size:14px;overscroll-behavior:none}
+  body{display:flex;flex-direction:column;height:100dvh}
+  button,input,select{font-family:inherit;font-size:14px}
+  button{cursor:pointer;border:none}
+
+  header{background:var(--paper2);border-bottom:2px solid var(--line2);padding:7px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  header h1{font-size:15px;margin:0;letter-spacing:1px;color:var(--accent);font-weight:800;white-space:nowrap}
+  header .spacer{flex:1}
+  .file{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-weight:700}
+  .file input{display:none}
+  .fld{display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:3px 7px}
+  .fld label{color:var(--ink2);font-size:12px}
+  .fld input{width:48px;border:none;background:transparent;text-align:center;font-weight:700;color:var(--ink)}
+  select{border:none;background:transparent;font-weight:700;color:var(--ink)}
+  .ic{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 8px;font-weight:800;color:var(--ink2)}
+
+  .stage{flex:1;position:relative;overflow:hidden;background:
+     repeating-conic-gradient(#e7dcc2 0% 25%, #efe6cf 0% 50%) 50% / 24px 24px}
+  #cv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
+  .coord{position:absolute;left:8px;top:8px;background:#3a2c1ccc;color:var(--paper);
+    font-variant-numeric:tabular-nums;padding:4px 9px;border-radius:9px;font-size:12px;pointer-events:none}
+  .zoomctl{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;gap:6px}
+  .zoomctl button{width:40px;height:40px;border-radius:11px;background:#3a2c1ccc;color:var(--paper);font-size:20px;font-weight:800;box-shadow:0 2px 0 #0003}
+
+  .toolbar{background:var(--paper2);border-top:2px solid var(--line2);padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .seg button{padding:8px 12px;font-weight:700;color:var(--ink2);background:transparent;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--accent);color:#fff}
+  .chip{padding:7px 11px;border-radius:10px;background:var(--card);border:2px solid var(--line);font-weight:800;color:var(--ink2)}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:#fff}
+  .chip input{width:30px;border:none;background:transparent;text-align:center;font-weight:800;color:inherit}
+  .btn{background:var(--accent);color:#fff;border-radius:10px;padding:8px 13px;font-weight:800;box-shadow:0 2px 0 #00000018}
+  .btn:active{transform:translateY(1px);box-shadow:none}
+  .btn.green{background:var(--accent2)} .btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line2)}
+  .hint{color:var(--ink2);font-size:12px}
+
+  .mask{position:fixed;inset:0;background:#3a2c1c66;z-index:30;display:none;align-items:center;justify-content:center;padding:14px}
+  .mask.show{display:flex}
+  .sheet{background:var(--paper);width:100%;max-width:560px;max-height:86dvh;overflow:auto;border-radius:16px;padding:16px;box-shadow:0 12px 40px #0004}
+  .sheet h3{margin:0 0 8px;font-size:16px}
+  .sheet .x{float:right;font-size:20px;color:var(--ink2);background:none;border:none}
+  textarea{width:100%;min-height:150px;border:1px solid var(--line2);border-radius:10px;padding:10px;
+    background:var(--card);color:var(--ink);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;resize:vertical}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+  .zlist{margin-top:6px}
+  .zitem{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .zitem .dot{width:12px;height:12px;border-radius:3px}
+  .zitem .del{margin-left:auto;color:var(--danger);background:none;border:none;font-weight:800}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:6px 0}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:3px}
+  .pills{display:flex;gap:6px;flex-wrap:wrap}
+  .pills button{border:1px solid var(--line2);border-radius:14px;padding:4px 10px;background:var(--card);font-weight:700;color:var(--ink2)}
+  .pills button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧱 碰撞編輯器</h1>
+  <span class="fld"><label>場景</label><select id="sceneSel"></select></span>
+  <button class="ic" id="newScene" title="新場景">＋</button>
+  <button class="ic" id="renScene" title="改名">✎</button>
+  <button class="ic" id="delScene" title="刪場景">🗑</button>
+  <label class="file">🖼️ 地圖圖<input type="file" id="imgFile" accept="image/*"></label>
+  <span class="fld"><label>tile</label><input id="ts" type="number" value="16" min="1"></span>
+  <span class="fld"><label>欄</label><input id="cols" type="number" value="20" min="1"></span>
+  <span class="fld"><label>列</label><input id="rows" type="number" value="18" min="1"></span>
+  <span class="spacer"></span>
+  <button class="btn ghost" id="btnImport">匯入</button>
+  <button class="btn" id="btnExport">匯出</button>
+</header>
+
+<div class="stage">
+  <canvas id="cv"></canvas>
+  <div class="coord" id="coord">—</div>
+  <div class="zoomctl">
+    <button id="zin">＋</button><button id="zout">－</button>
+    <button id="zfit" style="font-size:13px">符合</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="seg" id="tools">
+    <button data-tool="paint" class="on">筆刷</button>
+    <button data-tool="rect">矩形</button>
+    <button data-tool="zone">區域框</button>
+    <button data-tool="pan">平移</button>
+  </div>
+  <span class="hint">畫：</span>
+  <button class="chip" data-char="." id="cDot">空地 .</button>
+  <button class="chip on" data-char="F" id="cWall">牆 F</button>
+  <span class="chip" id="cCustom">自訂 <input id="customChar" maxlength="1" value="W"></span>
+  <span class="spacer" style="flex:1"></span>
+  <span class="hint">兩指縮放/平移・自動存檔</span>
+</div>
+
+<div class="mask" id="mImport"><div class="sheet">
+  <button class="x" onclick="hide('mImport')">✕</button>
+  <h3>匯入到目前場景</h3>
+  <div class="hint">貼上現有地圖那幾行（含引號的字串），按「載入地圖」。</div>
+  <textarea id="taMap" placeholder='"FFFF....",&#10;"F......F",'></textarea>
+  <div class="row"><button class="btn green" id="doImportMap">載入地圖</button></div>
+  <div class="hint" style="margin-top:8px">（選用）貼上 FARM_ZONES：</div>
+  <textarea id="taZone" style="min-height:90px" placeholder="{kind:'cow',nm:'牛棚',x1:0,y1:0,x2:19,y2:3},"></textarea>
+  <div class="row"><button class="btn green" id="doImportZone">載入區域</button></div>
+</div></div>
+
+<div class="mask" id="mExport"><div class="sheet">
+  <button class="x" onclick="hide('mExport')">✕</button>
+  <h3>匯出</h3>
+  <div class="legend" id="legend"></div>
+  <div class="pills" style="margin-bottom:6px">
+    <button id="expCur" class="on">只匯出目前場景</button>
+    <button id="expAll">匯出全部場景地圖</button>
+  </div>
+  <div class="row"><b>地圖</b><span class="hint" id="allHint" style="margin-left:6px"></span><button class="btn ghost" id="copyMap" style="margin-left:auto">複製</button></div>
+  <textarea id="outMap" readonly></textarea>
+  <div class="row"><b>FARM_ZONES（目前場景）</b><button class="btn ghost" id="copyZone" style="margin-left:auto">複製</button></div>
+  <textarea id="outZone" readonly style="min-height:90px"></textarea>
+</div></div>
+
+<div class="mask" id="mZone"><div class="sheet" style="max-width:400px">
+  <button class="x" onclick="cancelZone()">✕</button>
+  <h3>新增區域框</h3>
+  <div class="hint" id="zoneRange">—</div>
+  <div class="row"><span class="hint">類型：</span><div class="pills" id="kindPills"></div></div>
+  <div class="row"><span class="fld" style="flex:1"><label>kind</label><input id="zKind" style="flex:1;width:auto;text-align:left" value="plot"></span></div>
+  <div class="row"><span class="fld" style="flex:1"><label>名稱</label><input id="zNm" style="flex:1;width:auto;text-align:left" value="農田"></span></div>
+  <div class="row"><span class="fld"><label>idx（plot才用，選填）</label><input id="zIdx" style="width:60px"></span></div>
+  <div class="row"><button class="btn ghost" onclick="cancelZone()">取消</button><button class="btn green" id="zAdd" style="margin-left:auto">加入</button></div>
+  <div class="zlist" id="zList"></div>
+</div></div>
+
+<script>
+const BLOCK=new Set(['F','W','B','C','T','S']);
+const STORE='mapeditor_v2';
+const ZONE_COLORS={ plot:'#c97b4a', cow:'#a874c9', pig:'#5c86d6', chicken:'#4fb15f', _:'#7a9b5c' };
+const KIND_PRESETS=[['plot','農田'],['cow','牛棚'],['pig','豬圈'],['chicken','雞舍']];
+function zc(kind){return ZONE_COLORS[kind]||ZONE_COLORS._;}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+
+let store=loadStore(); let cur=store.current;
+function loadStore(){try{const s=JSON.parse(localStorage.getItem(STORE));if(s&&s.scenes&&Object.keys(s.scenes).length)return s;}catch(e){}
+  return {current:'office',scenes:{office:blankScene()}};}
+function blankScene(){return {ts:16,cols:20,rows:18,rowsData:Array(18).fill('.'.repeat(20)),zones:[],img:null};}
+function persist(){try{localStorage.setItem(STORE,JSON.stringify(store));}catch(e){toast('存檔失敗（圖太大？）');}}
+
+let TS=16, COLS=20, ROWS=18;
+let grid=makeGrid(20,18), zones=[], img=null, imgData=null;
+let zoom=2, panX=20, panY=20, tool='paint', curChar='F';
+const cv=document.getElementById('cv'); const ctx=cv.getContext('2d');
+
+function makeGrid(c,r){const g=[];for(let y=0;y<r;y++)g.push(new Array(c).fill('.'));return g;}
+function gridFromRows(rd,c,r){const g=makeGrid(c,r);for(let y=0;y<r;y++)for(let x=0;x<c;x++)g[y][x]=(rd[y]&&rd[y][x])||'.';return g;}
+function rowsFromGrid(){return grid.map(row=>row.join(''));}
+function resizeGrid(c,r){const g=makeGrid(c,r);for(let y=0;y<Math.min(r,grid.length);y++)for(let x=0;x<Math.min(c,grid[0].length);x++)g[y][x]=grid[y][x];grid=g;COLS=c;ROWS=r;}
+
+function saveCur(){store.scenes[cur]={ts:TS,cols:COLS,rows:ROWS,rowsData:rowsFromGrid(),zones:JSON.parse(JSON.stringify(zones)),img:imgData};store.current=cur;persist();}
+function applyScene(name){const s=store.scenes[name];if(!s)return;
+  cur=name;TS=s.ts;COLS=s.cols;ROWS=s.rows;grid=gridFromRows(s.rowsData,COLS,ROWS);zones=s.zones||[];imgData=s.img||null;
+  document.getElementById('ts').value=TS;document.getElementById('cols').value=COLS;document.getElementById('rows').value=ROWS;
+  img=null;if(imgData){const im=new Image();im.onload=()=>{img=im;render();};im.src=imgData;}
+  refreshSceneSel();fitView();}
+function refreshSceneSel(){document.getElementById('sceneSel').innerHTML=Object.keys(store.scenes).map(n=>`<option ${n===cur?'selected':''}>${n}</option>`).join('');}
+document.getElementById('sceneSel').onchange=function(){saveCur();applyScene(this.value);};
+document.getElementById('newScene').onclick=()=>{const n=(prompt('新場景名稱（如 cafe / kitchen）：')||'').trim();if(!n)return;
+  if(store.scenes[n]){alert('已存在');return;}saveCur();store.scenes[n]=blankScene();persist();applyScene(n);};
+document.getElementById('renScene').onclick=()=>{const n=(prompt('改成新名稱：',cur)||'').trim();if(!n||n===cur)return;
+  if(store.scenes[n]){alert('已存在');return;}saveCur();store.scenes[n]=store.scenes[cur];delete store.scenes[cur];cur=n;persist();refreshSceneSel();};
+document.getElementById('delScene').onclick=()=>{if(Object.keys(store.scenes).length<=1){alert('至少要留一個場景');return;}
+  if(!confirm(`刪除場景「${cur}」？`))return;delete store.scenes[cur];cur=Object.keys(store.scenes)[0];persist();applyScene(cur);};
+
+function fitCanvas(){const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();
+  cv.width=r.width*dpr;cv.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;}
+function render(){
+  const w=cv.clientWidth,h=cv.clientHeight;ctx.clearRect(0,0,w,h);
+  ctx.save();ctx.translate(panX,panY);ctx.scale(zoom,zoom);
+  const W=COLS*TS,H=ROWS*TS;
+  if(img)ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight);
+  else{ctx.fillStyle='#efe6cf';ctx.fillRect(0,0,W,H);}
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${Math.max(8,TS*0.6)}px monospace`;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const ch=grid[y][x];if(ch==='.')continue;
+    if(BLOCK.has(ch)){ctx.fillStyle='rgba(194,90,74,.45)';ctx.fillRect(x*TS,y*TS,TS,TS);}
+    else{ctx.fillStyle='rgba(74,59,42,.7)';ctx.fillText(ch,x*TS+TS/2,y*TS+TS/2);}}
+  for(const z of zones){const zx=z.x1*TS,zy=z.y1*TS,zw=(z.x2-z.x1+1)*TS,zh=(z.y2-z.y1+1)*TS,col=zc(z.kind);
+    ctx.fillStyle=hexA(col,.28);ctx.fillRect(zx,zy,zw,zh);ctx.strokeStyle=col;ctx.lineWidth=2/zoom;ctx.strokeRect(zx,zy,zw,zh);
+    ctx.fillStyle='rgba(74,59,42,.9)';ctx.fillText(z.nm||z.kind,zx+zw/2,zy+zh/2);}
+  if(drag.active&&(tool==='rect'||tool==='zone')&&drag.cur){const a=norm(drag.start,drag.cur),col=tool==='zone'?zc((document.getElementById('zKind')||{}).value||'plot'):'#c97b4a';
+    ctx.fillStyle=hexA(col,.3);ctx.fillRect(a.x1*TS,a.y1*TS,(a.x2-a.x1+1)*TS,(a.y2-a.y1+1)*TS);
+    ctx.strokeStyle=col;ctx.lineWidth=2/zoom;ctx.strokeRect(a.x1*TS,a.y1*TS,(a.x2-a.x1+1)*TS,(a.y2-a.y1+1)*TS);}
+  ctx.strokeStyle='rgba(74,59,42,.18)';ctx.lineWidth=1/zoom;ctx.beginPath();
+  for(let x=0;x<=COLS;x++){ctx.moveTo(x*TS,0);ctx.lineTo(x*TS,H);}for(let y=0;y<=ROWS;y++){ctx.moveTo(0,y*TS);ctx.lineTo(W,y*TS);}ctx.stroke();
+  ctx.strokeStyle='rgba(74,59,42,.33)';ctx.lineWidth=1.5/zoom;ctx.beginPath();
+  for(let x=0;x<=COLS;x+=5){ctx.moveTo(x*TS,0);ctx.lineTo(x*TS,H);}for(let y=0;y<=ROWS;y+=5){ctx.moveTo(0,y*TS);ctx.lineTo(W,y*TS);}ctx.stroke();
+  ctx.restore();
+}
+function toTile(sx,sy){return {x:Math.floor((sx-panX)/zoom/TS),y:Math.floor((sy-panY)/zoom/TS)};}
+function inBounds(x,y){return x>=0&&y>=0&&x<COLS&&y<ROWS;}
+function norm(a,b){return {x1:Math.min(a.x,b.x),y1:Math.min(a.y,b.y),x2:Math.max(a.x,b.x),y2:Math.max(a.y,b.y)};}
+function rel(e){const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
+
+const pointers=new Map(); let gesture=null;
+const drag={active:false,start:null,cur:null,pan:null};
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){startGesture();drag.active=false;return;}
+  const t=toTile(...rel(e));
+  if(tool==='pan'){drag.active=true;drag.pan={x:e.clientX,y:e.clientY,px:panX,py:panY};return;}
+  drag.active=true;drag.start=t;drag.cur=t;if(tool==='paint')paintCell(t);render();});
+cv.addEventListener('pointermove',e=>{if(pointers.has(e.pointerId))pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2&&gesture){doGesture();render();return;}
+  const [rx,ry]=rel(e);const t=toTile(rx,ry);document.getElementById('coord').textContent=inBounds(t.x,t.y)?`x ${t.x}, y ${t.y}`:'—';
+  if(!drag.active)return;
+  if(tool==='pan'&&drag.pan){panX=drag.pan.px+(e.clientX-drag.pan.x);panY=drag.pan.py+(e.clientY-drag.pan.y);render();return;}
+  drag.cur=t;if(tool==='paint')paintCell(t);render();});
+function endPointer(e){pointers.delete(e.pointerId);if(pointers.size<2)gesture=null;if(!drag.active)return;
+  if((tool==='rect'||tool==='zone')&&drag.start&&drag.cur){const a=norm(drag.start,drag.cur);
+    if(tool==='rect'){fillRect(a,curChar);saveCur();}else openZoneSheet(a);}
+  else if(tool==='paint')saveCur();
+  drag.active=false;drag.start=drag.cur=drag.pan=null;render();}
+cv.addEventListener('pointerup',endPointer);cv.addEventListener('pointercancel',endPointer);
+function startGesture(){const p=[...pointers.values()];gesture={d:dist(p[0],p[1]),mx:(p[0].x+p[1].x)/2,my:(p[0].y+p[1].y)/2,zoom,panX,panY};}
+function doGesture(){const p=[...pointers.values()];if(p.length<2)return;const d=dist(p[0],p[1]);const mx=(p[0].x+p[1].x)/2,my=(p[0].y+p[1].y)/2;
+  const r=cv.getBoundingClientRect();const nz=Math.max(.25,Math.min(12,gesture.zoom*(d/gesture.d)));
+  const ax=gesture.mx-r.left,ay=gesture.my-r.top;const wx=(ax-gesture.panX)/gesture.zoom,wy=(ay-gesture.panY)/gesture.zoom;
+  zoom=nz;panX=(ax-wx*zoom)+(mx-gesture.mx);panY=(ay-wy*zoom)+(my-gesture.my);}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+
+function paintCell(t){if(inBounds(t.x,t.y))grid[t.y][t.x]=curChar;}
+function fillRect(a,ch){for(let y=a.y1;y<=a.y2;y++)for(let x=a.x1;x<=a.x2;x++)if(inBounds(x,y))grid[y][x]=ch;}
+
+let pendingZone=null;
+function openZoneSheet(a){pendingZone=a;document.getElementById('zoneRange').textContent=`範圍 x${a.x1}–${a.x2}, y${a.y1}–${a.y2}`;renderKindPills();renderZList();show('mZone');}
+function renderKindPills(){document.getElementById('kindPills').innerHTML=KIND_PRESETS.map(([k,nm])=>`<button onclick="pickKind('${k}','${nm}')" style="border-color:${zc(k)};color:${zc(k)}">${nm}</button>`).join('');}
+function pickKind(k,nm){document.getElementById('zKind').value=k;document.getElementById('zNm').value=nm;render();}
+function cancelZone(){pendingZone=null;hide('mZone');render();}
+document.getElementById('zAdd').onclick=()=>{if(!pendingZone)return;
+  const kind=document.getElementById('zKind').value.trim()||'zone';const nm=document.getElementById('zNm').value.trim()||kind;
+  const idxRaw=document.getElementById('zIdx').value.trim();const z={kind,nm,...pendingZone};if(idxRaw!=='')z.idx=Number(idxRaw);
+  zones.push(z);pendingZone=null;hide('mZone');saveCur();render();};
+function renderZList(){const box=document.getElementById('zList');
+  box.innerHTML=zones.length?zones.map((z,i)=>`<div class="zitem"><span class="dot" style="background:${zc(z.kind)}"></span>${z.kind}・${z.nm}
+    <span class="hint">x${z.x1}–${z.x2} y${z.y1}–${z.y2}${z.idx!=null?' idx'+z.idx:''}</span><button class="del" onclick="delZone(${i})">刪</button></div>`).join(''):'<div class="hint">尚無區域。</div>';}
+function delZone(i){zones.splice(i,1);renderZList();saveCur();render();}
+
+document.getElementById('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  tool=b.dataset.tool;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));});
+function setChar(ch,btn){curChar=ch;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));btn.classList.add('on');}
+document.getElementById('cDot').onclick=function(){setChar('.',this);};
+document.getElementById('cWall').onclick=function(){setChar('F',this);};
+document.getElementById('cCustom').onclick=function(){setChar((document.getElementById('customChar').value||'W')[0],this);};
+document.getElementById('customChar').addEventListener('input',function(){if(document.getElementById('cCustom').classList.contains('on'))curChar=(this.value||'W')[0];});
+
+function zoomAt(cx,cy,k){const nz=Math.max(.25,Math.min(12,zoom*k));const wx=(cx-panX)/zoom,wy=(cy-panY)/zoom;zoom=nz;panX=cx-wx*zoom;panY=cy-wy*zoom;render();}
+document.getElementById('zin').onclick=()=>zoomAt(cv.clientWidth/2,cv.clientHeight/2,1.25);
+document.getElementById('zout').onclick=()=>zoomAt(cv.clientWidth/2,cv.clientHeight/2,.8);
+document.getElementById('zfit').onclick=fitView;
+cv.addEventListener('wheel',e=>{e.preventDefault();const[rx,ry]=rel(e);zoomAt(rx,ry,e.deltaY<0?1.1:.9);},{passive:false});
+function fitView(){const W=COLS*TS,H=ROWS*TS,pad=24;const z=Math.min((cv.clientWidth-pad*2)/W,(cv.clientHeight-pad*2)/H);
+  zoom=Math.max(.25,Math.min(12,z));panX=(cv.clientWidth-W*zoom)/2;panY=(cv.clientHeight-H*zoom)/2;render();}
+
+function syncDims(){TS=Math.max(1,+document.getElementById('ts').value||16);
+  const c=Math.max(1,+document.getElementById('cols').value||COLS),r=Math.max(1,+document.getElementById('rows').value||ROWS);
+  if(c!==COLS||r!==ROWS)resizeGrid(c,r);saveCur();render();}
+['ts','cols','rows'].forEach(id=>document.getElementById(id).addEventListener('change',syncDims));
+
+document.getElementById('imgFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();im.onload=()=>{img=im;imgData=fr.result;
+    const c=Math.round(im.naturalWidth/TS),r=Math.round(im.naturalHeight/TS);
+    document.getElementById('cols').value=c;document.getElementById('rows').value=r;resizeGrid(c,r);saveCur();fitView();};im.src=fr.result;};
+  fr.readAsDataURL(f);});
+
+document.getElementById('btnImport').onclick=()=>show('mImport');
+document.getElementById('doImportMap').onclick=()=>{const rowsArr=[...document.getElementById('taMap').value.matchAll(/"([^"]*)"/g)].map(m=>m[1]);
+  if(!rowsArr.length){alert('沒抓到字串列，請確認有雙引號');return;}
+  const c=Math.max(...rowsArr.map(s=>s.length)),r=rowsArr.length;grid=gridFromRows(rowsArr,c,r);COLS=c;ROWS=r;
+  document.getElementById('cols').value=c;document.getElementById('rows').value=r;hide('mImport');saveCur();fitView();};
+document.getElementById('doImportZone').onclick=()=>{const blocks=[...document.getElementById('taZone').value.matchAll(/\{[^}]*\}/g)].map(m=>m[0]);const got=[];
+  for(const b of blocks){const num=n=>{const m=b.match(new RegExp(n+'\\s*:\\s*(-?\\d+)'));return m?+m[1]:null;};
+    const str=n=>{const m=b.match(new RegExp(n+"\\s*:\\s*['\"]([^'\"]*)['\"]"));return m?m[1]:null;};
+    const x1=num('x1'),y1=num('y1'),x2=num('x2'),y2=num('y2');if(x1==null||y1==null||x2==null||y2==null)continue;
+    const z={kind:str('kind')||'zone',nm:str('nm')||'',x1,y1,x2,y2};const idx=num('idx');if(idx!=null)z.idx=idx;got.push(z);}
+  if(!got.length){alert('沒解析到區域');return;}zones=got;hide('mImport');saveCur();render();};
+
+let expMode='cur';
+function mapBlockFor(name,s){const rd=(name===cur)?rowsFromGrid():s.rowsData;return `  ${name}:[\n${rd.map(r=>'   "'+r+'"').join(',\n')},\n  ],`;}
+function buildExport(){saveCur();
+  document.getElementById('legend').innerHTML=Object.keys(ZONE_COLORS).filter(k=>k!=='_').map(k=>`<span><span class="sw" style="background:${zc(k)}"></span>${k}</span>`).join('')+`<span><span class="sw" style="background:#c25a4a99"></span>擋路格</span>`;
+  if(expMode==='all'){document.getElementById('outMap').value=Object.entries(store.scenes).map(([n,s])=>mapBlockFor(n,s)).join('\n');document.getElementById('allHint').textContent='（全部場景，貼進 MAPS={ … }）';}
+  else{document.getElementById('outMap').value=mapBlockFor(cur,store.scenes[cur]);document.getElementById('allHint').textContent='（貼進 MAPS）';}
+  if(zones.length){document.getElementById('outZone').value='const FARM_ZONES = [\n'+zones.map(z=>{const idx=z.idx!=null?` idx:${z.idx},`:'';
+    return `  {kind:'${z.kind}', nm:'${z.nm}',${idx} x1:${z.x1}, y1:${z.y1}, x2:${z.x2}, y2:${z.y2}},`;}).join('\n')+'\n];';}
+  else document.getElementById('outZone').value='（目前場景沒有區域框）';}
+document.getElementById('btnExport').onclick=()=>{expMode='cur';setExpPills();buildExport();show('mExport');};
+document.getElementById('expCur').onclick=()=>{expMode='cur';setExpPills();buildExport();};
+document.getElementById('expAll').onclick=()=>{expMode='all';setExpPills();buildExport();};
+function setExpPills(){document.getElementById('expCur').classList.toggle('on',expMode==='cur');document.getElementById('expAll').classList.toggle('on',expMode==='all');}
+function copyTA(id){const ta=document.getElementById(id);ta.select();navigator.clipboard?.writeText(ta.value).then(()=>toast('已複製')).catch(()=>{document.execCommand('copy');toast('已複製');});}
+document.getElementById('copyMap').onclick=()=>copyTA('outMap');
+document.getElementById('copyZone').onclick=()=>copyTA('outZone');
+
+function show(id){document.getElementById(id).classList.add('show');}
+function hide(id){document.getElementById(id).classList.remove('show');}
+let toastT;function toast(m){let t=document.getElementById('_t');if(!t){t=document.createElement('div');t.id='_t';
+  t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#3a2c1c;color:#f4ecd9;padding:8px 16px;border-radius:20px;z-index:99;transition:opacity .2s';document.body.appendChild(t);}
+  t.textContent=m;t.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>t.style.opacity=0,1200);}
+[...document.querySelectorAll('.mask')].forEach(m=>m.addEventListener('click',e=>{if(e.target===m){if(m.id==='mZone')cancelZone();else m.classList.remove('show');}}));
+
+window.addEventListener('resize',()=>{fitCanvas();render();});
+window.addEventListener('beforeunload',saveCur);
+fitCanvas(); refreshSceneSel(); applyScene(cur);
+</script>
+</body>
+</html>
