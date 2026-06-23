@@ -219,7 +219,7 @@ const CROPS={
   lemon:{nm:'檸檬',e:'🍋',base:5,seed:2,grow:DAY,volat:'mid'},
 };
 const ANIMALS={
-  chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle:12,mode:'produce'},
+  chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle:12,mode:'produce',growFeed:2},
   cow:{nm:'牛',e:'🐄',cub:25,feed:3,prod:'milk',cycle:12,mode:'produce'},
   pig:{nm:'豬',e:'🐖',cub:13,feed:2,prod:'pork',cycle:3,mode:'fatten'},
 };
@@ -558,7 +558,7 @@ const MERCHANTS={
   Antonio:{ nm:'安東尼奧·費爾南德斯·卡里埃多', e:'👩‍🦰', job:'farm',
     lines:['香料是甜點的靈魂喔。','嚐過異國的味道嗎？','我認得出識貨的人。'],
     goods:[ {kind:'extra', k:'flour', price:20, qty:10}, {kind:'seed', k:'papaya', price:5} ] },
-  vincent:{ nm:'文森', e:'🤵', job:'rich', era:19,
+  Alfred:{ nm:'阿爾弗雷德·F·瓊斯', e:'🤵', job:'rich', era:19,
     lines:['錢嘛，我從來不缺。','跟著我，你不會吃苦的。','這點小東西，當見面禮。'],
     goods:[ {kind:'extra', k:'sugar', price:4, qty:30}, {kind:'seed', k:'banana', price:6} ] },
 };
@@ -801,6 +801,76 @@ function setCookBy(who){
   if(who==='partner' && !S.partner){ toast('沒有伴侶，只能由主角製作（產出毒物）'); return; }
   S.cookBy=who; applyCookSkin(); toast(who==='partner'?'交給伴侶做：產出食物':'主角親手做：產出毒物'); openPickRecipe(); save();
 }
+/* ---------- 雞（在雞舍範圍走動） ---------- */
+const CHICK_IMG=new Image(); CHICK_IMG.src='chick.png';
+const HEN_IMG=new Image();   HEN_IMG.src='Hen.png';
+const CHICKEN_ZONE={x1:23,y1:16,x2:28,y2:20};   // 對應 FARM_ZONES 的雞舍範圍
+const CHICKEN_SPEED=0.035, CHICKEN_FRAME_MS=400;
+let chickenNpcs=[];
+function chickenWalkable(x,y){
+  const ix=Math.round(x),iy=Math.round(y),z=CHICKEN_ZONE;
+  return ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2;
+}
+function pickChickenTarget(c){
+  const z=CHICKEN_ZONE;
+  for(let i=0;i<12;i++){
+    const tx=z.x1+Math.floor(Math.random()*(z.x2-z.x1+1));
+    const ty=z.y1+Math.floor(Math.random()*(z.y2-z.y1+1));
+    if(chickenWalkable(tx,ty)){ c.tx=tx; c.ty=ty; return; }
+  }
+}
+function buildChickens(){
+  chickenNpcs=[];
+  const list=(S.animals&&S.animals.chicken)||[];
+  list.forEach((a,i)=>{
+    const slotX=CHICKEN_ZONE.x1+(i%((CHICKEN_ZONE.x2-CHICKEN_ZONE.x1)||1));
+    const slotY=CHICKEN_ZONE.y1+(i%((CHICKEN_ZONE.y2-CHICKEN_ZONE.y1+1)));
+    chickenNpcs.push({ idx:i, x:slotX, y:slotY, tx:slotX, ty:slotY,
+      flip:false, frame:0, frameT:0, idleUntil:0 });
+  });
+}
+function isHen(a){ return (a.feedCount||0) >= (ANIMALS.chicken.growFeed||2); }
+function updateChickens(){
+  const now=Date.now(), list=(S.animals&&S.animals.chicken)||[];
+  if(chickenNpcs.length!==list.length) buildChickens();
+  for(const c of chickenNpcs){
+    const dx=c.tx-c.x, dy=c.ty-c.y, d=Math.hypot(dx,dy);
+    if(d<0.1){
+      if(!c.idleUntil) c.idleUntil=now+800+Math.random()*2500;
+      else if(now>=c.idleUntil){ c.idleUntil=0; pickChickenTarget(c); }
+    }else{
+      c.idleUntil=0;
+      c.x+=(dx/d)*CHICKEN_SPEED; c.y+=(dy/d)*CHICKEN_SPEED;
+      if(Math.abs(dx)>0.01) c.flip = dx<0;   // 往左走→鏡像
+      if(now-c.frameT>=CHICKEN_FRAME_MS){ c.frameT=now; c.frame=(c.frame+1)%2; }
+    }
+  }
+}
+function drawChickens(ox,oy){
+  const list=(S.animals&&S.animals.chicken)||[];
+  for(const c of chickenNpcs){
+    const a=list[c.idx]; if(!a) continue;
+    const hen=isHen(a);
+    const img=hen?HEN_IMG:CHICK_IMG;
+    const px=c.x*TS+TS/2-ox, py=c.y*TS+TS/2-oy;
+    const shW=hen?9:5, shH=hen?3:2, shY=hen?4:4;   // 母雞：大、小雞：小
+    ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+    ctx.beginPath();ctx.ellipse(px,py+shY,shW,shH,0,0,Math.PI*2);ctx.fill();
+    if(img && img.complete && img.naturalWidth){
+      const fw=32, fh=32, sx=c.frame*fw;
+      if(c.flip){
+        ctx.save(); ctx.translate(px,0); ctx.scale(-1,1);
+        ctx.drawImage(img, sx,0,fw,fh, -16, py-32+6, 32,32);
+        ctx.restore();
+      }else{
+        ctx.drawImage(img, sx,0,fw,fh, px-16, py-32+6, 32,32);
+      }
+    }else{
+      ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(isHen(a)?'🐔':'🐤', px, py);
+    }
+  }
+}
 /* ---------- 怪物（蛇） ---------- */
 let monsters=[];
 let lastSpawn=Date.now();
@@ -809,12 +879,18 @@ function randFarmTile(){
   const C=GRID.farm[0].length, R=GRID.farm.length;
   for(let i=0;i<30;i++){
     const x=1+Math.floor(Math.random()*(C-2)), y=1+Math.floor(Math.random()*(R-2));
-    if(!blocked(GRID.farm[y][x]) && Math.hypot(x-player.x,y-player.y)>5) return {x,y};
+    if(snakeWalkable(x,y) && Math.hypot(x-player.x,y-player.y)>5) return {x,y};
   }
   return null;
 }
+function inFencedPen(ix,iy){
+  return FARM_ZONES.some(z=>(z.kind==='chicken'||z.kind==='cow'||z.kind==='pig')
+    && ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
+}
 function snakeWalkable(x,y){ const ix=Math.floor(x),iy=Math.floor(y),C=GRID.farm[0].length,R=GRID.farm.length;
-  if(ix<0||iy<0||ix>=C||iy>=R) return false; return !blocked(GRID.farm[iy][ix]); }
+  if(ix<0||iy<0||ix>=C||iy>=R) return false;
+  if(inFencedPen(ix,iy)) return false;            // 不進柵欄（雞舍／牛棚／豬圈）
+  return !blocked(GRID.farm[iy][ix]); }
 function spawnSnake(){ const p=randFarmTile(); if(!p) return; monsters.push({x:p.x,y:p.y,hp:4,lastBite:0,wanderT:0,wx:0,wy:0,facing:'down',frame:0,aTimer:0,aStep:0,moving:false}); }
 function spawnSnakes(){ monsters=[]; shots=[]; for(let i=0;i<MONSTER_CAP;i++) spawnSnake(); lastSpawn=Date.now(); }
 function updateMonsters(){
@@ -875,7 +951,7 @@ const CHARS={
   Francis:{ nm:'弗朗西斯·波諾弗瓦', face:{ neutral:'Francis_neutral.png', happy:'Francis_happy.png', shy:'Francis_shy.png', love:'Francis_love.png', sad:'😢' } },
   Pedro: { nm:'佩德羅·費爾南德斯·卡里埃多', face:{ neutral:'🧔',   happy:'😄', shy:'😅', love:'😍', sad:'😟' } },
   Antonio:{ nm:'安東尼奧·費爾南德斯·卡里埃多',   face:{ neutral:'👩‍🦰', happy:'😊', shy:'😳', love:'🥰', sad:'😢' } },
-  vincent:{ nm:'文森',   face:{ neutral:'🤵', happy:'😎', shy:'😏', love:'😍', sad:'😞' } },
+  Alfred:{ nm:'阿爾弗雷德·F·瓊斯',   face:{ neutral:'🤵', happy:'😎', shy:'😏', love:'😍', sad:'😞' } },
 };
 function charFace(id,mood){ const c=CHARS[id]; if(!c) return '🙂'; return c.face[mood]||c.face.neutral||'🙂'; }
 function charName(id){ return (CHARS[id]&&CHARS[id].nm)||(MERCHANTS[id]&&MERCHANTS[id].nm)||id; }
@@ -1302,7 +1378,7 @@ function blankState(){
   return {
     day:1, era:17, startTs:Date.now(), lastTick:Date.now(),
     cash:50, hp:20, maxHp:20, toxins:0, cookBy:'self', plots, fert:0, feed:0, seeds:{}, crops:{},
-    animals:{chicken:[{born:Date.now(),fed:Date.now(),lastProd:Date.now()}],cow:[],pig:[]},
+    animals:{chicken:[{born:Date.now(),fed:Date.now(),lastProd:Date.now(),feedCount:0}],cow:[],pig:[]},
     store:{}, extras:{}, market:{}, marketDay:0,
     port:{merchants:[], relations:{}, lastTs:0},
     partner:null,
@@ -1424,6 +1500,7 @@ function tick(){
       if(emp)a.fed=now;
       if(!emp && now-(a.fed||a.born)>2*DAY){ addLog(`☠️ 一隻${def.nm}太久沒餵死了`); return false; }
       if(def.mode==='produce'){
+        if(type==='chicken' && def.growFeed && (a.feedCount||0)<def.growFeed){ return true; }   // 還是小雞→不生蛋
         const n=Math.floor((now-(a.lastProd||a.born))/def.cycle);
         if(n>0){a.pending=(a.pending||0)+n;a.lastProd=(a.lastProd||a.born)+n*def.cycle;
           if(emp){const g=Math.floor(a.pending*0.6);if(g>0)addStore(def.prod,g);a.pending=0;}}
@@ -1611,7 +1688,17 @@ function openAnimals(type){
   openSheet(`<div class="sheethead"><h3>${def.e} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。</div>${rows}`);
 }
-function feed(type,idx){const def=ANIMALS[type];if(S.feed<def.feed){toast('飼料不足');return;}S.feed-=def.feed;S.animals[type][idx].fed=Date.now();toast(`🌾 餵了${def.nm}`);openAnimals(type);save();}
+function feed(type,idx){
+  const def=ANIMALS[type]; if(S.feed<def.feed){toast('飼料不足');return;}
+  S.feed-=def.feed; const a=S.animals[type][idx]; a.fed=Date.now();
+  if(type==='chicken' && def.growFeed){
+    a.feedCount=(a.feedCount||0)+1;
+    if(a.feedCount===def.growFeed){ a.lastProd=Date.now(); toast('🐔 小雞長大成母雞了！'); }
+    else if(a.feedCount<def.growFeed) toast(`🌾 餵了小雞（${a.feedCount}/${def.growFeed} 就會長大）`);
+    else toast(`🌾 餵了${def.nm}`);
+  }else toast(`🌾 餵了${def.nm}`);
+  openAnimals(type); save();
+}
 function collect(type,idx){const a=S.animals[type][idx];const def=ANIMALS[type];if(!a.pending){toast('還沒產出');return;}addStore(def.prod,a.pending);toast(`收了 ${a.pending} ${PRODUCTS[def.prod].nm}`);a.pending=0;openAnimals(type);save();}
 function confirmSellPig(idx){const price=priceOf('pork');
   openSheet(`<div class="sheethead"><h3>確認賣豬？</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -1828,7 +1915,7 @@ function openShopBuy(){
 function buySeed(c,q){const cost=Math.round(CROPS[c].seed*QUAL_MUL[q]);if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${CROPS[c].nm}種子`);S.seeds[seedKey(c,q)]=(S.seeds[seedKey(c,q)]||0)+1;toast(`買了${CROPS[c].nm}種子`);openShopBuy();save();}
 function buyCropSeed(k){const cost=Math.round(FARM_CROPS[k].seed*shopBuyMul()); if(S.cash<cost){toast('現金不足');return;} spend(cost,`買${FARM_CROPS[k].nm}種子`); S.seeds[k]=(S.seeds[k]||0)+1; toast(`買了${FARM_CROPS[k].nm}種子`); openShopBuy(); save();}
 
-function buyAnimal(k){const d=ANIMALS[k];if(S.animals[k].length>=10){toast('已達上限');return;}const cost=Math.round(d.cub*shopBuyMul());if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${d.nm}`);S.animals[k].push({born:Date.now(),fed:Date.now(),lastProd:Date.now()});toast(`買了${d.nm}，已進牧地`);openShopBuy();save();}
+function buyAnimal(k){const d=ANIMALS[k];if(S.animals[k].length>=10){toast('已達上限');return;}const cost=Math.round(d.cub*shopBuyMul());if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${d.nm}`);S.animals[k].push({born:Date.now(),fed:Date.now(),lastProd:Date.now(),feedCount:0});buildChickens();toast(`買了${d.nm}，已進牧地`);openShopBuy();save();}
 
 function buyFeed(q){const c=Math.round((S._fe||1)*q*shopBuyMul());if(S.cash<c){toast('現金不足');return;}spend(c,`買飼料×${q}`);S.feed+=q;toast(`+${q}飼料`);openShopBuy();save();}
 
@@ -1946,7 +2033,7 @@ if(walkable(nx+0.5,player.y+foot))player.x=nx;
   }
 document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
-  if(curScene==='farm'){ updateMonsters(); updateShots(); }
+  if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); }
   if(curScene==='office') updateOfficeNpcs();
   if(curScene==='port') updatePortNpcs();
   if(curScene==='kitchen') updateKitchenPickups();
@@ -2124,16 +2211,18 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
     }
   }
   if(curScene==='farm'){ ctx.globalAlpha=1; ctx.textAlign='center';ctx.textBaseline='middle';
-    const _si=npcImg('snake.png'), _dc={down:0,left:1,right:2,up:3};
+    const _si=npcImg('snake.png');
     for(const m of monsters){ const mx=m.x*TS+TS/2-ox, my=m.y*TS+TS/2-oy;
-      if(_si&&_si.complete&&_si.naturalWidth){ const cols=Math.max(1,Math.round(_si.naturalWidth/64)), rows=Math.max(1,Math.round(_si.naturalHeight/64));
-        ctx.drawImage(_si, Math.min(_dc[m.facing]||0,cols-1)*64, Math.min(m.frame||0,rows-1)*64, 64,64, mx-32,my-64+14,64,64); }
+      if(_si&&_si.complete&&_si.naturalWidth){ const fr=(m.frame>0?1:0)*32, flip=(m.facing==='left');
+        if(flip){ ctx.save(); ctx.translate(mx,0); ctx.scale(-1,1); ctx.drawImage(_si, fr,0,32,32, -16, my-32+6, 32,32); ctx.restore(); }
+        else ctx.drawImage(_si, fr,0,32,32, mx-16, my-32+6, 32,32); }
       else { ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.fillText('🐍', mx, my); } }
     const _ti=npcImg('throw_toxin.png');
     for(const s of shots){ const sx=s.x*TS+TS/2-ox, sy=s.y*TS+TS/2-oy;
       if(_ti&&_ti.complete&&_ti.naturalWidth){ ctx.drawImage(_ti, 0,0,_ti.naturalWidth,_ti.naturalHeight, sx-16, sy-16, 32,32); }
       else { ctx.fillStyle='#000'; ctx.font='14px serif'; ctx.fillText('🧪', sx, sy); } }
   }
+  if(curScene==='farm') drawChickens(ox,oy);
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
   // === 烤箱運作：兩楨地圖動畫（畫在人物下面）===
@@ -2211,7 +2300,7 @@ function goScene(name){
     if(!S.port.merchants.length || Date.now()-(S.port.lastTs||0)>PORT_REFRESH_MS) refreshPort(); else buildPortObjects();
     buildPortNpcs(); }
   if(name==='office'){ syncPartnerObject(); buildOfficeNpcs(); }
-  if(name==='farm') spawnSnakes();
+  if(name==='farm'){ spawnSnakes(); buildChickens(); }
   curScene=name; applyCookSkin();
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
