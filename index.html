@@ -1520,8 +1520,8 @@ function kStep(){ const r=curRecipe(); if(!prepReady())return 0; if(prep.knead<(
 let dlgNpc=null, dlgIdx=0;
 function interact(ev){
   if(ev)ev.preventDefault();
-  // 坐在書桌時：互動鍵 = 翻開帳簿
-  if(sitting){ openLedger(); return; }
+  // 坐在書桌時：互動鍵 = 打開桌面選單（看帳本／雇用）
+  if(sitting){ openDeskMenu(); return; }
   if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
   if(!sleeping && curScene===BED.scene && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2 && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2){ askSleep(); return; }
  const o=facingObject();
@@ -1619,6 +1619,12 @@ function confirmSellPig(idx){const price=priceOf('pork');
 function sellPig(idx){const price=priceOf('pork');earn(price,'賣豬肉');S.animals.pig.splice(idx,1);closeSheet();toast(`🥩 +$${fmt(price)}`);save();}
 
 /* ---------- OFFICE ---------- */
+function openDeskMenu(){
+  openSheet(`<div class="sheethead"><h3>🪑 書桌</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:12px">坐在書桌前，要做什麼？</div>
+    <button class="btn green" style="width:100%;margin-bottom:8px" onclick="openLedger()">📒 看帳本</button>
+    <button class="btn" style="width:100%" onclick="openEmployee()">👷 雇用人員</button>`);
+}
 function openLedger(){
   const rows=S.ledger.length?S.ledger.slice(0,14).map(x=>`<div class="row"><div style="flex:1">${x.l}</div><div class="${x.a>=0?'up':'down'}">${x.a>=0?'+':''}$${fmt(x.a)}</div></div>`).join(''):'<div class="empty-note">還沒有紀錄</div>';
   openSheet(`<div class="sheethead"><h3>📒 帳簿（最近）</h3><button class="close" onclick="closeSheet()">✕</button></div>${rows}`);
@@ -1628,7 +1634,7 @@ function askSit(){
     <div class="small" style="margin-bottom:12px">坐著時按互動鍵可翻開帳簿。</div>
     <div style="display:flex;gap:10px">
       <button class="btn ghost" style="flex:1" onclick="closeSheet()">先不要</button>
-      <button class="btn green" style="flex:1" onclick="sitting=true;closeSheet()">坐下</button></div>`);
+      <button class="btn green" style="flex:1" onclick="sitting=true;openDeskMenu()">坐下</button></div>`);
 }
 function askSleep(){
   openSheet(`<div class="sheethead"><h3>🛏️ 確定要睡覺嗎？</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -1640,10 +1646,16 @@ function askSleep(){
 function openEmployee(){
   const b = S.employee
     ? `<div class="small" style="margin-bottom:10px">雇員上工中，自動照料、不死保險。</div><button class="btn ghost" style="width:100%;color:var(--danger)" onclick="fireEmp()">解雇</button>`
-    : `<div class="small" style="margin-bottom:10px">月薪 $300，每滿30天扣。效率60%，不碰買賣。</div><button class="btn" style="width:100%" onclick="hireEmp()">雇用 $300/月</button>`;
+    : `<div class="small" style="margin-bottom:10px">雇用時先付首月 $300，之後每滿30天再扣。效率60%，不碰買賣。</div><button class="btn" style="width:100%" onclick="hireEmp()">雇用 $300/月</button>`;
   openSheet(`<div class="sheethead"><h3>👷 阿土（雇員）</h3><button class="close" onclick="closeSheet()">✕</button></div>${b}`);
 }
-function hireEmp(){S.employee={hiredTs:Date.now(),lastPaidTs:Date.now()};addLog('👷 雇用了雇員');closeSheet();toast('已雇用');save();}
+function hireEmp(){
+  if(S.cash<300){toast('現金不足，付不出首月薪水');return;}
+  spend(300,'雇員首月薪');
+  S.employee={hiredTs:Date.now(),lastPaidTs:Date.now()};
+  addLog('👷 雇用了雇員（先付首月 $300）');
+  closeSheet();toast('已雇用，已扣首月 $300');save();refreshTop();
+}
 function fireEmp(){S.employee=null;addLog('解雇雇員');closeSheet();toast('已解雇');save();}
 
 /* ---------- CAFE ---------- */
