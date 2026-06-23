@@ -9,9 +9,9 @@
   html,body{ -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
   input,textarea,[contenteditable]{ -webkit-user-select:text; user-select:text; }
   :root{
-    --paper:#f4ecd9; --paper2:#ece0c4; --ink:#4a3b2a; --ink2:#7a6a52;
-    --line:#d8c8a6; --line2:#c9b58c; --accent:#c97b4a; --accent2:#7a9b5c;
-    --gold:#caa24a; --danger:#c25a4a; --card:#fbf6e9; --shadow:rgba(74,59,42,.12);
+    --paper:#f1ead4; --paper2:#e3dabd; --ink:#423926; --ink2:#6e6450;
+    --line:#cabf9f; --line2:#b7a78c; --accent:#7A7612; --accent2:#6e7a48;
+    --gold:#b0883a; --danger:#a85d4c; --card:#f3f5e7; --shadow:rgba(66,57,38,.16);
     --grass:#9fb96a; --grass2:#94af60; --soil:#a9794f; --soil2:#9c6e46;
     --path:#d8c08a; --water:#7fb6c4; --fence:#8a6b45;
     --floor:#e3c79a; --floor2:#d8b985; --wall:#b89b72; --rug:#c98a6a;
@@ -55,8 +55,7 @@
 
   .dialogue{margin:4px 12px 0px;background:var(--card);border:2px solid var(--line2);border-radius:14px;
     padding:9px 12px;display:flex;align-items:center;gap:10px;min-height:60px;box-shadow:0 2px 0 var(--shadow)}
-  .dialogue .avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(--paper2);
-    border:2px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:24px}
+  .dialogue .avatar{display:none}
   .dialogue .dlgtext{flex:1;font-size:14px;line-height:1.4;color:var(--ink)}
   .dialogue.idle{opacity:.65} .dialogue.idle .dlgtext{color:var(--ink2);font-size:13px}
   .dialogue .name{font-weight:700;color:var(--accent);margin-right:5px}
@@ -66,19 +65,19 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:21px;box-shadow:0 2px 0 var(--shadow)}
   .bag span{font-size:10px;color:var(--ink2);margin-top:-2px}
   .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:6px}
-  .key{width:44px;height:44px;border-radius:11px;font-size:19px;font-weight:700;display:flex;
-    align-items:center;justify-content:center;box-shadow:0 3px 0 #00000018;border:2px solid #00000010}
+.key{width:44px;height:44px;border-radius:11px;font-size:19px;font-weight:700;display:flex;
+    align-items:center;justify-content:center;box-shadow:0 3px 0 #42392633;border:2px solid #46470422}
   .key:active{transform:translateY(2px);box-shadow:0 1px 0 #00000018}
-  .k-up{grid-column:2;grid-row:1;background:#bcd3e8}
-  .k-left{grid-column:1;grid-row:2;background:#f0cdb0}
-  .k-down{grid-column:2;grid-row:2;background:#d9c5ea}
-  .k-right{grid-column:3;grid-row:2;background:#cfe2b8}
+  .k-up{grid-column:2;grid-row:1;background:#C6C485}
+  .k-left{grid-column:1;grid-row:2;background:#C6C485}
+  .k-down{grid-column:2;grid-row:2;background:#C6C485}
+  .k-right{grid-column:3;grid-row:2;background:#C6C485}
   .actbtn{width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;
     font-weight:700;box-shadow:0 4px 0 #00000020;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
   .actbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #00000020}
   .actbtn.dim{background:var(--line2)}
 
-  .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex}
+  .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex;margin-top:auto}
   .nav button{flex:1;padding:7px 2px 8px;font-size:11px;color:var(--ink2);display:flex;
     flex-direction:column;align-items:center;gap:1px;font-weight:700}
   .nav button .ic{font-size:19px}
@@ -174,9 +173,12 @@
 </svg></button>
     </div>
     <button class="actbtn dim" id="actBtn" ontouchstart="interact(event)" onmousedown="interact(event)">
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="11" cy="11" r="9" stroke="#4a3b2a" stroke-width="2"/>
-    <path d="M11 6L7 15H9L9.7 13H12.3L13 15H15L11 6ZM10.5 11L11 9.5L11.5 11H10.5Z" fill="#4a3b2a"/>
+<svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#423926">
+    <ellipse cx="5.4" cy="9" rx="1.9" ry="2.5"/>
+    <ellipse cx="9.6" cy="6.2" rx="2" ry="2.7"/>
+    <ellipse cx="14.4" cy="6.2" rx="2" ry="2.7"/>
+    <ellipse cx="18.6" cy="9" rx="1.9" ry="2.5"/>
+    <path d="M12 10.8c3.7 0 6.6 2.7 6.6 5.6 0 2.3-2.1 3.4-3.9 2.6-1-.4-1.7-.7-2.7-.7s-1.7.3-2.7.7c-1.8.8-3.9-.3-3.9-2.6 0-2.9 2.9-5.6 6.6-5.6z"/>
   </svg>
 </button>
   </div>
