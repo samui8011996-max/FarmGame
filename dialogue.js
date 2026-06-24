@@ -330,7 +330,7 @@ const CHILD_PARTNER_LINES={
   },
 };
 const CHILD_GONE_LINES=[
-  '（搖籃空空的，阿爾弗雷德已經長大離家了）',
+  '（阿爾弗雷德已經長大離家了）',
 ];
 /* 伴侶路過台詞（給 partnerWalkLines / showDlg 用）
    base：平時隨機浮現；jealous：家裡有阿爾弗雷德、且到幼兒以上才會摻入。 */
