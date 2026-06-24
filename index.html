@@ -804,6 +804,13 @@ function setCookBy(who){
 /* ---------- 雞（在雞舍範圍走動） ---------- */
 const CHICK_IMG=new Image(); CHICK_IMG.src='chick.png';
 const HEN_IMG=new Image();   HEN_IMG.src='Hen.png';
+/* ---------- 蛋箱：產蛋上限 + 滿箱疊圖 ---------- */
+const EGG_BOX_COUNT=3;          // 蛋箱數＝最多疊幾張圖
+const EGG_PER_BOX=8;            // 每箱幾顆蛋（總上限 = 3×8 = 24；想要更少蛋就把這調小）
+const EGG_BOX_IMG=['egg_box1.png','egg_box2.png','egg_box3.png'];  // 三張「整張地圖一樣大」的圖
+function eggCap(){ return EGG_BOX_COUNT*EGG_PER_BOX; }
+function eggTotalPending(){ let s=0; const list=(S.animals&&S.animals.chicken)||[]; for(const a of list) s+=(a.pending||0); return s; }
+function eggBoxes(){ return Math.min(EGG_BOX_COUNT, Math.ceil(eggTotalPending()/EGG_PER_BOX)); }  // 要疊幾張圖＝有蛋的箱數
 const CHICKEN_ZONE={x1:23,y1:16,x2:28,y2:20};   // 對應 FARM_ZONES 的雞舍範圍
 const CHICKEN_SPEED=0.035, CHICKEN_FRAME_MS=400;
 let chickenNpcs=[];
@@ -1349,9 +1356,10 @@ const FARM_ZONES = [
   {kind:'plot', nm:'農田', x1:2, y1:18, x2:5, y2:23},
   {kind:'plot', nm:'農田', x1:8, y1:16, x2:11, y2:21},
   {kind:'plot', nm:'農田', x1:14, y1:18, x2:17, y2:23},
-  {kind:'chicken', nm:'雞舍', x1:21, y1:22, x2:28, y2:24},
   {kind:'cow', nm:'牛棚', x1:0, y1:12, x2:14, y2:14},
-  {kind:'pig', nm:'豬圈', x1:19, y1:8, x2:21, y2:16},
+  {kind:'pig', nm:'豬圈', x1:19, y1:5, x2:29, y2:15},
+  {kind:'chicken', nm:'雞舍', x1:21, y1:15, x2:29, y2:17},
+  {kind:'chicken', nm:'雞舍', x1:21, y1:21, x2:29, y2:24},
 ];
 function farmZoneAt(x,y){
   const ix=Math.round(x),iy=Math.round(y);
@@ -1502,8 +1510,18 @@ function tick(){
       if(def.mode==='produce'){
         if(type==='chicken' && def.growFeed && (a.feedCount||0)<def.growFeed){ return true; }   // 還是小雞→不生蛋
         const n=Math.floor((now-(a.lastProd||a.born))/def.cycle);
-        if(n>0){a.pending=(a.pending||0)+n;a.lastProd=(a.lastProd||a.born)+n*def.cycle;
-          if(emp){const g=Math.floor(a.pending*0.6);if(g>0)addStore(def.prod,g);a.pending=0;}}
+        if(n>0){
+          a.lastProd=(a.lastProd||a.born)+n*def.cycle;
+          if(type==='chicken'){
+            const room=eggCap()-eggTotalPending();        // 蛋箱還能裝幾顆（滿了 room=0 → 不再生蛋）
+            const add=Math.max(0,Math.min(n,room));
+            if(add>0) a.pending=(a.pending||0)+add;
+            if(emp && a.pending>0){ addStore('egg',Math.floor(a.pending*0.6)); a.pending=0; }
+          }else{
+            a.pending=(a.pending||0)+n;
+            if(emp){const g=Math.floor(a.pending*0.6);if(g>0)addStore(def.prod,g);a.pending=0;}
+          }
+        }
       }else if(now-a.born>=def.cycle)a.fat=true;
       return true;
     });
@@ -1686,7 +1704,7 @@ function openAnimals(type){
       <button class="btn sm" onclick="feed('${type}',${idx})">🌾餵</button>${act}</div>`;
   }).join('') : `<div class="empty-note">還沒有${def.nm}，去商店買幼崽。</div>`;
   openSheet(`<div class="sheethead"><h3>${def.e} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。</div>${rows}`);
+    <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。${type==='chicken'?`<br>🥚 蛋箱 ${eggTotalPending()}/${eggCap()}・使用 ${eggBoxes()}/${EGG_BOX_COUNT} 箱（滿了暫停產蛋，收蛋後再生）`:''}</div>${rows}`);
 }
 function feed(type,idx){
   const def=ANIMALS[type]; if(S.feed<def.feed){toast('飼料不足');return;}
@@ -2157,6 +2175,12 @@ function draw(){
     if(ch==='W'||ch==='F'||ch==='B'){ctx.fillStyle='#00000022';ctx.fillRect(x*TS-ox,y*TS-oy+TS-3,TS,3);}
     }
   }
+  // 蛋箱：依「有蛋的箱數」疊上整張地圖大小的圖（位置畫死在圖裡，所以精準）
+  if(curScene==='farm'){
+    const nb=eggBoxes();
+    for(let i=0;i<nb;i++){ const eb=npcImg(EGG_BOX_IMG[i]);
+      if(eb&&eb.complete&&eb.naturalWidth) ctx.drawImage(eb, -ox, -oy, mapCols()*TS, mapRows()*TS); }
+  }
   // DEBUG：顯示碰撞格（對齊家具用，調好後把 DEBUG 改成 false）
 // DEBUG：作物格範圍（每框=一株=CELL×CELL）。Console 打 DEBUG_CROPCELL=true 開啟
   if (window.DEBUG_CROPCELL && curScene==='farm') {
@@ -2329,6 +2353,13 @@ function startGame(n){
   if(!S.crops)S.crops={};if(!S.era)S.era=17;if(!S.port)S.port={merchants:[],relations:{},lastTs:0};if(!S.maxHp)S.maxHp=20;if(S.hp===undefined)S.hp=S.maxHp;if(S.toxins===undefined)S.toxins=0;if(!S.cookBy)S.cookBy='self';
   if(!S.wardrobe)S.wardrobe={owned:['default'],wearing:'default'};
   if(!S.kitchenPickups)S.kitchenPickups=[];
+  // 清掉舊存檔殘留的爆量雞蛋：總 pending 超過蛋箱上限會讓 room 變負、雞全面停產
+  if(S.animals && S.animals.chicken){
+    let over=0; for(const a of S.animals.chicken) over+=(a.pending||0);
+    over-=eggCap();
+    for(const a of S.animals.chicken){ if(over<=0) break;
+      const cut=Math.min(a.pending||0, over); a.pending=(a.pending||0)-cut; over-=cut; }
+  }
   if(!S.child && !S.childLeftHome) S.child={ name:'阿爾弗雷德·F·瓊斯', stage:0, affinity:0, lastCare:Date.now(), crying:false, bornTs:Date.now() };
   applySkin(S.wardrobe.wearing);
   if(S.partner && S.partner.intimacy===undefined){ S.partner.intimacy=0; S.partner.lastIntim=0; }
