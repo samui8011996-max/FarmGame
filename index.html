@@ -76,6 +76,7 @@
     font-weight:700;box-shadow:0 4px 0 #00000020;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
   .actbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #00000020}
   .actbtn.dim{background:var(--line2)}
+  .actbtn.throw{background:var(--accent2)}
 
   .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex;margin-top:auto}
   .nav button{flex:1;padding:7px 2px 8px;font-size:11px;color:var(--ink2);display:flex;
@@ -155,7 +156,6 @@
       <canvas id="game" width="320" height="288"></canvas>
       <div class="ovenbar" id="ovenbar"><span id="ovenTxt">烘烤中</span><div class="meter"><i id="ovenFill"></i></div></div>
       <div class="hint" id="hint"></div>
-      <button id="throwBtn" ontouchstart="throwToxin(event)" onmousedown="throwToxin(event)" style="position:absolute;right:8px;bottom:8px;width:56px;height:56px;border-radius:50%;background:var(--accent2);color:#fff;font-size:13px;font-weight:700;box-shadow:0 3px 0 #00000020;display:none;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;z-index:5">🧪<span id="throwCount" style="font-size:11px">0</span></button>
     </div>
   </div>
   <div class="dialogue idle" id="dialogue">
@@ -172,6 +172,8 @@
   <path d="M4 11L17 3L17 19L4 11Z" fill="#4a3b2a" transform="rotate(180 11 11)"/>
 </svg></button>
     </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+    <button id="equipBtn" ontouchstart="toggleEquip(event)" onmousedown="toggleEquip(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🧪<span id="equipCount" style="font-size:10px;color:var(--ink2)">0</span></button>
     <button class="actbtn dim" id="actBtn" ontouchstart="interact(event)" onmousedown="interact(event)">
 <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#423926">
     <ellipse cx="5.4" cy="9" rx="1.9" ry="2.5"/>
@@ -181,6 +183,7 @@
     <path d="M12 10.8c3.7 0 6.6 2.7 6.6 5.6 0 2.3-2.1 3.4-3.9 2.6-1-.4-1.7-.7-2.7-.7s-1.7.3-2.7.7c-1.8.8-3.9-.3-3.9-2.6 0-2.9 2.9-5.6 6.6-5.6z"/>
   </svg>
 </button>
+    </div>
   </div>
   <nav class="nav" id="nav">
     <button data-s="farm" onclick="goScene('farm')"><span class="ic">🌱</span>農牧地</button>
@@ -541,9 +544,11 @@ function growChild(){
 function childLeaveHome(){
   const c=S.child; if(!c) return;
   const nm=c.name||'孩子';
-  S.child=null; S.childLeftHome=true;
+  S.child=null; S.childLeftHome=true; S.childHired=false;
   if(typeof officeNpcs!=='undefined' && officeNpcs['crib']) delete officeNpcs['crib'];
+  if(typeof farmNpcs!=='undefined' && farmNpcs['alfred']) delete farmNpcs['alfred'];
   SCENES.office.objects=SCENES.office.objects.filter(o=>o.id!=='crib');   // 連搖籃互動點一起移除
+  SCENES.farm.objects=SCENES.farm.objects.filter(o=>o.id!=='alfred');     // 農田的阿爾弗雷德也移除
   addLog(`🎓 ${nm}長大成人，離家追尋自己的人生了。`);
   closeSheet(); save(); refreshTop();
   toast(`🎓 ${nm}離家了，一路順風。`);
@@ -961,6 +966,95 @@ function drawPigs(ox,oy){
     }
   }
 }
+/* ---------- 農田 NPC（少年阿爾弗雷德閒晃／顧農場） ---------- */
+const ALFRED_ZONE={x1:1,y1:15,x2:18,y2:26};   // 阿爾在農田的活動範圍，想換地方就改這
+let farmNpcs={};
+function farmNpcWalkable(x,y){
+  const ix=Math.round(x),iy=Math.round(y);
+  if(ix<ALFRED_ZONE.x1||ix>ALFRED_ZONE.x2||iy<ALFRED_ZONE.y1||iy>ALFRED_ZONE.y2) return false;
+  return snakeWalkable(ix,iy);   // 不走柵欄、不撞牆
+}
+function pickFarmNpcTarget(n){
+  for(let i=0;i<20;i++){
+    const tx=ALFRED_ZONE.x1+Math.floor(Math.random()*(ALFRED_ZONE.x2-ALFRED_ZONE.x1+1));
+    const ty=ALFRED_ZONE.y1+Math.floor(Math.random()*(ALFRED_ZONE.y2-ALFRED_ZONE.y1+1));
+    if(farmNpcWalkable(tx,ty)){ n.tx=tx; n.ty=ty; return; }
+  }
+}
+function buildFarmNpcs(){
+  farmNpcs={};
+  SCENES.farm.objects=SCENES.farm.objects.filter(o=>o.id!=='alfred');
+  if(S.child && S.child.stage===3){   // 少年期才出現在農田
+    const nm=S.child.name||'阿爾弗雷德', sx=8, sy=20;
+    SCENES.farm.objects.push({id:'alfred',x:sx,y:sy,e:'🧑‍🎓',nm,kind:'farmhand',npc:true,avatar:'🧑‍🎓',hide:true});
+    farmNpcs['alfred']={ x:sx,y:sy, tx:sx,ty:sy, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
+      img:npcImg('child_teen.png'), fallback:'🧑‍🎓' };
+  }
+}
+function updateFarmNpcs(){
+  const now=Date.now();
+  for(const id in farmNpcs){
+    const n=farmNpcs[id];
+    const dx=n.tx-n.x, dy=n.ty-n.y, d=Math.hypot(dx,dy);
+    if(d<0.12){
+      n.moving=false;
+      if(!n.idleUntil) n.idleUntil=now+1200+Math.random()*2800;
+      else if(now>=n.idleUntil){ n.idleUntil=0; pickFarmNpcTarget(n); }
+    }else{
+      n.idleUntil=0;
+      const nx=n.x+(dx/d)*NPC_SPEED, ny=n.y+(dy/d)*NPC_SPEED;
+      if(farmNpcWalkable(nx,n.y)) n.x=nx; else pickFarmNpcTarget(n);
+      if(farmNpcWalkable(n.x,ny)) n.y=ny;
+      n.facing = Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+      n.moving=true;
+    }
+    if(n.moving){ if(++n.aTimer>=WALK_SPEED){ n.aTimer=0; n.aStep=(n.aStep+1)%WALK_CYCLE.length; } n.frame=WALK_CYCLE[n.aStep]; }
+    else { n.frame=0; n.aTimer=0; n.aStep=0; }
+    const o=SCENES.farm.objects.find(ob=>ob.id===id);
+    if(o){ o.x=Math.round(n.x); o.y=Math.round(n.y); }
+  }
+}
+function drawFarmNpcs(ox,oy){
+  for(const id in farmNpcs){
+    const n=farmNpcs[id];
+    const px=n.x*TS+TS/2-ox, py=n.y*TS+TS/2-oy;
+    ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+    ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
+    if(n.img && n.img.complete && n.img.naturalWidth){
+      const dirCols={down:0,left:1,right:2,up:3}, sx=(dirCols[n.facing]||0)*64, sy=n.frame*64;
+      ctx.drawImage(n.img, sx,sy,64,64, px-32, py-64+14, 64,64);
+    }else{
+      ctx.fillStyle='#000'; ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.fallback||'🧑‍🎓', px, py);
+    }
+  }
+}
+function alfredFarmLines(){
+  const set=(typeof ALFRED_FARM_LINES!=='undefined')?ALFRED_FARM_LINES:{idle:['…'],hired:['…']};
+  return S.childHired ? (set.hired||['…']) : (set.idle||['…']);
+}
+function openFarmhand(){
+  const nm=(S.child&&S.child.name)||'阿爾弗雷德';
+  const pool=alfredFarmLines(), line=pool[Math.floor(Math.random()*pool.length)];
+  const action = S.childHired
+    ? `<button class="btn ghost" style="width:100%;color:var(--danger)" onclick="fireChild()">讓他別做了</button>`
+    : `<button class="btn green" style="width:100%" onclick="hireChild()">雇用他顧農場（蛇不敢來）</button>`;
+  openSheet(`<div class="sheethead"><h3>🧑‍🎓 ${nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:6px">${S.childHired?'農場交給他打理中，自動照料、不怕蛇。':'少年期的他正在農田裡晃。'}</div>
+    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.5">${line}</div>
+    ${action}`);
+}
+function hireChild(){
+  S.childHired=true; monsters=[]; shots=[];
+  addLog(`🧑‍🎓 ${(S.child&&S.child.name)||'阿爾弗雷德'} 開始幫忙顧農場`);
+  closeSheet(); toast('🧑‍🎓 他開始顧農場了，蛇也不敢來了'); save();
+}
+function fireChild(){
+  S.childHired=false;
+  if(curScene==='farm') spawnSnakes();
+  addLog('🧑‍🎓 讓阿爾弗雷德休息一下');
+  closeSheet(); toast('他暫時不顧農場了'); save();
+}
 let monsters=[];
 let lastSpawn=Date.now();
 const MONSTER_CAP=2, SNAKE_SPEED=0.07, AGGRO=5, BITE_RANGE=0.7, BITE_CD=1200, SNAKE_DMG=2, SPAWN_MS=12000;
@@ -981,8 +1075,9 @@ function snakeWalkable(x,y){ const ix=Math.floor(x),iy=Math.floor(y),C=GRID.farm
   if(inFencedPen(ix,iy)) return false;            // 不進柵欄（雞舍／牛棚／豬圈）
   return !blocked(GRID.farm[iy][ix]); }
 function spawnSnake(){ const p=randFarmTile(); if(!p) return; monsters.push({x:p.x,y:p.y,hp:4,lastBite:0,wanderT:0,wx:0,wy:0,facing:'down',frame:0,aTimer:0,aStep:0,moving:false}); }
-function spawnSnakes(){ monsters=[]; shots=[]; for(let i=0;i<MONSTER_CAP;i++) spawnSnake(); lastSpawn=Date.now(); }
+function spawnSnakes(){ monsters=[]; shots=[]; if(S.childHired) return; for(let i=0;i<MONSTER_CAP;i++) spawnSnake(); lastSpawn=Date.now(); }
 function updateMonsters(){
+  if(S.childHired){ if(monsters.length) monsters=[]; return; }
   const now=Date.now();
   if(monsters.length<MONSTER_CAP && now-lastSpawn>SPAWN_MS){ lastSpawn=now; spawnSnake(); }
   for(const m of monsters){
@@ -1007,7 +1102,14 @@ function updateMonsters(){
 }
 /* ---------- 投擲毒物 ---------- */
 let shots=[];
+let equipped=null;   // null=空手；'toxin'=選了毒物。之後要加別的工具就放這
 const THROW_SPEED=0.35, TOXIN_DMG=2, SHOT_LIFE=60, HIT_RANGE=0.7;
+function toggleEquip(ev){
+  if(ev)ev.preventDefault();
+  if(curScene!=='farm'){ toast('只能在農牧地使用'); return; }
+  equipped = (equipped==='toxin') ? null : 'toxin';
+  toast(equipped==='toxin' ? '🧪 已選擇毒物：按互動鍵投擲' : '收起毒物，恢復一般互動');
+}
 function throwToxin(ev){
   if(ev)ev.preventDefault();
   if(curScene!=='farm'){ toast('只能在農牧地投擲'); return; }
@@ -1486,7 +1588,7 @@ function blankState(){
     wardrobe:{owned:['default'],wearing:'default'},
     employee:null,
     cafe:{staff:false,till:0,menu:[],goods:{},lastRun:Date.now()},
-    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), child:null,
+    ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), child:null, childHired:false,
     kitchenPickups:[],
   };
 }
@@ -1585,7 +1687,7 @@ function tick(){
       else{addLog('👷 沒錢付月薪，雇員離職');S.employee=null;break;}
     }
   }
-  const emp=!!S.employee || (isPartnerWorking()&&S.partner.job==='farm');
+  const emp=!!S.employee || (isPartnerWorking()&&S.partner.job==='farm') || S.childHired;
   // crops（每格、要澆水才長）
  for(const key in S.crops){
     const c=S.crops[key]; const def=FARM_CROPS[c.crop]; if(!def){delete S.crops[key];continue;}
@@ -1712,6 +1814,7 @@ function kStep(){ const r=curRecipe(); if(!prepReady())return 0; if(prep.knead<(
 let dlgNpc=null, dlgIdx=0;
 function interact(ev){
   if(ev)ev.preventDefault();
+  if(curScene==='farm' && equipped==='toxin'){ throwToxin(); return; }   // 選了毒物→互動鍵=投擲（限農牧地）
   // 坐在書桌時：互動鍵 = 打開桌面選單（看帳本／雇用）
   if(sitting){ openDeskMenu(); return; }
   if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
@@ -1739,6 +1842,7 @@ function interact(ev){
     case 'eraBoard': return openEra();
     case 'child': return openChild();
     case 'merchant': return openMerchant(o.mid);
+    case 'farmhand': return openFarmhand();
     case 'partner': return openPartner();
     case 'wardrobe': return openWardrobe();
     case 'till': return collectTill();
@@ -2130,6 +2234,7 @@ function showDlg(o){document.getElementById('dialogue').classList.remove('idle')
   else if(o.id==='crib'){ const pool=childWalkLines();
     avatar = S.child ? (S.child.crying?'😢':CHILD_STAGES[S.child.stage].e) : '🕊️';
     line=pool[Math.floor(Math.random()*pool.length)]; }
+  else if(o.id==='alfred'){ const pool=alfredFarmLines(); line=pool[Math.floor(Math.random()*pool.length)]; avatar='🧑‍🎓'; }
   else { const pool=o.lines; line=pool?pool[dlgIdx%pool.length]:'……'; }
   document.getElementById('dlgAvatar').textContent=avatar;
   document.getElementById('dlgText').innerHTML=`<span class="name">${o.nm}</span>${line}`;}
@@ -2214,12 +2319,20 @@ if(walkable(nx+0.5,player.y+foot))player.x=nx;
   }
 document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
-  if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); updatePigs(); }
+  if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); updatePigs(); updateFarmNpcs(); }
   if(curScene==='office') updateOfficeNpcs();
   if(curScene==='port') updatePortNpcs();
   if(curScene==='kitchen') updateKitchenPickups();
-  const tb=document.getElementById('throwBtn');
-  if(tb){ if(curScene==='farm'){ tb.style.display='flex'; const tc=document.getElementById('throwCount'); if(tc)tc.textContent=S.toxins||0; } else tb.style.display='none'; }
+  const eb=document.getElementById('equipBtn');
+  if(eb){
+    if(curScene==='farm'){
+      eb.style.display='flex';
+      const on = equipped==='toxin';
+      eb.style.background = on ? 'var(--accent2)' : 'var(--card)';
+      eb.style.borderColor = on ? 'var(--accent2)' : 'var(--line2)';
+      const ec=document.getElementById('equipCount'); if(ec){ ec.textContent=S.toxins||0; ec.style.color=on?'#ffffffcc':'var(--ink2)'; }
+    }else{ eb.style.display='none'; }
+  }
   const onChair = (curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y);
   const onBed = (curScene===BED.scene
     && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2
@@ -2245,6 +2358,11 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
  }else if(sleeping){
     document.getElementById('actBtn').className='actbtn dim';
     hint.textContent='😴 睡覺中・按方向鍵起床';
+    hint.classList.add('show');
+ }else if(curScene==='farm' && equipped==='toxin'){
+    dlgNpc=null; if(!say._t) idleDlg();
+    document.getElementById('actBtn').className='actbtn throw';
+    hint.textContent=(S.toxins>0)?'🧪 投擲毒物（互動鍵）':'🧪 沒有毒物了，去廚房做';
     hint.classList.add('show');
  }else{
     let onTile = null;
@@ -2431,6 +2549,7 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
   }
   if(curScene==='farm') drawChickens(ox,oy);
   if(curScene==='farm') drawPigs(ox,oy);
+  if(curScene==='farm') drawFarmNpcs(ox,oy);
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
   // === 烤箱運作：兩楨地圖動畫（畫在人物下面）===
@@ -2529,7 +2648,7 @@ function goScene(name){
     if(!S.port.merchants.length || Date.now()-(S.port.lastTs||0)>PORT_REFRESH_MS) refreshPort(); else buildPortObjects();
     buildPortNpcs(); }
   if(name==='office'){ syncPartnerObject(); buildOfficeNpcs(); }
-  if(name==='farm'){ spawnSnakes(); buildChickens(); buildPigs(); }
+  if(name==='farm'){ if(S.childHired){ monsters=[]; shots=[]; } else spawnSnakes(); buildChickens(); buildPigs(); buildFarmNpcs(); }
   curScene=name; applyCookSkin();
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
@@ -2559,6 +2678,7 @@ function startGame(n){
   if(!S.crops)S.crops={};if(!S.era)S.era=17;if(!S.port)S.port={merchants:[],relations:{},lastTs:0};if(!S.maxHp)S.maxHp=20;if(S.hp===undefined)S.hp=S.maxHp;if(S.toxins===undefined)S.toxins=0;if(!S.cookBy)S.cookBy='self';
   if(!S.wardrobe)S.wardrobe={owned:['default'],wearing:'default'};
   if(!S.kitchenPickups)S.kitchenPickups=[];
+  if(S.childHired===undefined)S.childHired=false;
   // 清掉舊存檔殘留的爆量雞蛋：總 pending 超過蛋箱上限會讓 room 變負、雞全面停產
   if(S.animals && S.animals.chicken){
     let over=0; for(const a of S.animals.chicken) over+=(a.pending||0);
