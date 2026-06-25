@@ -992,7 +992,7 @@ function buildFarmNpcs(){
   farmNpcs={};
   SCENES.farm.objects=SCENES.farm.objects.filter(o=>o.id!=='alfred');
   if(S.child && S.child.stage===3){   // 少年期才出現在農田
-    const nm=S.child.name||'阿爾弗雷德', sx=8, sy=20;
+    const nm=S.child.name||'阿爾弗雷德', sx=8, sy=24;
     SCENES.farm.objects.push({id:'alfred',x:sx,y:sy,e:'🧑‍🎓',nm,kind:'farmhand',npc:true,avatar:'🧑‍🎓',hide:true});
     farmNpcs['alfred']={ x:sx,y:sy, tx:sx,ty:sy, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
       img:npcImg('child_teen.png'), fallback:'🧑‍🎓' };
