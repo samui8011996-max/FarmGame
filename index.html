@@ -2138,15 +2138,22 @@ function childWalkLines(){
   const key=CHILD_STAGES[S.child.stage].key;                 // baby / toddler / child / teen
   if(key==='baby') return CHILD_BABY_LINES;
   if(S.partner){
+    if(partnerHoneymoon() && typeof CHILD_SETTLING_LINES!=='undefined' && CHILD_SETTLING_LINES[key])
+      return CHILD_SETTLING_LINES[key];                       // 同居初期：孩子還在觀望，先不排斥
     const byStage=CHILD_PARTNER_LINES[key] || CHILD_PARTNER_LINES.child;
     return byStage[S.partner.id] || byStage._default;
   }
   return CHILD_HAPPY_LINES;
 }
+function partnerHoneymoon(){ return !!(S.partner && (S.partner.newlyMoved||0)>0); }
 function partnerWalkLines(){
   const p=S.partner; if(!p) return ['…'];
   const set=(typeof PARTNER_WALK_LINES!=='undefined' && (PARTNER_WALK_LINES[p.id]||PARTNER_WALK_LINES._default))
             || {base:['和你在一起真好。']};
+  if(partnerHoneymoon() && set.newlyMoved && set.newlyMoved.length){   // 剛同居：先放幾次「搬進來」台詞
+    if(p.newlyMoved>0){ p.newlyMoved--; save(); }
+    return set.newlyMoved;
+  }
   let pool=(set.base||[]).slice();
   if(S.child && S.child.stage>=1 && set.jealous) pool=pool.concat(set.jealous);  // 阿爾弗雷德到幼兒以上才摻心事
   return pool.length?pool:['…'];
