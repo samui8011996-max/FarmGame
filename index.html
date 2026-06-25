@@ -1063,7 +1063,7 @@ function fireChild(){
   closeSheet(); toast('他暫時不顧農場了'); save();
 }
 /* ---------- 牛（在牛棚範圍走動） ---------- */
-const COW_ZONE={x1:0,y1:5,x2:12,y2:11};   // 對應 FARM_ZONES 的牛棚範圍
+const COW_ZONE={x1:3,y1:7,x2:12,y2:11};   // 對應 FARM_ZONES 的牛棚範圍
 const COW_SPEED=0.028, COW_FRAME_MS=460;
 let cowNpcs=[];
 function cowWalkable(x,y){
@@ -1490,15 +1490,15 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   ".............F.....FFFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   ".............F......FFFFFFFFF",
-   "FFFFFFFFFFFFFF......FFFFFFFFF",
+   ".F...........F.....FFFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".F...........F......FFFFFFFFF",
+   ".FFFFFFFFFFFFF......FFFFFFFFF",
    "....................FFFFFFFFF",
    "....................FFFFFFFFF",
    "........FFFF..........FFFFFFF",
