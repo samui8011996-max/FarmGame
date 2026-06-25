@@ -221,7 +221,7 @@ const CROPS={
 };
 const ANIMALS={
   chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle: 30000,mode:'produce',growFeed:2},
-  cow:{nm:'牛',e:'🐄',cub:25,feed:3,prod:'milk',cycle: 30000,mode:'produce'},
+  cow:{nm:'牛',e:'🐄',cub:25,feed:3,prod:'milk',cycle: 30000,mode:'produce',growFeed:2},
   pig:{nm:'豬',e:'🐖',cub:13,feed:2,prod:'pork',cycle:3,mode:'fatten',growFeed:2},
 };
 const PRODUCTS={
@@ -235,7 +235,8 @@ const PRODUCTS={
   lemon:{nm:'檸檬',e:'🍋',base:5,volat:'mid'},
   egg:{nm:'egg',e:'📦',base:10,volat:'mid'},
   milk:{nm:'milk',e:'📦',base:10,volat:'mid'},
-  pork:{nm:'pork',e:'📦',base:10,volat:'mid'},
+  pork:{nm:'豬肉',e:'🥓',base:10,volat:'mid'},
+  beef:{nm:'牛肉',e:'🥩',base:12,volat:'mid'},
   chicken_meat:{nm:'雞肉',e:'🍗',base:6,volat:'small'},
   turkey_meat:{nm:'火雞肉',e:'🍖',base:7,volat:'small'},
 };
@@ -824,10 +825,16 @@ const HEN_IMG=new Image();   HEN_IMG.src='Hen.png';
 const TURKEY_IMG=new Image();TURKEY_IMG.src='turkey.png';
 const PIGLET_IMG=new Image();PIGLET_IMG.src='piglet.png';
 const PIG_IMG=new Image();   PIG_IMG.src='pig.png';
+const CALF_IMG=new Image();  CALF_IMG.src='calf.png';
+const COW_IMG=new Image();   COW_IMG.src='cow.png';
 /* ---------- 蛋箱：產蛋上限 + 滿箱疊圖 ---------- */
 const EGG_BOX_COUNT=3;          // 蛋箱數＝最多疊幾張圖
 const EGG_PER_BOX=8;            // 每箱幾顆蛋（總上限 = 3×8 = 24；想要更少蛋就把這調小）
 const EGG_BOX_IMG=['egg_box1.png','egg_box2.png','egg_box3.png'];  // 三張「整張地圖一樣大」的圖
+const EGG_HUNGER_MS=DAY;   // 雞超過這時間沒餵→停止產蛋（餵了才繼續），想嚴格就調小
+const FEED_BOWL_IMG={ chicken:'feed_chicken.png', pig:'feed_pig.png', cow:'feed_cow.png' };  // 各區飼料盆「滿」的整張地圖圖
+const BOWL_FULL_MS=60000;  // 餵完後飼料盆顯示滿盆多久（毫秒），到時間變回空盆
+function bowlFull(zone){ return Date.now() - ((S.feedBowl&&S.feedBowl[zone])||0) < BOWL_FULL_MS; }
 function eggCap(){ return EGG_BOX_COUNT*EGG_PER_BOX; }
 function eggTotalPending(){ let s=0; const list=(S.animals&&S.animals.chicken)||[]; for(const a of list) s+=(a.pending||0); return s; }
 function eggBoxes(){ return Math.min(EGG_BOX_COUNT, Math.ceil(eggTotalPending()/EGG_PER_BOX)); }  // 要疊幾張圖＝有蛋的箱數
@@ -1055,8 +1062,74 @@ function fireChild(){
   addLog('🧑‍🎓 讓阿爾弗雷德休息一下');
   closeSheet(); toast('他暫時不顧農場了'); save();
 }
-let monsters=[];
-let lastSpawn=Date.now();
+/* ---------- 牛（在牛棚範圍走動） ---------- */
+const COW_ZONE={x1:0,y1:5,x2:12,y2:11};   // 對應 FARM_ZONES 的牛棚範圍
+const COW_SPEED=0.028, COW_FRAME_MS=460;
+let cowNpcs=[];
+function cowWalkable(x,y){
+  const ix=Math.round(x),iy=Math.round(y),z=COW_ZONE;
+  return ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2;
+}
+function pickCowTarget(c){
+  const z=COW_ZONE;
+  for(let i=0;i<12;i++){
+    const tx=z.x1+Math.floor(Math.random()*(z.x2-z.x1+1));
+    const ty=z.y1+Math.floor(Math.random()*(z.y2-z.y1+1));
+    if(cowWalkable(tx,ty)){ c.tx=tx; c.ty=ty; return; }
+  }
+}
+function buildCows(){
+  cowNpcs=[];
+  const list=(S.animals&&S.animals.cow)||[];
+  list.forEach((a,i)=>{
+    const slotX=COW_ZONE.x1+(i%((COW_ZONE.x2-COW_ZONE.x1)||1));
+    const slotY=COW_ZONE.y1+(i%((COW_ZONE.y2-COW_ZONE.y1+1)));
+    cowNpcs.push({ idx:i, x:slotX, y:slotY, tx:slotX, ty:slotY,
+      flip:false, frame:0, frameT:0, idleUntil:0 });
+  });
+}
+function isGrownCow(a){ return (a.feedCount||0) >= (ANIMALS.cow.growFeed||2); }
+function updateCows(){
+  const now=Date.now(), list=(S.animals&&S.animals.cow)||[];
+  if(cowNpcs.length!==list.length) buildCows();
+  for(const c of cowNpcs){
+    const dx=c.tx-c.x, dy=c.ty-c.y, d=Math.hypot(dx,dy);
+    if(d<0.1){
+      if(!c.idleUntil) c.idleUntil=now+1200+Math.random()*3000;
+      else if(now>=c.idleUntil){ c.idleUntil=0; pickCowTarget(c); }
+    }else{
+      c.idleUntil=0;
+      c.x+=(dx/d)*COW_SPEED; c.y+=(dy/d)*COW_SPEED;
+      if(Math.abs(dx)>0.01) c.flip = dx<0;   // 往左走→鏡像
+      if(now-c.frameT>=COW_FRAME_MS){ c.frameT=now; c.frame=(c.frame+1)%2; }
+    }
+  }
+}
+function drawCows(ox,oy){
+  const list=(S.animals&&S.animals.cow)||[];
+  for(const c of cowNpcs){
+    const a=list[c.idx]; if(!a) continue;
+    const grown=isGrownCow(a);
+    const img = grown?COW_IMG:CALF_IMG;
+    const px=c.x*TS+TS/2-ox, py=c.y*TS+TS/2-oy;
+    const shW=grown?14:7, shH=grown?4:2, shY=-1;
+    ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+    ctx.beginPath();ctx.ellipse(px,py+shY,shW,shH,0,0,Math.PI*2);ctx.fill();
+    if(img && img.complete && img.naturalWidth){
+      const fw=64, fh=64, sx=c.frame*fw;   // 走路兩楨，橫向排
+      if(c.flip){
+        ctx.save(); ctx.translate(px,0); ctx.scale(-1,1);
+        ctx.drawImage(img, sx,0,fw,fh, -32, py-64+14, 64,64);
+        ctx.restore();
+      }else{
+        ctx.drawImage(img, sx,0,fw,fh, px-32, py-64+14, 64,64);
+      }
+    }else{
+      ctx.fillStyle='#000'; ctx.font='18px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(grown?'🐄':'🐮', px, py);
+    }
+  }
+}
 const MONSTER_CAP=2, SNAKE_SPEED=0.07, AGGRO=5, BITE_RANGE=0.7, BITE_CD=1200, SNAKE_DMG=2, SPAWN_MS=12000;
 function randFarmTile(){
   const C=GRID.farm[0].length, R=GRID.farm.length;
@@ -1555,6 +1628,9 @@ const FARM_ZONES = [
   {kind:'chicken', nm:'雞舍', x1:21, y1:16, x2:30, y2:27},
   {kind:'pig', nm:'豬圈', x1:19, y1:5, x2:30, y2:16},
   {kind:'cow', nm:'牛棚', x1:-1, y1:3, x2:14, y2:14},
+  {kind:'plot', nm:'農田', x1:14, y1:18, x2:17, y2:23},
+  {kind:'plot', nm:'農田', x1:8, y1:16, x2:11, y2:21},
+  {kind:'plot', nm:'農田', x1:2, y1:18, x2:5, y2:23},
 ];
 function farmZoneAt(x,y){
   const ix=Math.round(x),iy=Math.round(y);
@@ -1582,7 +1658,7 @@ function blankState(){
     day:1, era:17, startTs:Date.now(), lastTick:Date.now(),
     cash:50, hp:20, maxHp:20, toxins:0, cookBy:'self', plots, fert:0, feed:0, seeds:{}, crops:{},
     animals:{chicken:[{born:Date.now(),fed:Date.now(),lastProd:Date.now(),feedCount:0}],cow:[],pig:[]},
-    store:{}, extras:{}, market:{}, marketDay:0,
+    store:{}, extras:{}, market:{}, marketDay:0, feedBowl:{},
     port:{merchants:[], relations:{}, lastTs:0},
     partner:null,
     wardrobe:{owned:['default'],wearing:'default'},
@@ -1705,6 +1781,8 @@ function tick(){
       if(def.mode==='produce'){
         if(type==='chicken' && a.species==='turkey'){ return true; }   // 火雞不產蛋
         if(type==='chicken' && def.growFeed && (a.feedCount||0)<def.growFeed){ return true; }   // 還是小雞→不生蛋
+        if(type==='cow' && def.growFeed && (a.feedCount||0)<def.growFeed){ return true; }       // 還是小牛→不擠奶
+        if(type==='chicken' && !emp && now-(a.fed||a.born) > EGG_HUNGER_MS){ a.lastProd=now; return true; }   // 太久沒餵→停產蛋
         const n=Math.floor((now-(a.lastProd||a.born))/def.cycle);
         if(n>0){
           a.lastProd=(a.lastProd||a.born)+n*def.cycle;
@@ -1890,6 +1968,21 @@ function water(i){S.plots[i].watered=true;closeSheet();toast('💧 澆水好了'
 function fertilize(i){if(S.fert<=0)return;S.fert--;S.plots[i].fert=true;closeSheet();toast('💩 施肥 +50%');save();}
 function harvest(i){const p=S.plots[i];const y=baseYield(p);addStore(p.crop,y);resetPlot(p);closeSheet();toast(`🧺 收成 ${y} 個${CROPS[p.crop].nm}`);save();}
 
+/* ---------- 體重／產肉系統 ---------- */
+const MEAT_SPEC={
+  turkey:{ feedKg:0.6, maxKg:9,   baseKg:4,  meatPerKg:0.8,  prod:'turkey_meat' },
+  pig:   { feedKg:4,   maxKg:60,  baseKg:20, meatPerKg:0.25, prod:'pork' },
+  cow:   { feedKg:6,   maxKg:120, baseKg:50, meatPerKg:0.12, prod:'beef' },
+};
+function meatSpecFor(type,a){
+  if(type==='pig') return MEAT_SPEC.pig;
+  if(type==='cow') return MEAT_SPEC.cow;
+  if(type==='chicken' && a && a.species==='turkey') return MEAT_SPEC.turkey;
+  return null;   // 一般母雞→null（產肉固定、不顯示體重）
+}
+function meatYield(spec,w){ return Math.max(1, Math.round((w||spec.baseKg)*spec.meatPerKg)); }
+function gainWeight(type,a){ const s=meatSpecFor(type,a); if(!s)return; a.weight=Math.min(s.maxKg,(a.weight||s.baseKg)+s.feedKg); }
+function weightTxt(type,a){ const s=meatSpecFor(type,a); if(!s)return ''; const w=(a.weight||s.baseKg); return `・${w.toFixed(1)}/${s.maxKg}公斤${w>=s.maxKg?'(已肥)':''}`; }
 /* ---------- ANIMALS ---------- */
 function openAnimals(type){
   const def=ANIMALS[type];const list=S.animals[type];
@@ -1898,72 +1991,176 @@ function openAnimals(type){
     if(type==='chicken'){
       const turkey=a.species==='turkey', adult=isHen(a);
       const e=turkey?'🦃':(adult?'🐔':'🐤'), nm=turkey?'火雞':'雞';
+      const wt = (turkey&&adult) ? weightTxt('chicken',a) : '';
       let act = turkey
         ? (adult?`<button class="btn sm gold" onclick="confirmKillBird(${idx})">宰殺</button>`:`<span class="small">養大中</span>`)
-        : (adult?`<button class="btn sm ${a.pending?'green':'dis'}" onclick="collect('chicken',${idx})">取蛋${a.pending?'('+a.pending+')':''}</button> <button class="btn sm gold" onclick="confirmKillBird(${idx})">宰殺</button>`:`<span class="small">小雞養大中</span>`);
+        : (adult?`<button class="btn sm gold" onclick="confirmKillBird(${idx})">宰殺</button>`:`<span class="small">小雞養大中</span>`);
       return `<div class="row"><div class="e">${e}</div>
-        <div class="info"><div class="n">${nm} #${idx+1}</div><div class="d">距餵食 ${hrs}時${S.employee?'（雇員顧）':''}</div></div>
-        <button class="btn sm" onclick="feed('chicken',${idx})">🌾餵</button>${act}</div>`;
+        <div class="info"><div class="n">${nm} #${idx+1}</div><div class="d">距餵食 ${hrs}時${wt}${S.employee?'（雇員顧）':''}</div></div>
+        ${act}</div>`;
     }
     if(type==='pig'){
       const grown=isGrownPig(a), e=grown?'🐖':'🐷';
+      const wt = grown ? weightTxt('pig',a) : '';
       let act = !grown ? `<span class="small">小豬養大中</span>`
-        : (a.fat?`<button class="btn sm gold" onclick="confirmSellPig(${idx})">賣豬</button>`:`<span class="small">養肥中</span>`);
+        : `<button class="btn sm gold" onclick="confirmSellPig(${idx})">宰殺</button>`;
       return `<div class="row"><div class="e">${e}</div>
-        <div class="info"><div class="n">${grown?'豬':'小豬'} #${idx+1}</div><div class="d">距餵食 ${hrs}時${S.employee?'（雇員顧）':''}</div></div>
-        <button class="btn sm" onclick="feed('pig',${idx})">🌾餵</button>${act}</div>`;
+        <div class="info"><div class="n">${grown?'豬':'小豬'} #${idx+1}</div><div class="d">距餵食 ${hrs}時${wt}${S.employee?'（雇員顧）':''}</div></div>
+        ${act}</div>`;
+    }
+    if(type==='cow'){
+      const grown=isGrownCow(a), e=grown?'🐄':'🐮';
+      const wt = grown ? weightTxt('cow',a) : '';
+      let act = !grown ? `<span class="small">小牛養大中</span>`
+        : `<button class="btn sm ${a.pending?'green':'dis'}" onclick="collect('cow',${idx})">擠奶${a.pending?'('+a.pending+')':''}</button> <button class="btn sm gold" onclick="confirmSellCow(${idx})">宰殺</button>`;
+      return `<div class="row"><div class="e">${e}</div>
+        <div class="info"><div class="n">${grown?'牛':'小牛'} #${idx+1}</div><div class="d">距餵食 ${hrs}時${wt}${S.employee?'（雇員顧）':''}</div></div>
+        ${act}</div>`;
     }
     let act = def.mode==='produce'
       ? `<button class="btn sm ${a.pending?'green':'dis'}" onclick="collect('${type}',${idx})">${def.prod==='egg'?'取蛋':'擠奶'}${a.pending?'('+a.pending+')':''}</button>`
       : (a.fat?`<button class="btn sm gold" onclick="confirmSellPig(${idx})">賣豬</button>`:`<span class="small">養肥中</span>`);
     return `<div class="row"><div class="e">${def.e}</div>
       <div class="info"><div class="n">${def.nm} #${idx+1}</div><div class="d">距餵食 ${hrs}時${S.employee?'（雇員顧）':''}</div></div>
-      <button class="btn sm" onclick="feed('${type}',${idx})">🌾餵</button>${act}</div>`;
+      ${act}</div>`;
   }).join('') : `<div class="empty-note">還沒有${def.nm}，去商店買幼崽。</div>`;
+const feedAllBtn = list.length
+    ? `<button class="btn green ${S.feed<def.feed?'dis':''}" style="width:100%;margin-bottom:10px" onclick="feedAll('${type}')">🌾 餵食全部${def.nm}（每隻 ${def.feed} 份・庫存 ${S.feed}）</button>`
+    : '';
+  let eggBtns='';
+  if(type==='chicken'){
+    const total=eggTotalPending();
+    let cells='';
+    for(let b=0;b<EGG_BOX_COUNT;b++){
+      const inBox=Math.max(0, Math.min(EGG_PER_BOX, total-b*EGG_PER_BOX));
+      cells+=`<button class="btn sm ${inBox>0?'gold':'dis'}" style="flex:1" onclick="collectEggBox(${b})">第${b+1}箱 ${inBox}/${EGG_PER_BOX}</button>`;
+    }
+    eggBtns=`<div style="display:flex;gap:6px;margin-bottom:10px">${cells}</div>`;
+  }
   openSheet(`<div class="sheethead"><h3>${def.e} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。${type==='chicken'?`<br>🥚 蛋箱 ${eggTotalPending()}/${eggCap()}・使用 ${eggBoxes()}/${EGG_BOX_COUNT} 箱（滿了暫停產蛋，收蛋後再生）`:''}</div>${rows}`);
+    <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。${type==='chicken'?`<br>🥚 蛋箱 ${eggTotalPending()}/${eggCap()}・使用 ${eggBoxes()}/${EGG_BOX_COUNT} 箱（滿了暫停產蛋，收蛋後再生）`:''}</div>${feedAllBtn}${eggBtns}${rows}`);
+}
+function feedAll(type){
+  const def=ANIMALS[type], list=S.animals[type]||[];
+  if(!list.length){ toast(`還沒有${def.nm}`); return; }
+  if(S.feed<def.feed){ toast('飼料不足'); return; }
+  let fedN=0;
+  for(const a of list){
+    if(S.feed<def.feed) break;            // 飼料不夠→餵到這裡為止
+    S.feed-=def.feed; a.fed=Date.now(); fedN++;
+    if((type==='chicken'||type==='pig'||type==='cow') && def.growFeed){
+      a.feedCount=(a.feedCount||0)+1;
+      const turkey=type==='chicken'&&a.species==='turkey';
+      if(a.feedCount===def.growFeed){
+        if(type==='chicken'&&!turkey) a.lastProd=Date.now();
+        if(type==='cow') a.lastProd=Date.now();
+        const s=meatSpecFor(type,a); if(s) a.weight=s.baseKg;
+      }else if(a.feedCount>def.growFeed){
+        gainWeight(type,a);
+      }
+    }
+  }
+  if(!S.feedBowl) S.feedBowl={};
+  if(fedN>0) S.feedBowl[type]=Date.now();   // 餵到任何一隻→這區飼料桶變滿
+  const short = S.feed<def.feed && fedN<list.length;
+  toast(`🌾 餵了 ${fedN} 隻${def.nm}${short?'（飼料不夠，剩下的沒餵到）':''}`);
+  openAnimals(type); save();
 }
 function feed(type,idx){
   const def=ANIMALS[type]; if(S.feed<def.feed){toast('飼料不足');return;}
   S.feed-=def.feed; const a=S.animals[type][idx]; a.fed=Date.now();
-  if(type==='chicken' && def.growFeed){
+  if(!S.feedBowl) S.feedBowl={};
+  S.feedBowl[type]=Date.now();   // 餵了→這區（雞舍/豬圈/牛棚）的飼料盆變滿
+  if((type==='chicken'||type==='pig'||type==='cow') && def.growFeed){
     a.feedCount=(a.feedCount||0)+1;
-    const turkey=a.species==='turkey';
-    if(a.feedCount===def.growFeed){ if(!turkey)a.lastProd=Date.now(); toast(turkey?'🦃 小火雞長大了！':'🐔 小雞長大成母雞了！'); }
-    else if(a.feedCount<def.growFeed) toast(`🌾 餵了${turkey?'小火雞':'小雞'}（${a.feedCount}/${def.growFeed} 就會長大）`);
-    else toast(`🌾 餵了${turkey?'火雞':def.nm}`);
-  }else if(type==='pig' && def.growFeed){
-    a.feedCount=(a.feedCount||0)+1;
-    if(a.feedCount===def.growFeed){ a.born=Date.now(); toast('🐖 小豬長大了！開始養肥'); }
-    else if(a.feedCount<def.growFeed) toast(`🌾 餵了小豬（${a.feedCount}/${def.growFeed} 就會長大）`);
-    else toast(`🌾 餵了${def.nm}`);
-  }else toast(`🌾 餵了${def.nm}`);
+    const turkey=type==='chicken'&&a.species==='turkey';
+    const youngNm=type==='chicken'?(turkey?'小火雞':'小雞'):type==='pig'?'小豬':'小牛';
+    const grownNm=type==='chicken'?(turkey?'火雞':'母雞'):def.nm;
+    if(a.feedCount===def.growFeed){              // 剛長大
+      if(type==='chicken'&&!turkey) a.lastProd=Date.now();
+      if(type==='cow') a.lastProd=Date.now();
+      const s=meatSpecFor(type,a); if(s) a.weight=s.baseKg;   // 開始有體重
+      toast(`🎉 ${youngNm}長大了！`);
+    }else if(a.feedCount<def.growFeed){
+      toast(`🌾 餵了${youngNm}（${a.feedCount}/${def.growFeed} 就會長大）`);
+    }else{                                       // 成年→增重（封頂）
+      gainWeight(type,a);
+      const s=meatSpecFor(type,a);
+      toast(s ? `🌾 餵了${grownNm}（${a.weight.toFixed(1)} 公斤）` : `🌾 餵了${grownNm}`);
+    }
+  }else{ toast(`🌾 餵了${def.nm}`); }
   openAnimals(type); save();
 }
 function collect(type,idx){const a=S.animals[type][idx];const def=ANIMALS[type];if(!a.pending){toast('還沒產出');return;}addStore(def.prod,a.pending);toast(`收了 ${a.pending} ${PRODUCTS[def.prod].nm}`);a.pending=0;openAnimals(type);save();}
-function confirmSellPig(idx){const price=priceOf('pork');
-  openSheet(`<div class="sheethead"><h3>確認賣豬？</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div style="text-align:center;padding:10px"><div style="font-size:42px">🐖➡️🥩</div><p>以 <b>$${price}</b> 賣出，無法復原。</p></div>
+function collectEggBox(boxIdx){
+  const total=eggTotalPending();
+  if(total<=0){ toast('目前沒有蛋'); return; }
+  // 這箱實際有幾顆：第 boxIdx 箱（0起算）裝的範圍
+  const start=boxIdx*EGG_PER_BOX;
+  const inThisBox=Math.max(0, Math.min(EGG_PER_BOX, total-start));
+  if(inThisBox<=0){ toast(`第 ${boxIdx+1} 箱還沒有蛋`); return; }
+  // 從各隻雞的 pending 依序扣，湊滿這箱的數量
+  let need=inThisBox;
+  const list=S.animals.chicken||[];
+  for(const a of list){
+    if(need<=0) break;
+    const take=Math.min(a.pending||0, need);
+    if(take>0){ a.pending-=take; need-=take; }
+  }
+  const got=inThisBox-need;
+  addStore('egg',got);
+  toast(`🥚 收了第 ${boxIdx+1} 箱 ${got} 顆蛋`);
+  openAnimals('chicken'); save();
+}
+function confirmSellPig(idx){
+  const a=S.animals.pig[idx]; if(!a) return;
+  const spec=MEAT_SPEC.pig, amt=meatYield(spec,a.weight), w=(a.weight||spec.baseKg).toFixed(1);
+  openSheet(`<div class="sheethead"><h3>確認宰殺豬？</h3><button class="close" onclick="openAnimals('pig')">✕</button></div>
+    <div style="text-align:center;padding:10px"><div style="font-size:42px">🐖➡️🥩</div><p>宰殺後得到 <b>${amt} 豬肉</b>（${w}公斤），無法復原。</p></div>
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" onclick="openAnimals('pig')">取消</button>
-    <button class="btn green" style="flex:1" onclick="sellPig(${idx})">確認</button></div>`);}
-function sellPig(idx){const price=priceOf('pork');earn(price,'賣豬肉');S.animals.pig.splice(idx,1);closeSheet();toast(`🥩 +$${fmt(price)}`);save();}
+    <button class="btn green" style="flex:1" onclick="sellPig(${idx})">確認</button></div>`);
+}
+function sellPig(idx){
+  const a=S.animals.pig[idx]; if(!a) return;
+  const amt=meatYield(MEAT_SPEC.pig,a.weight);
+  addStore('pork',amt); S.animals.pig.splice(idx,1); buildPigs();
+  closeSheet(); toast(`🥩 取得 ${amt} 豬肉（去商店賣）`); save();
+}
+function confirmSellCow(idx){
+  const a=S.animals.cow[idx]; if(!a) return;
+  const spec=MEAT_SPEC.cow, amt=meatYield(spec,a.weight), w=(a.weight||spec.baseKg).toFixed(1);
+  openSheet(`<div class="sheethead"><h3>確認宰殺牛？</h3><button class="close" onclick="openAnimals('cow')">✕</button></div>
+    <div style="text-align:center;padding:10px"><div style="font-size:42px">🐄➡️🥩</div><p>宰殺後得到 <b>${amt} 牛肉</b>（${w}公斤），無法復原；之後就不能再擠奶了。</p></div>
+    <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" onclick="openAnimals('cow')">取消</button>
+    <button class="btn green" style="flex:1" onclick="sellCow(${idx})">確認</button></div>`);
+}
+function sellCow(idx){
+  const a=S.animals.cow[idx]; if(!a) return;
+  const amt=meatYield(MEAT_SPEC.cow,a.weight);
+  addStore('beef',amt); S.animals.cow.splice(idx,1); buildCows();
+  closeSheet(); toast(`🥩 取得 ${amt} 牛肉（去商店賣）`); save();
+}
 function killBird(idx){
   const a=S.animals.chicken[idx]; if(!a) return;
   const turkey=a.species==='turkey';
-  const meat=turkey?'turkey_meat':'chicken_meat', amt=turkey?5:3;
+  let meat,amt;
+  if(turkey){ meat='turkey_meat'; amt=meatYield(MEAT_SPEC.turkey, a.weight); }   // 火雞→依體重
+  else { meat='chicken_meat'; amt=3; }                                           // 母雞→固定
   addStore(meat,amt); S.animals.chicken.splice(idx,1); buildChickens();
   closeSheet(); toast(`🔪 取得 ${amt} ${PRODUCTS[meat].nm}（去商店賣）`); save();
 }
 function confirmKillBird(idx){
   const a=S.animals.chicken[idx]; if(!a) return;
   const turkey=a.species==='turkey';
-  const nm=turkey?'火雞':'母雞', meat=turkey?'火雞肉':'雞肉', e=turkey?'🦃':'🐔';
+  const nm=turkey?'火雞':'母雞', e=turkey?'🦃':'🐔';
+  const amt = turkey ? meatYield(MEAT_SPEC.turkey, a.weight) : 3;
+  const meatNm = turkey?'火雞肉':'雞肉';
+  const wTxt = turkey ? `（${(a.weight||MEAT_SPEC.turkey.baseKg).toFixed(1)}公斤）` : '';
   openSheet(`<div class="sheethead"><h3>確認宰殺${nm}？</h3><button class="close" onclick="openAnimals('chicken')">✕</button></div>
-    <div style="text-align:center;padding:10px"><div style="font-size:42px">${e}➡️🍗</div><p>宰殺後得到 <b>${meat}</b>，無法復原。</p></div>
+    <div style="text-align:center;padding:10px"><div style="font-size:42px">${e}➡️🍗</div><p>宰殺後得到 <b>${amt} ${meatNm}</b>${wTxt}，無法復原。</p></div>
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" onclick="openAnimals('chicken')">取消</button>
     <button class="btn green" style="flex:1" onclick="killBird(${idx})">確認</button></div>`);
 }
-
 /* ---------- OFFICE ---------- */
 function openDeskMenu(){
   openSheet(`<div class="sheethead"><h3>🪑 書桌</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -2175,7 +2372,7 @@ function openShopBuy(){
 function buySeed(c,q){const cost=Math.round(CROPS[c].seed*QUAL_MUL[q]);if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${CROPS[c].nm}種子`);S.seeds[seedKey(c,q)]=(S.seeds[seedKey(c,q)]||0)+1;toast(`買了${CROPS[c].nm}種子`);openShopBuy();save();}
 function buyCropSeed(k){const cost=Math.round(FARM_CROPS[k].seed*shopBuyMul()); if(S.cash<cost){toast('現金不足');return;} spend(cost,`買${FARM_CROPS[k].nm}種子`); S.seeds[k]=(S.seeds[k]||0)+1; toast(`買了${FARM_CROPS[k].nm}種子`); openShopBuy(); save();}
 
-function buyAnimal(k){const d=ANIMALS[k];if(S.animals[k].length>=10){toast('已達上限');return;}const cost=Math.round(d.cub*shopBuyMul());if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${d.nm}`);S.animals[k].push({born:Date.now(),fed:Date.now(),lastProd:Date.now(),feedCount:0});buildChickens();buildPigs();toast(`買了${d.nm}，已進牧地`);openShopBuy();save();}
+function buyAnimal(k){const d=ANIMALS[k];if(S.animals[k].length>=10){toast('已達上限');return;}const cost=Math.round(d.cub*shopBuyMul());if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${d.nm}`);S.animals[k].push({born:Date.now(),fed:Date.now(),lastProd:Date.now(),feedCount:0});buildChickens();buildPigs();buildCows();toast(`買了${d.nm}，已進牧地`);openShopBuy();save();}
 function buyTurkey(){
   if(S.animals.chicken.length>=10){toast('雞舍滿了');return;}
   const cost=Math.round(8*shopBuyMul());
@@ -2192,7 +2389,7 @@ function buyFert(q){const c=Math.round((S._fp||6)*q*shopBuyMul());if(S.cash<c){t
 function buyExtra(k,q){const c=Math.round(EXTRAS[k].price*q*shopBuyMul());if(S.cash<c){toast('現金不足');return;}spend(c,`買${EXTRAS[k].nm}×${q}`);S.extras[k]=(S.extras[k]||0)+q;toast(`+${q}${EXTRAS[k].nm}`);openShopBuy();save();}
 function openShopSell(){
   let raw='';let any=false;
-  for(const k in PRODUCTS){if(k==='pork')continue;const have=S.store[k]||0;const price=priceOf(k);const dir=priceDir(k);
+  for(const k in PRODUCTS){const have=S.store[k]||0;const price=priceOf(k);const dir=priceDir(k);
     const arrow=dir>0?'<span class="up">▲</span>':dir<0?'<span class="down">▼</span>':'';
     raw+=`<div class="row"><div class="e">${PRODUCTS[k].e}</div><div class="info"><div class="n">${PRODUCTS[k].nm} <span class="small">基準$${PRODUCTS[k].base}</span></div>
       <div class="d">庫存 ${have}</div></div><div class="price">$${price} ${arrow}</div>
@@ -2319,7 +2516,7 @@ if(walkable(nx+0.5,player.y+foot))player.x=nx;
   }
 document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
-  if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); updatePigs(); updateFarmNpcs(); }
+  if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); updatePigs(); updateCows(); updateFarmNpcs(); }
   if(curScene==='office') updateOfficeNpcs();
   if(curScene==='port') updatePortNpcs();
   if(curScene==='kitchen') updateKitchenPickups();
@@ -2479,6 +2676,9 @@ function draw(){
     const nb=eggBoxes();
     for(let i=0;i<nb;i++){ const eb=npcImg(EGG_BOX_IMG[i]);
       if(eb&&eb.complete&&eb.naturalWidth) ctx.drawImage(eb, -ox, -oy, mapCols()*TS, mapRows()*TS); }
+    for(const z in FEED_BOWL_IMG){ if(!bowlFull(z)) continue;   // 餵過的那區→疊滿盆圖
+      const fb=npcImg(FEED_BOWL_IMG[z]);
+      if(fb&&fb.complete&&fb.naturalWidth) ctx.drawImage(fb, -ox, -oy, mapCols()*TS, mapRows()*TS); }
   }
   // DEBUG：顯示碰撞格（對齊家具用，調好後把 DEBUG 改成 false）
 // DEBUG：作物格範圍（每框=一株=CELL×CELL）。Console 打 DEBUG_CROPCELL=true 開啟
@@ -2549,6 +2749,7 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
   }
   if(curScene==='farm') drawChickens(ox,oy);
   if(curScene==='farm') drawPigs(ox,oy);
+  if(curScene==='farm') drawCows(ox,oy);
   if(curScene==='farm') drawFarmNpcs(ox,oy);
   if(curScene==='office') drawOfficeNpcs(ox,oy);
   if(curScene==='port') drawPortNpcs(ox,oy);
@@ -2648,7 +2849,7 @@ function goScene(name){
     if(!S.port.merchants.length || Date.now()-(S.port.lastTs||0)>PORT_REFRESH_MS) refreshPort(); else buildPortObjects();
     buildPortNpcs(); }
   if(name==='office'){ syncPartnerObject(); buildOfficeNpcs(); }
-  if(name==='farm'){ if(S.childHired){ monsters=[]; shots=[]; } else spawnSnakes(); buildChickens(); buildPigs(); buildFarmNpcs(); }
+  if(name==='farm'){ if(S.childHired){ monsters=[]; shots=[]; } else spawnSnakes(); buildChickens(); buildPigs(); buildCows(); buildFarmNpcs(); }
   curScene=name; applyCookSkin();
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
@@ -2679,6 +2880,12 @@ function startGame(n){
   if(!S.wardrobe)S.wardrobe={owned:['default'],wearing:'default'};
   if(!S.kitchenPickups)S.kitchenPickups=[];
   if(S.childHired===undefined)S.childHired=false;
+  if(!S.feedBowl)S.feedBowl={};
+  if(S.animals){   // 已長大的火雞/豬/牛補上體重欄位
+    (S.animals.chicken||[]).forEach(a=>{ if(a.species==='turkey' && isHen(a) && a.weight===undefined) a.weight=MEAT_SPEC.turkey.baseKg; });
+    (S.animals.pig||[]).forEach(a=>{ if(isGrownPig(a) && a.weight===undefined) a.weight=MEAT_SPEC.pig.baseKg; });
+    (S.animals.cow||[]).forEach(a=>{ if(isGrownCow(a) && a.weight===undefined) a.weight=MEAT_SPEC.cow.baseKg; });
+  }
   // 清掉舊存檔殘留的爆量雞蛋：總 pending 超過蛋箱上限會讓 room 變負、雞全面停產
   if(S.animals && S.animals.chicken){
     let over=0; for(const a of S.animals.chicken) over+=(a.pending||0);
