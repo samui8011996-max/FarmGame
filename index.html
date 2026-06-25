@@ -681,7 +681,7 @@ function cohabit(id){
   if(!familyReady()){toast('要先養育過孩子（養到幼兒以上）');return;}
   if(S.partner){toast('你已經有伴侶了');return;}
   const m=MERCHANTS[id];
-  S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0, wardrobe:{owned:['default'],wearing:'default'}};
+  S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0, newlyMoved:6, wardrobe:{owned:['default'],wearing:'default'}};
   S.port.merchants=S.port.merchants.filter(x=>x!==id); buildPortObjects();
   addLog(`💞 和 ${m.nm} 開始同居`);
   closeSheet(); toast(`💞 ${m.nm} 搬進來一起住了`); save(); goScene('office');
