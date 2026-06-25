@@ -789,7 +789,18 @@ const HP_REGEN_MS=8000;   // 多久自動回 1 點血
 let lastRegen=Date.now();
 function damagePlayer(n){ S.hp=Math.max(0,S.hp-n); refreshTop(); if(S.hp<=0) faint(); }
 function healPlayer(n){ S.hp=Math.min(S.maxHp,S.hp+n); refreshTop(); toast(`❤️ 回復 ${n} 點`); }
-function faint(){ S.hp=S.maxHp; toast('😵 你昏倒了，被送回家休息'); goScene('office'); save(); }
+function faint(){
+  S.hp=S.maxHp; toast('😵 你昏倒了，被送回家休息');
+  goScene('office');
+  // 放到床範圍內、但腳下是可走的格子（避免起床卡在床的碰撞框裡）
+  let bx=Math.round((BED.x1+BED.x2)/2), by=BED.y2;
+  for(let y=BED.y2;y>=BED.y1;y--) for(let x=BED.x1;x<=BED.x2;x++){
+    if(walkable(x+0.5,y+0.5)){ bx=x; by=y; }
+  }
+  player.x=bx; player.y=by;
+  sleeping=true;
+  save();
+}
 function eatDish(k){
   if((S.cafe.goods[k]||0)<=0){ toast('沒有這個成品'); return; }
   if(S.hp>=S.maxHp){ toast('血量已滿'); return; }
@@ -1106,7 +1117,7 @@ function intimate(kind){
   dlgNpc=null;
   if(kind==='spicy'){
     // 先播 2 秒 _spicy 全圖兩楨動畫，再切到 _afterglow 事後全圖（停住、按方向鍵才下床）
-    spicyScene={ phase:'spicy', img:npcImg('spicy.png') };
+    spicyScene={ phase:'spicy', img:SPICY_IMG };
     setTimeout(()=>{ if(spicyScene){ spicyScene={ phase:'after', img:npcImg(p.id+'_afterglow.png') }; showSpicyLine(); } }, 2000);
     return;   // 不自動解凍
   }
@@ -1276,6 +1287,7 @@ function unfreezeNpcs(){
 }
 let intimCG=null;
 let spicyScene=null;   // 跟伴侶做可疑的事：兩人躺床的事後全圖，按方向鍵才解除
+const SPICY_IMG=npcImg('spicy.png');   // 開場就預載，避免第一次觸發時閃黑屏字幕
 function showSpicyLine(){
   const p=S.partner; if(!p) return;
   const nm=(MERCHANTS[p.id]||{}).nm||'伴侶';
@@ -2206,7 +2218,8 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2
     && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2);
   if(!onChair) sitting=false;   // 離開椅子→起身
-  if(!onBed) sleeping=false;    // 離開床→起來
+  if(sleeping && (held.up||held.down||held.left||held.right)) sleeping=false;   // 睡覺中按方向鍵→直接起床
+  else if(!onBed) sleeping=false;    // 離開床→起來
   // oven ui
   const ob=document.getElementById('ovenbar');
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
@@ -2315,11 +2328,6 @@ function draw(){
       }else{
         ctx.drawImage(im, -ox,-oy, mw,mh);
       }
-    }else{
-      ctx.fillStyle='#3a2c1c'; ctx.fillRect(0,0,cv.width,cv.height);
-      ctx.fillStyle='#f4ecd9'; ctx.font='14px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      const need=spicyScene.phase==='spicy'?'spicy.png':((S.partner?S.partner.id:'')+'_afterglow.png');
-      ctx.fillText('💤 …（請放 '+need+'）', cv.width/2, cv.height/2);
     }
     return;
   }
