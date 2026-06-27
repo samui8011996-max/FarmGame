@@ -83,7 +83,32 @@
     flex-direction:column;align-items:center;gap:1px;font-weight:700}
   .nav button .ic{font-size:19px}
   .nav button.on{color:var(--accent)} .nav button.on .ic{transform:scale(1.12)}
-
+/* === 桌機 / 網頁版：導覽列移到左側直放（手機維持底部橫排） === */
+  @media (min-width:820px){
+    .nav{
+      position:fixed;
+      left:max(12px, calc(50vw - 400px));
+      top:50%;
+      transform:translateY(-50%);
+      flex-direction:column;
+      width:68px;
+      margin-top:0;
+      background:var(--paper2);
+      border:2px solid var(--line2);
+      border-radius:14px;
+      box-shadow:0 3px 0 var(--shadow);
+      overflow:hidden;
+      z-index:40;
+    }
+    .nav button{
+      flex:none;
+      padding:13px 4px;
+      font-size:11px;
+      border-bottom:1px solid var(--line);
+    }
+    .nav button:last-child{border-bottom:none}
+    .nav button .ic{font-size:21px}
+  }
   .mask{position:fixed;inset:0;background:#3a2c1c66;z-index:50;display:none;align-items:flex-end;justify-content:center}
   .mask.show{display:flex}
   .sheet{background:var(--paper);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px 16px 22px;max-height:82vh;overflow:auto}
@@ -156,6 +181,9 @@
       <canvas id="game" width="320" height="288"></canvas>
       <div class="ovenbar" id="ovenbar"><span id="ovenTxt">烘烤中</span><div class="meter"><i id="ovenFill"></i></div></div>
       <div class="hint" id="hint"></div>
+      <div id="fishUI" style="display:none;position:absolute;top:8px;right:8px;z-index:6">
+        <button onclick="landBoat(true)" style="background:#3a2c1cdd;color:#f1ead4;border:none;border-radius:12px;padding:6px 12px;font-size:13px;font-weight:700">🏠 靠岸</button>
+      </div>
     </div>
   </div>
   <div class="dialogue idle" id="dialogue">
@@ -173,8 +201,9 @@
 </svg></button>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-    <button id="equipBtn" ontouchstart="toggleEquip(event)" onmousedown="toggleEquip(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🧪<span id="equipCount" style="font-size:10px;color:var(--ink2)">0</span></button>
-    <button class="actbtn dim" id="actBtn" ontouchstart="interact(event)" onmousedown="interact(event)">
+    <button id="fishWeaponBtn" ontouchstart="weaponBtn(event)" onmousedown="weaponBtn(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">⚔️<span style="font-size:10px;color:var(--ink2)">攻擊</span></button>
+     <button id="equipBtn" ontouchstart="throwToxin(event)" onmousedown="throwToxin(event)"  style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🧪<span id="equipCount" style="font-size:10px;color:var(--ink2)">0</span></button>
+    <button class="actbtn dim" id="actBtn" ontouchstart="actDown(event)" ontouchend="actUp()" onmousedown="actDown(event)" onmouseup="actUp()" onmouseleave="actUp()">
 <svg width="40" height="40" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#423926">
     <ellipse cx="5.4" cy="9" rx="1.9" ry="2.5"/>
     <ellipse cx="9.6" cy="6.2" rx="2" ry="2.7"/>
@@ -246,10 +275,12 @@ const RECIPES={
     ingredients:{strawberry:2, flour:1, sugar:1}},
   banana_pudding:{nm:'香蕉布丁',e:'🍮',price:12,batch:30,knead:3,
     ingredients:{banana:2, sugar:1}},
+  pancake:{nm:'鬆餅',e:'🥞',price:18,batch:30,knead:3,bakeMs:5000,locked:true,learnCost:80,
+    ingredients:{egg:2, milk:1, flour:1, sugar:1}},
 };
 const QUAL_MUL={bad:0.5,normal:1,good:1.8};
 const STORE_CAP=200;
-const BAKE_MS=10000, BURN_MS=14000;
+const BAKE_MS=10000, BURN_MS=20000;
 /* ---------- 農作物表（要加新作物就在這裡加一筆） ---------- */
 const FARM_CROPS={
   strawberry:{ nm:'草莓', img:'strawberry.png', fw:32, fh:32,
@@ -494,7 +525,7 @@ function openChild(){
 function childReward(){
   if(Math.random()>0.35) return null;
   const pool=[];
-  for(const k in FARM_CROPS) if(cropEra(k)<=S.era) pool.push({t:'seed',k});
+  for(const k in FARM_CROPS) if(cropEra(k)<=S.era && !FARM_CROPS[k].hidden) pool.push({t:'seed',k});
   pool.push({t:'extra',k:'flour'},{t:'extra',k:'sugar'});
   const p=pool[Math.floor(Math.random()*pool.length)];
   if(p.t==='seed'){ S.seeds[p.k]=(S.seeds[p.k]||0)+1; return `${FARM_CROPS[p.k].nm}種子`; }
@@ -585,6 +616,8 @@ function buildPortObjects(){
     const m=MERCHANTS[id], slot=PORT_SLOTS[i]; if(!m||!slot) return;
     objs.push({ id:'mc_'+id, x:slot.x, y:slot.y, e:m.e, nm:m.nm, kind:'merchant', mid:id, npc:true, avatar:m.e, lines:m.lines });
   });
+  // 港邊的漁船：互動就能出航去捕魚
+  objs.push({ id:'boat', x:10, y:13, e:'⛵', nm:'漁船（出航捕魚）', kind:'boatSail' });
   SCENES.port.objects=objs;
 }
 function openMerchant(id){
@@ -1063,7 +1096,7 @@ function fireChild(){
   closeSheet(); toast('他暫時不顧農場了'); save();
 }
 /* ---------- 牛（在牛棚範圍走動） ---------- */
-const COW_ZONE={x1:3,y1:7,x2:12,y2:11};   // 對應 FARM_ZONES 的牛棚範圍
+const COW_ZONE={x1:3,y1:8,x2:12,y2:11};   // 對應 FARM_ZONES 的牛棚範圍
 const COW_SPEED=0.028, COW_FRAME_MS=460;
 let cowNpcs=[];
 function cowWalkable(x,y){
@@ -1179,6 +1212,8 @@ let equipped=null;   // null=空手；'toxin'=選了毒物。之後要加別的�
 const THROW_SPEED=0.35, TOXIN_DMG=2, SHOT_LIFE=60, HIT_RANGE=0.7;
 function toggleEquip(ev){
   if(ev)ev.preventDefault();
+  if(curScene==='fishing'){ fishToggleWeapon(); return; }
+  if(curScene==='fishing'){ fishAttack(); return; }   // 捕魚場景：互動鍵＝攻擊
   if(curScene!=='farm'){ toast('只能在農牧地使用'); return; }
   equipped = (equipped==='toxin') ? null : 'toxin';
   toast(equipped==='toxin' ? '🧪 已選擇毒物：按互動鍵投擲' : '收起毒物，恢復一般互動');
@@ -1484,20 +1519,20 @@ function wipeSave(){
 }
 /* ---------- maps ---------- */
 const MAPS={
-  farm:[
+   farm:[
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   ".F...........F.....FFFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
-   ".F...........F......FFFFFFFFF",
+   "F.....FFFFFFFFFFFFFFFFFFFFFFF",
+   "..FFF.FFFFFFFFFFFFFFFFFFFFFFF",
+   ".FFFF.FFFFFFFF.....FFFFFFFFFF",
+   ".FFFF.FFFFFFFF......FFFFFFFFF",
+   ".FFFF.FFFFFFFF......FFFFFFFFF",
+   ".FFFF.FFFF...F......FFFFFFFFF",
+   ".FF..........F......FFFFFFFFF",
+   ".FF..........F......FFFFFFFFF",
+   ".FFFFFFFFFFFFF......FFFFFFFFF",
+   ".FFFFFFFFFFFFF......FFFFFFFFF",
    ".FFFFFFFFFFFFF......FFFFFFFFF",
    "....................FFFFFFFFF",
    "....................FFFFFFFFF",
@@ -1535,12 +1570,24 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
   ],
   cafe:[
-   "BBBBBBBBBBBBBBBBBBBB","BBBBBBBBBBBBBBBBBBBB","B..................B",
-   "B..CCCCCCCCCCCC....B","B..................B",
-   "B..................B","B..................B","B..................B",
-   "B..................B","B....TTTTTTTT......B","B..................B",
-   "B..................B","B..................B","B..................B",
-   "B........KK........B","B..................B","BBBBBBBBBBBBBBBBBBBB","BBBBBBBBBBBBBBBBBBBB",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FF..FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FF..FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FF..FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F................FFF.FFFFF.FFFFFF.FFFFF",
+   "F................FFF.FFFFF.FFFFFF.FFFFF",
+   "F.......FFFFFFFFFFFF.FFFFF.FFFFFF.FFF.F",
+   "F.......FFFFFFFFFFFF..................F",
+   "F.......FFFFFFFFFFFF..................F",
+   "F.......FFFFFFFFFFFF..................F",
+   "F.....................................F",
+   "F.....................................F",
+   "F.....................................F",
+   "F.....................................F",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
   ],
   kitchen:[
    "FFFFFFFFFFFFFFFFFFFF",
@@ -1563,12 +1610,24 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFF",
   ],
   shop:[
-   "WWWWWWWWWWWWWWWWWWWW","WWWWWWWWWWWWWWWWWWWW","W..................W",
-   "W..SSSSSS..SSSSSS..W","W..................W","W..................W",
-   "W..................W","W....CCCCCCCCCC....W","W..................W",
-   "W..................W","W..................W","W..................W",
-   "W..................W","W..................W","W........DD........W",
-   "W..................W","WWWWWWWWWWWWWWWWWWWW","WWWWWWWWWWWWWWWWWWWW",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFF",
+   "FFFF..........FFFFFF",
+   "FFFF...FFFF...FFFFFF",
+   "FFFF...FFFF.....FFFF",
+   "FFFF............FFFF",
+   "FFFF............FFFF",
+   "F..................F",
+   "F..................F",
+   "F..................F",
+   "F..................F",
+   "FFFFFFFFFFFFFFFFFFFF",
   ],
   port:[
    "AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAA","AAAAAAAAAAAAAAAAAAAA",
@@ -1586,10 +1645,10 @@ for(const k in MAPS){ GRID[k]=MAPS[k].map(r=>r.padEnd(MAPS[k][0].length,r[0]).sp
 /* ---------- scene definitions (objects + spawn + camera mode) ---------- */
 const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:14,y:16}, objects:[
-    {id:'npc',x:5,y:14,e:'🧓',nm:'老農',kind:'npc',npc:true,avatar:'🧓',
-      lines:['今天天氣不錯，適合下田。','作物記得澆水，會長得好。']},
-        {id:'staff',x:3,y:14,e:'👷',nm:'阿土',kind:'employee',npc:true,avatar:'👷',
-      lines:['老闆，要我顧農場嗎？','田裡的活交給我！']},
+    {
+      
+        
+      },
   ]},
   office:{title:'辦公室', big:false, spawn:{x:9,y:13}, objects:[
    
@@ -1599,27 +1658,28 @@ const SCENES={
     {id:'cat',x:37,y:7,e:'🐱',nm:'妖精桑',kind:'npc',npc:true,avatar:'🐱',hide:true,
       lines:['（在曬太陽）','今天也辛苦了。','摸摸我（並不會回血）。']},
   ]},
-  cafe:{title:'咖啡廳（前台）', big:false, spawn:{x:9,y:12}, objects:[
-    {id:'counter',x:9,y:3,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew'},
-    {id:'menu',x:6,y:9,e:'📋',nm:'上架菜單',kind:'menu'},
-    {id:'till',x:12,y:9,e:'💰',nm:'收銀台',kind:'till'},
+  cafe:{title:'咖啡廳（前台）', big:true, spawn:{x:6,y:7}, objects:[
+    {id:'counter',x:16,y:6,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew',hide:true},
+    {id:'menu',x:10,y:9,e:'📋',nm:'上架菜單',kind:'menu',hide:true},
+    {id:'till',x:13,y:6,e:'💰',nm:'收銀台',kind:'till',hide:true},
     {id:'decor',x:15,y:9,e:'🎨',nm:'裝潢店面',kind:'decor'},
-    {id:'kdoor',x:9,y:14,e:'🚪',nm:'進廚房',kind:'gotoKitchen'},
+    {id:'table1',x:11,y:11,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table1',hide:true},
+    {id:'table2',x:16,y:11,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table2',hide:true},
+    {id:'table3',x:22,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table3',hide:true},
+    {id:'table4',x:24,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table4',hide:true},
+    {id:'table5',x:28,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table5',hide:true},
+    {id:'table6',x:31,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table6',hide:true},
+    {id:'table7',x:35,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table7',hide:true},
+    
   ]},
-  kitchen:{title:'廚房', big:false, spawn:{x:2,y:8}, objects:[
+  kitchen:{title:'廚房', big:true, spawn:{x:3,y:8}, objects:[
     {id:'board',x:13,y:9,e:'🔪',nm:'備料台（放食材）',kind:'cut',hide:true},
     {id:'table',x:18,y:7,e:'🫓',nm:'桌子（揉/拌）',kind:'knead',hide:true},
     {id:'oven',x:9,y:6,e:'🔥',nm:'烤箱',kind:'oven',hide:true},
     {id:'recipepick',x:1,y:15,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
-    {id:'cdoor',x:2,y:6,e:'🚪',nm:'回前台',kind:'gotoCafe',hide:true},
+    
   ]},
-  shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
-    {id:'buy',x:5,y:3,e:'🧺',nm:'採購（買）',kind:'shopBuy'},
-    {id:'sell',x:13,y:3,e:'💵',nm:'收購（賣）',kind:'shopSell'},
-    {id:'keeper',x:9,y:7,e:'🧑‍🌾',nm:'老闆',kind:'npc',npc:true,avatar:'🧑‍🌾',
-      lines:['歡迎光臨！要買還是要賣？','今天的行情自己看著辦囉。','種苗飼料這裡都有。']},
-    {id:'sdoor',x:9,y:14,e:'🚪',nm:'回農牧地',kind:'gotoFarm'},
-  ]},
+  shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[]},
   port:{title:'港口', big:false, spawn:{x:9,y:14}, objects:[]},
   
 };
@@ -1770,7 +1830,7 @@ function tick(){
     const last=def.stages.length-1;
     if(emp) c.watered=true;
     if(c.stage<last && c.watered && now-c.t>=def.stageMs){ c.stage++; if(!emp)c.watered=false; c.t=now; }
-    if(emp && c.stage===last){ addStore(c.crop,Math.round(def.yield*0.6)); delete S.crops[key]; }
+    if(emp && c.stage===last){ if(c.crop==='tulip'){ S.tulips=S.tulips||{}; const _col=rollTulipColor(); S.tulips[_col]=(S.tulips[_col]||0)+1; } else { addStore(c.crop,Math.round(def.yield*0.6)); } delete S.crops[key]; }
   }
   // animals
   for(const type in S.animals){
@@ -1872,11 +1932,12 @@ function release(d){held[d]=false;}
 document.addEventListener('keydown',e=>{
   const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
   if(m[e.key]){held[m[e.key]]=true;player.facing=m[e.key];e.preventDefault();}
-  if(e.key===' '||e.key==='Enter'){interact();e.preventDefault();}
+  if(e.key===' '||e.key==='Enter'){ if(curScene==='fishing'){held.rod=true;} else {interact();} e.preventDefault(); }
 });
 document.addEventListener('keyup',e=>{
   const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
   if(m[e.key])held[m[e.key]]=false;
+  if(e.key===' '||e.key==='Enter') held.rod=false;
 });
 
 /* ---------- kitchen prep state (per-session) ---------- */
@@ -1892,7 +1953,6 @@ function kStep(){ const r=curRecipe(); if(!prepReady())return 0; if(prep.knead<(
 let dlgNpc=null, dlgIdx=0;
 function interact(ev){
   if(ev)ev.preventDefault();
-  if(curScene==='farm' && equipped==='toxin'){ throwToxin(); return; }   // 選了毒物→互動鍵=投擲（限農牧地）
   // 坐在書桌時：互動鍵 = 打開桌面選單（看帳本／雇用）
   if(sitting){ openDeskMenu(); return; }
   if(!sitting && curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y){ askSit(); return; }
@@ -1925,6 +1985,7 @@ function interact(ev){
     case 'wardrobe': return openWardrobe();
     case 'till': return collectTill();
     case 'brew': return toast('☕ （試作）泡咖啡：之後接咖啡商品');
+    case 'foodtable': return openFoodTable(o.tbl);
     case 'shopBuy': return openShopBuy();
     case 'shopSell': return openShopSell();
     case 'pickrecipe': return openPickRecipe();
@@ -1932,6 +1993,7 @@ function interact(ev){
     case 'knead': return kKnead();
     case 'oven': return kOven();
     case 'gotoShop': return goScene('shop');
+    case 'boatSail': return askSail();
     case 'gotoKitchen': return goScene('kitchen');
     case 'gotoCafe': return goScene('cafe');
     case 'gotoFarm': return goScene('farm');
@@ -2029,13 +2091,8 @@ const feedAllBtn = list.length
     : '';
   let eggBtns='';
   if(type==='chicken'){
-    const total=eggTotalPending();
-    let cells='';
-    for(let b=0;b<EGG_BOX_COUNT;b++){
-      const inBox=Math.max(0, Math.min(EGG_PER_BOX, total-b*EGG_PER_BOX));
-      cells+=`<button class="btn sm ${inBox>0?'gold':'dis'}" style="flex:1" onclick="collectEggBox(${b})">第${b+1}箱 ${inBox}/${EGG_PER_BOX}</button>`;
-    }
-    eggBtns=`<div style="display:flex;gap:6px;margin-bottom:10px">${cells}</div>`;
+    const total=eggTotalPending(), boxes=eggBoxes();
+    eggBtns=`<button class="btn gold ${total>0?'':'dis'}" style="width:100%;margin-bottom:10px" onclick="collectTopEggBox()">🥚 取蛋（還有 ${boxes} 箱・共 ${total} 顆）</button>`;
   }
   openSheet(`<div class="sheethead"><h3>${def.e} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。${type==='chicken'?`<br>🥚 蛋箱 ${eggTotalPending()}/${eggCap()}・使用 ${eggBoxes()}/${EGG_BOX_COUNT} 箱（滿了暫停產蛋，收蛋後再生）`:''}</div>${feedAllBtn}${eggBtns}${rows}`);
@@ -2092,6 +2149,11 @@ function feed(type,idx){
   openAnimals(type); save();
 }
 function collect(type,idx){const a=S.animals[type][idx];const def=ANIMALS[type];if(!a.pending){toast('還沒產出');return;}addStore(def.prod,a.pending);toast(`收了 ${a.pending} ${PRODUCTS[def.prod].nm}`);a.pending=0;openAnimals(type);save();}
+function collectTopEggBox(){
+  const total=eggTotalPending();
+  if(total<=0){ toast('目前沒有蛋'); return; }
+  collectEggBox(eggBoxes()-1);   // 取最上面（最後）那一箱，按一次收一箱
+}
 function collectEggBox(boxIdx){
   const total=eggTotalPending();
   if(total<=0){ toast('目前沒有蛋'); return; }
@@ -2222,10 +2284,20 @@ function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}co
 function openPickRecipe(){
   let body='';
   for(const k in RECIPES){ if(recipeEra(k)>S.era) continue; const r=RECIPES[k];const on=S.curRecipe===k;
-    const stepTxt='備料→揉製→進烤箱';
-    body+=`<div class="menucard${on?' on':''}" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${r.e}</div>
-      <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div><div class="small">${stepTxt}</div></div>
-      <button class="btn sm ${on?'green':'ghost'}" onclick="pickRecipe('${k}')">${on?'製作中':'選這個'}</button></div>`;}
+    const unlocked = !r.locked || (S.recipesUnlocked&&S.recipesUnlocked[k]);
+    if(unlocked){
+      const stepTxt='備料→揉製→進烤箱';
+      body+=`<div class="menucard${on?' on':''}" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${r.e}</div>
+        <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div><div class="small">${stepTxt}</div></div>
+        <button class="btn sm ${on?'green':'ghost'}" onclick="pickRecipe('${k}')">${on?'製作中':'選這個'}</button></div>`;
+    }else{
+      const ingTxt=Object.keys(r.ingredients).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
+      const fml=`${ingTxt}・攪${r.knead}・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+      body+=`<div class="menucard${on?' on':''}" style="display:flex;align-items:center;gap:8px;opacity:.92"><div style="font-size:22px">🔒</div>
+        <div style="flex:1"><div style="font-weight:700">？？？ <span class="small">未解鎖</span></div><div class="small">配方：${fml}</div></div>
+        <button class="btn sm ${on?'green':'ghost'}" onclick="pickRecipe('${k}')">${on?'試做中':'試做'}</button></div>`;
+    }
+  }
   const hasP=!!S.partner, self=S.cookBy!=='partner';
   const cookSel=`<div class="small" style="margin-bottom:6px">由誰製作</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -2274,9 +2346,9 @@ function kKnead(){ const r=curRecipe();
   if(prep.knead>=(r.knead||4)){ say('好了，拿去烤箱！'); return; }
   prep.knead++; toast(`🫓 揉製 ${prep.knead}/${r.knead||4}`); if(prep.knead>=(r.knead||4)) say('好了，去烤箱開烤。'); }
 function kOven(){ const r=curRecipe();
-  if(prep.inOven){ const t=Date.now()-prep.ovenStart; if(t<BAKE_MS){ say(`還沒好，再等 ${Math.ceil((BAKE_MS-t)/1000)} 秒。`); return; } finishBake(t); }
+  if(prep.inOven){ finishBake(Date.now()-prep.ovenStart); }       // 隨時可出爐，秒數自己抓
   else{ if(!prepReady()||prep.knead<(r.knead||4)){ say('材料還沒備好。'); return; }
-    prep.inOven=true; prep.ovenStart=Date.now(); toast('🔥 開烤！10秒出爐，別超過14秒'); say('烘烤中…時間到回烤箱出爐。'); save(); }
+    prep.inOven=true; prep.ovenStart=Date.now(); save(); }        // 開烤，不報秒數
 }
 /* ---------- 桌上取貨：做好的先擺桌上，走過去碰到才收 ---------- */
 const KITCHEN_TABLE_SLOTS=[   // 第一種在 10,14；每多一「種」往左 2 格(=32px)；最多 5 種
@@ -2327,15 +2399,23 @@ function drawKitchenPickups(ox,oy){
 }
 function finishBake(t){
   prep.inOven=false;
-  if(t>BURN_MS){ toast('💀 燒焦了！這批報廢'); say('焦了…重新備料。'); }          // 報廢：直接丟、不擺桌上
-  else if(S.cookBy==='partner' && S.partner){
-    const r=curRecipe(), out=Math.round(r.batch*cookBatchMul());
-    if(addKitchenPickup('food', S.curRecipe, out)){ toast(`✅ 出爐 ${out} 個${r.nm}，擺到桌上了`); say('擺到桌上了，走過去拿吧。'); }
-    else { S.cafe.goods[S.curRecipe]=(S.cafe.goods[S.curRecipe]||0)+out; toast(`✅ 出爐 ${out} 個${r.nm}（桌上滿了，直接收進背包）`); say('桌上擺滿了，先幫你收起來。'); }
+  const r=curRecipe(), k=S.curRecipe;
+  if(t>BURN_MS){ toast('💀 燒焦了！這批報廢'); prep.slots={}; prep.knead=0; save(); return; }  // 20秒燒焦
+  if(r.locked && !(S.recipesUnlocked&&S.recipesUnlocked[k])){     // 鎖住的：烤秒數抓對才算答對
+    const bm=r.bakeMs||BAKE_MS;
+    if(Math.abs(t-bm)<=1500){
+      if(!S.recipesUnlocked)S.recipesUnlocked={};
+      S.recipesUnlocked[k]=true; toast(`🎉 學會了 ${r.nm}！配方解鎖`);
+    }else{ toast('火候不對，再試一次'); prep.slots={}; prep.knead=0; save(); return; }
+  }
+  if(S.cookBy==='partner' && S.partner){
+    const out=Math.round(r.batch*cookBatchMul());
+    if(addKitchenPickup('food', k, out)) toast(`出爐 ${out} 個${r.nm}，擺到桌上了`);
+    else { S.cafe.goods[k]=(S.cafe.goods[k]||0)+out; toast(`出爐 ${out} 個${r.nm}（直接收進背包）`); }
   } else {
-    const out=toxinYield(S.curRecipe);
-    if(addKitchenPickup('toxin', S.curRecipe, out)){ toast(`🧪 做出 ${out} 份毒物，擺到桌上了`); say('毒物擺在桌上了，自己去收。'); }
-    else { S.toxins=(S.toxins||0)+out; toast(`🧪 做出 ${out} 份毒物（桌上滿了，直接收進背包）`); say('桌上滿了，毒物先收進背包。'); }
+    const out=toxinYield(k);
+    if(addKitchenPickup('toxin', k, out)) toast(`做出 ${out} 份毒物，擺到桌上了`);
+    else { S.toxins=(S.toxins||0)+out; toast(`做出 ${out} 份毒物（直接收進背包）`); }
   }
   prep.slots={}; prep.knead=0; save();
 }
@@ -2343,7 +2423,7 @@ function finishBake(t){
 /* ---------- SHOP ---------- */
 function openShopBuy(){
   let seeds='';
-  for(const k in FARM_CROPS){ if(cropEra(k)>S.era) continue; const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
+  for(const k in FARM_CROPS){ if(cropEra(k)>S.era) continue; if(FARM_CROPS[k].hidden) continue; const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
     seeds+=`<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${d.nm}種子</div>
       <div class="d">背包 ${S.seeds[k]||0}</div></div>
       <div class="price">$${d.seed}</div><button class="btn sm" onclick="buyCropSeed('${k}')">買</button></div>`;}
@@ -2358,7 +2438,18 @@ function openShopBuy(){
   for(const k in EXTRAS){const x=EXTRAS[k];
     extras+=`<div class="row"><div class="e">${x.e}</div><div class="info"><div class="n">${x.nm}</div><div class="d">庫存 ${S.extras[k]||0}</div></div>
       <div class="price">$${x.price}</div><button class="btn sm" onclick="buyExtra('${k}',10)">買10</button></div>`;}
-  const fp=jitter(6,.1),fe=jitter(1,.1);S._fp=fp;S._fe=fe;
+  let recipes='';
+  for(const k in RECIPES){ const r=RECIPES[k];
+    if(!r.locked) continue;                         // 只賣鎖住的配方
+    if(recipeEra(k)>S.era) continue;                // 沒到時代不賣（想全賣就刪這行）
+    const known=S.recipesKnown&&S.recipesKnown[k];
+    const cost=Math.round((r.learnCost||60)*shopBuyMul());
+    recipes+=`<div class="row"><div class="e">${r.e}</div><div class="info"><div class="n">${r.nm}配方</div>
+      <div class="d">${known?'已學會（看食譜本）':'買了才知道做法'}</div></div>
+      <div class="price">$${cost}</div>
+      <button class="btn sm ${known?'dis':''}" onclick="buyRecipe('${k}')">${known?'已學會':'買'}</button></div>`;
+  }
+      const fp=jitter(6,.1),fe=jitter(1,.1);S._fp=fp;S._fe=fe;
   openSheet(`<div class="sheethead"><h3>🧺 採購</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small">💰 現金 $${fmt(S.cash)}${perk('Pedro')?'・<b style="color:var(--accent2)">佩德羅同居中：結帳 8 折</b>':''}</div><div class="hr"></div>
     <b class="small">種子</b>${seeds}<div class="hr"></div>
@@ -2367,7 +2458,7 @@ function openShopBuy(){
     <div class="row"><div class="e">🌾</div><div class="info"><div class="n">飼料</div><div class="d">庫存 ${S.feed}</div></div><div class="price">$${fe}</div>
       <button class="btn sm" onclick="buyFeed(10)">買10</button><button class="btn sm ghost" onclick="buyFeed(50)">買50</button></div>
     <div class="row"><div class="e">💩</div><div class="info"><div class="n">肥料</div><div class="d">庫存 ${S.fert}</div></div><div class="price">$${fp}</div>
-      <button class="btn sm" onclick="buyFert(1)">買1</button><button class="btn sm ghost" onclick="buyFert(5)">買5</button></div>${extras}`);
+      <button class="btn sm" onclick="buyFert(1)">買1</button><button class="btn sm ghost" onclick="buyFert(5)">買5</button></div>${extras}${recipes?`<div class="hr"></div><b class="small">📖 配方</b>${recipes}`:''}`);
 }
 function buySeed(c,q){const cost=Math.round(CROPS[c].seed*QUAL_MUL[q]);if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${CROPS[c].nm}種子`);S.seeds[seedKey(c,q)]=(S.seeds[seedKey(c,q)]||0)+1;toast(`買了${CROPS[c].nm}種子`);openShopBuy();save();}
 function buyCropSeed(k){const cost=Math.round(FARM_CROPS[k].seed*shopBuyMul()); if(S.cash<cost){toast('現金不足');return;} spend(cost,`買${FARM_CROPS[k].nm}種子`); S.seeds[k]=(S.seeds[k]||0)+1; toast(`買了${FARM_CROPS[k].nm}種子`); openShopBuy(); save();}
@@ -2387,25 +2478,52 @@ function buyFeed(q){const c=Math.round((S._fe||1)*q*shopBuyMul());if(S.cash<c){t
 function buyFert(q){const c=Math.round((S._fp||6)*q*shopBuyMul());if(S.cash<c){toast('現金不足');return;}spend(c,`買肥料×${q}`);S.fert+=q;toast(`+${q}肥料`);openShopBuy();save();}
 
 function buyExtra(k,q){const c=Math.round(EXTRAS[k].price*q*shopBuyMul());if(S.cash<c){toast('現金不足');return;}spend(c,`買${EXTRAS[k].nm}×${q}`);S.extras[k]=(S.extras[k]||0)+q;toast(`+${q}${EXTRAS[k].nm}`);openShopBuy();save();}
+function buyRecipe(k){
+  if(!RECIPES[k]||!RECIPES[k].locked) return;
+  if(S.recipesKnown&&S.recipesKnown[k]){ toast('已經學會這個配方了'); return; }
+  const cost=Math.round((RECIPES[k].learnCost||60)*shopBuyMul());
+  if(S.cash<cost){ toast('現金不足'); return; }
+  spend(cost, `買${RECIPES[k].nm}配方`);
+  learnRecipe(k);     // 設 known + 跳「學到配方」訊息（食譜本才會出現配方）
+  openShopBuy();      // 重新整理清單
+}
+function qtyOpts(id, have){
+  if(have<=0) return `<select id="${id}" class="qsel" disabled><option>0</option></select>`;
+  const steps=[1,5,10,20,50].filter(n=>n<have);
+  const opts=steps.map(n=>`<option value="${n}">${n}</option>`).join('')
+            +`<option value="${have}" selected>全部(${have})</option>`;
+  return `<select id="${id}" class="qsel" style="margin:0 4px;padding:2px 4px;border-radius:6px">${opts}</select>`;
+}
 function openShopSell(){
   let raw='';let any=false;
   for(const k in PRODUCTS){const have=S.store[k]||0;const price=priceOf(k);const dir=priceDir(k);
     const arrow=dir>0?'<span class="up">▲</span>':dir<0?'<span class="down">▼</span>':'';
     raw+=`<div class="row"><div class="e">${PRODUCTS[k].e}</div><div class="info"><div class="n">${PRODUCTS[k].nm} <span class="small">基準$${PRODUCTS[k].base}</span></div>
       <div class="d">庫存 ${have}</div></div><div class="price">$${price} ${arrow}</div>
-      <button class="btn sm ${have<=0?'dis':'green'}" onclick="sellProduct('${k}')">全賣</button></div>`;
+      ${qtyOpts('sq_'+k,have)}<button class="btn sm ${have<=0?'dis':'green'}" onclick="sellProduct('${k}')">賣</button></div>`;
     if(have>0)any=true;}
   let goods='';
   for(const k in RECIPES){const have=S.cafe.goods[k]||0;
     goods+=`<div class="row"><div class="e">${RECIPES[k].e}</div><div class="info"><div class="n">${RECIPES[k].nm}</div><div class="d">庫存 ${have}</div></div>
-      <div class="price">$${RECIPES[k].price}</div><button class="btn sm ${have<=0?'dis':'green'}" onclick="sellGood('${k}')">全賣</button></div>`;}
+      <div class="price">$${RECIPES[k].price}</div>${qtyOpts('sg_'+k,have)}<button class="btn sm ${have<=0?'dis':'green'}" onclick="sellGood('${k}')">賣</button></div>`;}
   openSheet(`<div class="sheethead"><h3>💵 收購</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small">賣價每天浮動，會暴漲暴跌。${any?'':'（農畜產庫存空）'}${perk('Pedro')?'・<b style="color:var(--accent2)">佩德羅同居中：收購 +20%</b>':''}</div><div class="hr"></div>
     <b class="small">農畜產品</b>${raw}<div class="hr"></div><b class="small">加工品</b>${goods}`);
 }
-function sellProduct(k){const have=S.store[k]||0;if(have<=0)return;const total=Math.round(priceOf(k)*have*shopSellMul());S.store[k]=0;earn(total,`賣${PRODUCTS[k].nm}×${have}`);toast(`💰 +$${fmt(total)}`);openShopSell();save();}
-
-function sellGood(k){const have=S.cafe.goods[k]||0;if(have<=0)return;const total=Math.round(RECIPES[k].price*have*shopSellMul());S.cafe.goods[k]=0;earn(total,`賣${RECIPES[k].nm}×${have}`);toast(`💰 +$${fmt(total)}`);openShopSell();save();}
+function sellProduct(k){
+  const have=S.store[k]||0; if(have<=0) return;
+  const sel=document.getElementById('sq_'+k);
+  let q=sel?(parseInt(sel.value)||have):have; q=Math.min(q,have);
+  const total=Math.round(priceOf(k)*q*shopSellMul());
+  S.store[k]-=q; earn(total,`賣${PRODUCTS[k].nm}×${q}`); toast(`💰 +$${fmt(total)}`); openShopSell(); save();
+}
+function sellGood(k){
+  const have=S.cafe.goods[k]||0; if(have<=0) return;
+  const sel=document.getElementById('sg_'+k);
+  let q=sel?(parseInt(sel.value)||have):have; q=Math.min(q,have);
+  const total=Math.round(RECIPES[k].price*q*shopSellMul());
+  S.cafe.goods[k]-=q; earn(total,`賣${RECIPES[k].nm}×${q}`); toast(`💰 +$${fmt(total)}`); openShopSell(); save();
+}
 /* ---------- BAG ---------- */
 function openBag(){
   let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱'; const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
@@ -2487,6 +2605,7 @@ function renderRecipeBar(){
 /* ---------- loop ---------- */
 let tickAccum=0;
 function update(){
+  if(curScene==='fishing'){ updateFishing(); return; }
   if(spicyScene){
     if(held.up||held.down||held.left||held.right){ spicyScene=null; unfreezeNpcs(); }   // 按方向鍵→大家下床
     else{
@@ -2516,6 +2635,7 @@ if(walkable(nx+0.5,player.y+foot))player.x=nx;
   }
 document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+Math.round(player.y)+')';
   updateCamera();
+  autoDoors();
   if(curScene==='farm'){ updateMonsters(); updateShots(); updateChickens(); updatePigs(); updateCows(); updateFarmNpcs(); }
   if(curScene==='office') updateOfficeNpcs();
   if(curScene==='port') updatePortNpcs();
@@ -2540,9 +2660,9 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
   // oven ui
   const ob=document.getElementById('ovenbar');
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
-    document.getElementById('ovenFill').style.width=Math.min(100,(t/BAKE_MS)*100)+'%';
-    ob.classList.toggle('warn',t>=BAKE_MS&&t<=BURN_MS);ob.classList.toggle('burn',t>BURN_MS);
-    document.getElementById('ovenTxt').textContent=t<BAKE_MS?`烘烤中 ${(t/1000).toFixed(1)}s`:t<=BURN_MS?'✅快出爐':'💀燒焦中';
+  document.getElementById('ovenFill').style.width=Math.min(100,(t/BURN_MS)*100)+'%';
+  ob.classList.remove('warn');ob.classList.toggle('burn',t>BURN_MS);
+  document.getElementById('ovenTxt').textContent=t<=BURN_MS?`烘烤中 ${(t/1000).toFixed(1)}s`:'💀燒焦中';
   }else ob.classList.remove('show');
   // hint + dialogue
   const near=facingObject();
@@ -2572,9 +2692,13 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     }
     const zone   = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
     const animal = zone && zone.kind!=='plot' ? zone : null;
-    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal||onChair||onBed)?'':' dim');
-    if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
-    else if(near){dlgNpc=null;if(!say._t)idleDlg();hint.textContent=`${near.e} ${near.nm}（互動鍵）`;hint.classList.add('show');}
+    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal||onChair||onBed||(curScene==='shop'&&nearKeeper()))?'':' dim');
+ const _atKeeper   = curScene==='shop' && nearKeeper();
+    const _atShopDoor = curScene==='shop' && inShopDoor();
+    document.getElementById('actBtn').className='actbtn'+((near||onTile||animal||onChair||onBed||_atKeeper||_atShopDoor)?'':' dim');
+    if(_atKeeper){ if(dlgNpc!=='keeper'){ dlgNpc='keeper'; dlgIdx=(Math.random()*KEEPER_NPC.lines.length)|0; showDlg(KEEPER_NPC); } hint.textContent='🎩 霍蘭德（互動鍵）'; hint.classList.add('show'); }
+    else if(_atShopDoor){ dlgNpc=null; if(!say._t) idleDlg(); hint.textContent='🚪 回農牧地（互動鍵）'; hint.classList.add('show'); }
+    else if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
     else if(onTile){dlgNpc=null;if(!say._t)idleDlg();
       const c=S.crops[onTile];
       if(!c){ hint.textContent='🟫 播種（互動鍵）'; }
@@ -2622,6 +2746,7 @@ loadBg('farm', 'farm.png');
 loadBg('farm_18', 'farm_18.png');             // 18 世紀農牧地（沒放就退回 farm.png）
 loadFg('kitchen', 'kitchen_fg.png');       // 廚房前景（只畫要蓋過人物的部分，其餘透明）  
 loadFg('cafe', 'cafe_fg.png'); 
+loadFg('farm', 'farm_fg.png'); 
 loadBg('kitchen', 'kitchen.png');             // 廚房底圖
 const PLAYER_IMG = new Image();
 PLAYER_IMG.src = 'player.png';   // 你的小人圖，跟 game.html 放一起
@@ -2636,6 +2761,7 @@ BAKE_IMG[0].src='bake1.png';
 BAKE_IMG[1].src='bake2.png';
 function draw(){
   ctx.clearRect(0,0,cv.width,cv.height);
+  if(curScene==='fishing'){ drawFishing(); return; }
   if(spicyScene && curScene==='office'){
     const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS);
     let _s='office'; if((S.child&&S.child.stage>=1)||S.childLeftHome) _s='office_grown';
@@ -2658,6 +2784,7 @@ function draw(){
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
   let _bgScene=curScene;
   if(curScene==='office' && ((S.child && S.child.stage>=1) || S.childLeftHome)) _bgScene='office_grown';
+  if(curScene==='cafe') _bgScene='cafe_17';   // 咖啡廳固定用這張，不隨時代換
   const bg = SCENE_BG[_bgScene+'_'+S.era] || SCENE_BG[_bgScene] || SCENE_BG[curScene+'_'+S.era] || SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
     // 這個場景有底圖且載入好了 → 鋪滿整個舞台
@@ -2700,7 +2827,7 @@ function draw(){
     let icon=o.e;
     if(o.kind==='farm'){const p=S.plots[o.plotIdx];icon=!p||p.stage==='empty'||!p.stage?'🟫':p.stage==='growing'?'🌱':CROPS[p.crop].e;}
     if(o.kind==='animals'){const n=S.animals[o.atype].length;if(n===0)icon='⬜';}
-if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':t>=BAKE_MS?'✅':'🔥';}
+if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_MS?'💀':'🔥';}
     if(o.kind==='child'&&S.child){ icon=S.child.crying?'😢':CHILD_STAGES[S.child.stage].e; }
     if(o.kind==='child' && S.child && S.child.stage===0){
       const bi=npcImg('child_baby.png');
@@ -2722,6 +2849,7 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
     if(curScene!=='farm'){ctx.fillStyle=cssVar('--counter');ctx.fillRect(o.x*TS-ox+1,o.y*TS-oy+1,TS-2,TS-2);}
     ctx.font='13px serif';ctx.fillText(icon,(o.x+0.5)*TS-ox,(o.y+0.5)*TS-oy);
   }
+  drawCafeFood(ox,oy);   // 咖啡廳擺盤食物：畫在物件之後、人物之前 → 會被人物蓋住
   if(curScene==='farm'){
     const SZ=CELL*TS;
     for(const key in S.crops){
@@ -2815,8 +2943,372 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
     ctx.drawImage(SLEEP_IMG, -ox, -oy, mapCols()*TS, mapRows()*TS);
   }
 }
-function loop(){if(S){update();draw();}requestAnimationFrame(loop);}
 
+/* ============================================================
+   🎣 捕魚小遊戲 v4（側視角）— 取代舊版整段，貼到 function loop(){…} 前面
+   修正：魚全程掛在線上不斷線；收線時線收緊、鉤子乖乖回到竿下；拉到甲板上方才輕輕送進船
+   保留：水裡鉤子自由飄、多魚同時上鉤、漂流垃圾扣錢、船小會飄、重量影響收線、海怪戰鬥
+   依賴：spend()/earn()/refreshTop()/save()/openSheet()/closeSheet()/toast()/say()/fmt()/held/PLAYER_IMG/npcImg()
+   ============================================================ */
+const FISH_W=320, FISH_H=288;
+const FISH_SURFACE=132;
+const DECK_Y=118;                       // 甲板/船緣高度
+const FISH_TOP=148, FISH_BOTTOM=274;
+const BX0=46, BX1=274;                  // 船身左右
+const CAP_MIN=64, CAP_MAX=256;
+const FISH_BOAT_MAXHP=100;
+
+const FISH_KINDS=[
+  {k:'herring', nm:'鯡魚',    e:'🐟', rar:'普通', w:34, val:6,  wt:1.0, len:14, col:'#a9c0cc', spd:0.9},
+  {k:'mackerel',nm:'鯖魚',    e:'🐟', rar:'普通', w:30, val:9,  wt:1.2, len:16, col:'#5f8fa6', spd:1.2},
+  {k:'cod',     nm:'鱈魚',    e:'🐠', rar:'少見', w:20, val:18, wt:1.7, len:20, col:'#cdb88a', spd:0.7},
+  {k:'salmon',  nm:'鮭魚',    e:'🐟', rar:'稀有', w:11, val:34, wt:2.2, len:22, col:'#e08a5f', spd:1.0},
+  {k:'halibut', nm:'大比目魚', e:'🐠', rar:'傳說', w:5,  val:70, wt:3.4, len:30, col:'#7a6e58', spd:0.45},
+];
+const RAR_COL={ '普通':'#8a8a7a', '少見':'#5b8a4e', '稀有':'#3f7bd6', '傳說':'#b0883a' };
+function pickFishKind(){ let tot=FISH_KINDS.reduce((s,f)=>s+f.w,0), r=Math.random()*tot;
+  for(const f of FISH_KINDS){ if((r-=f.w)<=0) return f; } return FISH_KINDS[0]; }
+const TRASH_KINDS=[
+  {k:'boot',  nm:'破靴子', e:'👢', val:-8,  wt:1.6, len:16, spd:0.4},
+  {k:'can',   nm:'空罐頭', e:'🥫', val:-5,  wt:1.0, len:13, spd:0.5},
+  {k:'bottle',nm:'玻璃瓶', e:'🍶', val:-6,  wt:1.2, len:14, spd:0.5},
+  {k:'tire',  nm:'廢輪胎', e:'🛞', val:-12, wt:6.6, len:20, spd:0.35},
+];
+const TRASH_RATE=0.22;
+
+// 手感／難度
+const ROD_GRAV=0.01, ROD_LIFT=0.18, ROD_DAMP=0.985;          // 垂直：下沉、收線力、阻尼
+const LOAD_SINK=0.22, LOAD_SLOW=0.45;                        // 重量→下沉更強、收線更慢
+const HOOK_SPRING=0.006, HOOK_DAMP=0.95, CUR_PUSH=0.09, HOOK_NUDGE=0.11; // 水裡：鬆鬆地自由飄
+const REEL_SPRING=0.07, REEL_DAMP=0.84;                      // 收線/出水：線收緊、鉤子乖乖回竿下
+const PLOP_UP=7;                                             // 拋魚的向上力道（中等高度，越大拋越高）                                           // 把魚送進船的小拋力（別太大）
+const AIR_G=0.30, HOOK_CAP=6;
+const FISH_IMG={ herring:'fish_herring.png', mackerel:'fish_mackerel.png', cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png' };
+const CAP_SPEED=2.0, SWIM_CAP=6;
+const MON_BITE_CD=1600, MON_DMG=7, MON_HP=6, MON_CAP=2, MON_MIN=7000, MON_MAX=13000;
+const ATK_CD=300, BULLET_SPEED=6, GUN_DMG=1, KNIFE_DMG=3, KNIFE_RANGE=46;
+
+let fish=null;
+
+function makeSwimmer(){
+  const isTrash=Math.random()<TRASH_RATE;
+  const kind=isTrash ? TRASH_KINDS[(Math.random()*TRASH_KINDS.length)|0] : pickFishKind();
+  const dir=Math.random()<0.5?-1:1;
+  return { kind, trash:isTrash, dir, x: dir>0? -20 : FISH_W+20,
+    y: FISH_TOP + Math.random()*(FISH_BOTTOM-FISH_TOP),
+    wob: Math.random()*Math.PI*2, hooked:false };
+}
+
+function askSail(){
+  openSheet(`<div class="sheethead"><h3>⛵ 出航捕魚</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <p class="small">開船到外海釣魚，操作方式：</p>
+    <div class="row"><div class="e">⬅️➡️</div><div class="info"><div class="d">移動船長；魚線在水裡會自由飄</div></div></div>
+    <div class="row"><div class="e">⭕</div><div class="info"><div class="d">大圓鈕／空白鍵＝收線；魚被拉回竿邊、舉過船緣就會送進船裡</div></div></div>
+    <div class="row"><div class="e">🪝</div><div class="info"><div class="d">碰到的魚＆垃圾會一起掛上來；魚越重收得越慢</div></div></div>
+    <div class="row"><div class="e">🗑️</div><div class="info"><div class="d">垃圾送進船裡會扣錢</div></div></div>
+    <div class="row"><div class="e">⚔️</div><div class="info"><div class="d">攻擊鈕打登船海怪（自動瞄準）</div></div></div>
+    <button class="btn green" style="width:100%;margin-top:10px" onclick="closeSheet();enterFishing()">⚓ 出航！</button>`);
+}
+
+function enterFishing(){
+  fish={ capX:160, facing:'right',
+    hookDepth:0, hv:0, hookX:160, hvx:0, hooked:[],
+    swimmers:[], airborne:[], bullets:[], monsters:[],
+    boatHp:FISH_BOAT_MAXHP, score:0, caught:0, boatX:0,
+    lastAtk:0, lastMonster:Date.now()+3000, knifeSwing:0, bob:0, over:false };
+  for(let i=0;i<SWIM_CAP;i++) fish.swimmers.push(makeSwimmer());
+  curScene='fishing';
+  document.getElementById('sceneTitle').textContent='🎣 外海捕魚';
+  document.getElementById('fishUI').style.display='block';
+  const fw=document.getElementById('fishWeaponBtn'); fw.style.display='flex';
+  document.getElementById('equipBtn').style.display='none';
+  document.getElementById('actBtn').className='actbtn';
+  const h=document.getElementById('hint'); if(h) h.classList.remove('show');
+  say('出航囉！讓線沉下去，碰到魚就上鉤，按住收線把牠拉過船緣送進船裡！');
+}
+
+function actDown(ev){ if(ev)ev.preventDefault(); if(curScene==='fishing'){ held.rod=true; return; } interact(ev); }
+function actUp(){ held.rod=false; }
+function weaponBtn(ev){ if(ev)ev.preventDefault(); if(curScene==='fishing'){ fishAttack(); return; } toggleEquip(ev); }
+
+function fishAttack(){
+  if(!fish||fish.over) return;
+  const now=Date.now(); if(now-fish.lastAtk<ATK_CD) return; fish.lastAtk=now;
+  let target=null, best=1e9;
+  for(const m of fish.monsters){ const d=Math.abs(m.x-fish.capX); if(d<best){best=d;target=m;} }
+  if(target) fish.facing = target.x<fish.capX ? 'left':'right';
+  const dir=fish.facing==='left'?-1:1;
+  if(target && best<=KNIFE_RANGE){ fish.knifeSwing=8; target.hit=6; target.hp-=KNIFE_DMG;
+    if(target.hp<=0) killMonster(fish.monsters.indexOf(target)); }
+  else fish.bullets.push({ x:fish.capX+dir*16, dir });
+}
+function killMonster(j){ if(j<0) return; fish.monsters.splice(j,1);
+  earn(8,'擊退海怪'); refreshTop(); save(); toast('💥 擊退一隻海怪 +$8'); }
+
+function landCatch(a){
+  if(a.trash){ const pen=Math.min(Math.abs(a.kind.val), S.cash||0); if(pen>0) spend(pen,'清理海上垃圾');
+    fish.score-=Math.abs(a.kind.val); toast(`🗑️ ${a.kind.nm}進船 -$${Math.abs(a.kind.val)}`); }
+  else{ const f=a.kind; fish.score+=f.val; fish.caught++; earn(f.val,'魚獲');
+    S.fishLog=S.fishLog||{}; S.fishLog[f.k]=(S.fishLog[f.k]||0)+1;
+    toast(`🎣 ${f.rar}・${f.nm} 入船！+$${f.val}`); }
+  refreshTop(); save();
+}
+
+function sinkBoat(){ if(!fish) return; fish.over=true; toast('🌊 船快沉了！緊急靠岸'); setTimeout(()=>landBoat(),1000); }
+function landBoat(){
+  if(!fish){ goScene('port'); return; }
+  const net=fish.score, n=fish.caught, log=Object.assign({},S.fishLog||{});
+  fish=null; goScene('port'); refreshTop();
+  const rows=FISH_KINDS.map(f=>`<div class="row"><div class="e">${f.e}</div><div class="info">
+    <div class="n">${f.nm} <span class="small" style="color:${RAR_COL[f.rar]}">${f.rar}</span></div>
+    <div class="d">累計釣獲 ${log[f.k]||0} 條・每條 $${f.val}・重量 ${f.wt}</div></div></div>`).join('');
+  openSheet(`<div class="sheethead"><h3>🎣 出航結算</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <p>這趟送進船 <b>${n}</b> 條魚，本趟淨收益 <b class="${net>=0?'up':'down'}">$${fmt(net)}</b>（已即時入帳）。</p>
+    <div class="hr"></div>${rows}
+    <button class="btn green" style="width:100%;margin-top:10px" onclick="closeSheet();askSail()">⛵ 再出航一次</button>`);
+}
+
+/* ---------- 每楨邏輯 ---------- */
+function updateFishing(){
+  if(!fish){ enterFishing(); return; }
+  if(fish.over) return;
+  const now=Date.now();
+  fish.bob=Math.sin(now/420)*2;
+  fish.boatX=Math.sin(now/2200)*14;
+  const boatX=fish.boatX;
+  if(fish.knifeSwing>0) fish.knifeSwing--;
+
+  if(held.left){ fish.capX=Math.max(CAP_MIN, fish.capX-CAP_SPEED); fish.facing='left'; }
+  if(held.right){ fish.capX=Math.min(CAP_MAX, fish.capX+CAP_SPEED); fish.facing='right'; }
+
+  // 線上總重量
+  let load=0; for(const h of fish.hooked) load+=(h.kind.wt||1);
+
+  // 垂直：重力下沉；按鈕收線(重量越大收越慢)。鉤子最高只到竿邊，不衝上天
+  const reeling=(held.rod||held.up);
+  fish.hv += ROD_GRAV*(1+load*LOAD_SINK);
+  if(reeling)  fish.hv -= ROD_LIFT/(1+load*LOAD_SLOW);   // 上鍵／拉竿鈕：收線往上拉
+  if(held.down) fish.hv += ROD_LIFT*0.7;                  // 下鍵：主動把魚鉤放下去
+  fish.hv *= ROD_DAMP;
+  fish.hookDepth += fish.hv;
+  const maxD=FISH_BOTTOM-FISH_SURFACE, minD=-56;   // minD≈竿邊高度（收到竿子就停）
+  if(fish.hookDepth>maxD){ fish.hookDepth=maxD; if(fish.hv>0) fish.hv=0; }
+  if(fish.hookDepth<minD){ fish.hookDepth=minD; if(fish.hv<0) fish.hv=0; }
+
+  // 水平：水裡鬆鬆地自由飄；一收線/出水就把線收緊、鉤子乖乖回到竿下
+  const pivotX=fish.capX+boatX+(fish.facing==='left'?-16:16);
+  const shallow=fish.hookDepth<24, tight=reeling||shallow;
+  const springK = tight ? REEL_SPRING : HOOK_SPRING/(1+fish.hookDepth*0.01);
+  fish.hvx += (pivotX-fish.hookX)*springK;
+  if(!tight && fish.hookDepth>4) fish.hvx += Math.sin(now/650)*CUR_PUSH + Math.sin(now/1700)*CUR_PUSH*0.6;
+  if(held.left)  fish.hvx -= HOOK_NUDGE;
+  if(held.right) fish.hvx += HOOK_NUDGE;
+  fish.hvx *= tight ? REEL_DAMP : HOOK_DAMP;
+  fish.hookX += fish.hvx;
+  fish.hookX=Math.max(8, Math.min(FISH_W-8, fish.hookX));
+
+  const hookX=fish.hookX, hookY=FISH_SURFACE+fish.hookDepth;
+
+  // 收線把魚拉過船緣 → 輕輕送進船裡（在這之前魚一直被線牽著）
+  if(fish.hooked.length && hookY <= DECK_Y-6){
+    const boatCx=(BX0+BX1)/2+boatX;
+    for(let k=0;k<fish.hooked.length;k++){
+      const s=fish.hooked[k];
+      fish.airborne.push({ kind:s.kind, trash:s.trash, x:hookX, y:hookY,
+      vx:(boatCx-hookX)*0.04 + fish.hvx*0.45 + (Math.random()-0.5)*0.9, vy:-PLOP_UP-k*0.45, spin:0 });
+      const i=fish.swimmers.indexOf(s); if(i>=0) fish.swimmers[i]=makeSwimmer();
+    }
+    fish.hooked=[];
+  }
+
+  // 水裡碰到的魚／垃圾→掛上（不限一隻）
+  if(fish.hookDepth>3 && fish.hooked.length<HOOK_CAP){
+    for(const s of fish.swimmers){
+      if(s.hooked) continue;
+      if(Math.abs(s.x-hookX)<11 && Math.abs(s.y-hookY)<11){
+        s.hooked=true; fish.hooked.push(s);
+        if(fish.hooked.length===1) say(s.trash?'呃，掛到垃圾了…':'上鉤了！按住收線把牠拉上船');
+      }
+    }
+  }
+  // 掛著的排成一串跟著鉤子（這就是「魚被線牽著」）
+  fish.hooked.forEach((s,k)=>{ s.x=hookX+Math.sin(now/200+k)*2; s.y=hookY+6+k*7; });
+
+  // 魚群／垃圾游動
+  for(const s of fish.swimmers){
+    if(s.hooked) continue;
+    s.x += s.dir*(s.kind.spd||0.6); s.wob+=0.05; s.y += Math.sin(s.wob)*0.3;
+    if(s.y<FISH_TOP) s.y=FISH_TOP; if(s.y>FISH_BOTTOM) s.y=FISH_BOTTOM;
+    if(s.x<-30||s.x>FISH_W+30) Object.assign(s, makeSwimmer());
+  }
+  while(fish.swimmers.length<SWIM_CAP) fish.swimmers.push(makeSwimmer());
+
+  // 送進船的漁獲：小拋物線落到甲板計分/扣錢
+  for(let i=fish.airborne.length-1;i>=0;i--){
+    const a=fish.airborne[i];
+    a.vy+=AIR_G; a.x+=a.vx; a.y+=a.vy; a.spin+=0.25;
+    if(a.vy>0 && a.y>=DECK_Y && a.x>(BX0+boatX+8) && a.x<(BX1+boatX-8)){
+      landCatch(a); fish.airborne.splice(i,1); continue;
+    }
+    if(a.y>FISH_H+30){ if(!a.trash) toast('💦 魚滑回海裡了…'); fish.airborne.splice(i,1); }
+  }
+
+  // 海怪
+  if(fish.monsters.length<MON_CAP && now>fish.lastMonster){
+    fish.lastMonster=now+MON_MIN+Math.random()*(MON_MAX-MON_MIN);
+    fish.monsters.push({ x:CAP_MIN+Math.random()*(CAP_MAX-CAP_MIN), hp:MON_HP, born:now, lastBite:now+900, frame:0, hit:0 });
+    toast('🐙 海怪登船了！快攻擊牠！');
+  }
+  for(const m of fish.monsters){
+    m.frame=Math.floor(now/240)%2; if(m.hit>0) m.hit--;
+    if(now-m.lastBite>=MON_BITE_CD){ m.lastBite=now; fish.boatHp=Math.max(0,fish.boatHp-MON_DMG);
+      if(fish.boatHp<=0){ sinkBoat(); return; } }
+  }
+  for(let i=fish.bullets.length-1;i>=0;i--){
+    const b=fish.bullets[i]; b.x+=b.dir*BULLET_SPEED;
+    let gone=(b.x<-6||b.x>FISH_W+6);
+    for(let j=fish.monsters.length-1;j>=0;j--){
+      const m=fish.monsters[j];
+      if(Math.abs(m.x-b.x)<18){ m.hp-=GUN_DMG; m.hit=6; gone=true; if(m.hp<=0) killMonster(j); break; }
+    }
+    if(gone) fish.bullets.splice(i,1);
+  }
+}
+
+/* ---------- 每楨繪圖 ---------- */
+function drawFishing(){
+  if(!fish){ enterFishing(); }
+  const now=Date.now(), boatX=fish.boatX||0;
+  const deck=DECK_Y, px=fish.capX+boatX;
+ // 天空＋海＋波紋
+  let sky=ctx.createLinearGradient(0,0,0,FISH_SURFACE);
+  sky.addColorStop(0,'#bfe0ea'); sky.addColorStop(1,'#e9f3ee');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,FISH_W,FISH_SURFACE);
+  let sea=ctx.createLinearGradient(0,FISH_SURFACE,0,FISH_H);
+  sea.addColorStop(0,'#58CCB9'); sea.addColorStop(0.5,'#0E8A93');sea.addColorStop(1,'#1f5d77');
+  ctx.fillStyle=sea; ctx.fillRect(0,FISH_SURFACE,FISH_W,FISH_H-FISH_SURFACE);
+  ctx.strokeStyle='#ffffff55'; ctx.lineWidth=2;
+  for(let x=0;x<FISH_W;x+=24){ ctx.beginPath();
+    ctx.moveTo(x,FISH_SURFACE+2+Math.sin(x+now/200)*1.5);
+    ctx.lineTo(x+12,FISH_SURFACE+2+Math.sin(x+12+now/200)*1.5); ctx.stroke(); }
+// 背景雲（全幅，最底層）
+  { const bg=npcImg('bg.png');
+    if(bg && bg.complete && bg.naturalWidth) ctx.drawImage(bg, 0, 0);
+    else { /* 沒圖才畫程式的天空海 */ } }
+  // ① 船帆（背景，全幅）
+  { const sm=npcImg('sail.png');
+    if(sm && sm.complete && sm.naturalWidth) ctx.drawImage(sm, Math.round(boatX), 0); }
+
+  // ② 船身（全幅；沒圖退回向量）
+  const boatImg=npcImg('boat.png');
+  if(boatImg && boatImg.complete && boatImg.naturalWidth){
+    ctx.drawImage(boatImg, Math.round(boatX), 0);
+  }else{
+    const bx0=BX0+boatX, bx1=BX1+boatX;
+    ctx.fillStyle='#7a5230';
+    ctx.beginPath(); ctx.moveTo(bx0,deck); ctx.lineTo(bx1,deck);
+    ctx.lineTo(bx1-22,FISH_SURFACE+18); ctx.lineTo(bx0+22,FISH_SURFACE+18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#8a6038'; ctx.fillRect(bx0,deck-6,bx1-bx0,8);
+    ctx.fillStyle='#5e3f24'; ctx.fillRect(bx0,deck+2,bx1-bx0,3);
+  }
+
+  // 釣竿（畫在人後面、位置稍低）
+  const rodTipX=px+(fish.facing==='left'?-16:16), rodTipY=deck-52;
+  ctx.strokeStyle='#b08a3a'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(px,deck-12); ctx.lineTo(rodTipX,rodTipY); ctx.stroke();
+
+  // ③ 船長（夾在船身與前景裝飾中間）
+  const py=deck-2+fish.bob*0.3;
+  if(PLAYER_IMG.complete && PLAYER_IMG.naturalWidth){
+    const dirCols={ down:0, left:1, right:2, up:3 }, col=dirCols[fish.facing]||2;
+    ctx.drawImage(PLAYER_IMG, col*64,0,64,64, px-32, py-64+14, 64,64);
+  }else{ ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillText('🧑‍✈️',px,py); }
+
+  // ④ 船上裝飾（前景，全幅，蓋在人前面）
+  { const dm=npcImg('deck.png');
+    if(dm && dm.complete && dm.naturalWidth) ctx.drawImage(dm, Math.round(boatX), 0); }
+
+  // ⑤ 魚（在 deck 之上）
+  for(const s of fish.swimmers) drawOneFish(s);
+  for(const s of fish.hooked)   drawOneFish(s);
+
+  // ⑥ 魚線＋鉤（在 deck 之上；釣竿已畫在人後面了）
+  const hookX=fish.hookX, hookY=FISH_SURFACE+fish.hookDepth;
+  ctx.strokeStyle='#eef6f8cc'; ctx.lineWidth=1.2;
+  const spanX=Math.abs(hookX-rodTipX);
+  const cx=(rodTipX+hookX)/2 + Math.sin(now/500)*3;
+  const cy=(rodTipY+hookY)/2 + 10 + spanX*0.25;
+  ctx.beginPath(); ctx.moveTo(rodTipX,rodTipY); ctx.quadraticCurveTo(cx,cy,hookX,hookY); ctx.stroke();
+  ctx.strokeStyle='#dfe6ea'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(hookX,hookY+2,2.5,0,Math.PI*1.5); ctx.stroke();
+
+  // ⑦ 飛魚／海怪／子彈／刀光
+  for(const a of fish.airborne) drawItem(a.kind,a.trash,a.x,a.y,a.vx<0,a.spin);
+  for(const m of fish.monsters) drawMonster(m, now, boatX);
+  ctx.fillStyle='#ffd24a';
+  for(const b of fish.bullets) ctx.fillRect(b.x+boatX-4,deck-30,8,3);
+  if(fish.knifeSwing>0){ const dir=fish.facing==='left'?-1:1; ctx.strokeStyle='#ffffffcc'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(px+dir*18,deck-24,20, dir>0?-0.8:2.3, dir>0?0.8:3.9); ctx.stroke(); }
+
+  // ⑧ HUD
+  ctx.fillStyle='#00000055'; ctx.fillRect(8,8,104,12);
+  ctx.fillStyle = fish.boatHp>40?'#6fae5e':(fish.boatHp>15?'#d6a93e':'#c2503e');
+  ctx.fillRect(10,10, Math.max(0,fish.boatHp)/FISH_BOAT_MAXHP*100, 8);
+  ctx.fillStyle='#fff'; ctx.font='9px serif'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('🚢 船體', 8, 28);
+  ctx.textAlign='center'; ctx.font='11px serif'; ctx.fillStyle='#fff';
+  ctx.fillText('🎣'+fish.caught+'　$'+fish.score, FISH_W/2-6, 14);
+  if(fish.hooked.length){ let load=0; for(const h of fish.hooked) load+=(h.kind.wt||1);
+    ctx.font='9px serif'; ctx.fillText('🪝×'+fish.hooked.length+'　重'+load.toFixed(1), FISH_W/2-6, 28); }
+}
+
+function drawItem(kind,trash,x,y,flip,spin){
+  ctx.save(); ctx.translate(x,y); if(spin) ctx.rotate(spin);
+  if(trash){
+    const tim = npcImg('trash_'+kind.k+'.png');
+    if(tim && tim.complete && tim.naturalWidth){ if(flip) ctx.scale(-1,1); ctx.drawImage(tim, -tim.naturalWidth/2, -tim.naturalHeight/2); }
+    else { ctx.font='16px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(kind.e,0,0); }
+  }
+  else{
+    const im = kind.k && FISH_IMG[kind.k] ? npcImg(FISH_IMG[kind.k]) : null;
+    if(im && im.complete && im.naturalWidth){              // 有貼圖：原尺寸置中畫，朝左自動翻
+      if(flip) ctx.scale(-1,1);
+      ctx.drawImage(im, -im.naturalWidth/2, -im.naturalHeight/2);
+    }else{                                                  // 沒貼圖：退回向量魚
+      const L=kind.len; if(flip) ctx.scale(-1,1);
+      ctx.fillStyle=kind.col;
+      ctx.beginPath(); ctx.moveTo(-L*0.5,0); ctx.lineTo(-L*0.5-6,-5); ctx.lineTo(-L*0.5-6,5); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0,0,L*0.5,L*0.32,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(L*0.28,-2,1.8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(L*0.30,-2,0.9,0,Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+function drawOneFish(s){
+  drawItem(s.kind, s.trash, s.x, s.y, s.dir<0, 0);
+  if(s.hooked){ const L=s.kind.len||14; ctx.strokeStyle='#fff'; ctx.globalAlpha=0.4+0.4*Math.sin(Date.now()/120); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(s.x,s.y,L*0.6,L*0.45,0,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
+}
+function drawMonster(m, now, boatX){
+  const grow=Math.min(1,(now-m.born)/400), bob=Math.sin(now/300+m.x)*3;
+  const mx=m.x+(boatX||0), my=DECK_Y-14+bob;
+  const ci=npcImg('cthulhu.png');
+  ctx.save(); ctx.translate(mx,my); ctx.scale(grow,grow);
+  if(ci && ci.complete && ci.naturalWidth){ const fw=ci.naturalWidth/2;
+    ctx.drawImage(ci, m.frame*fw,0, fw,ci.naturalHeight, -fw/2, -ci.naturalHeight+24, fw, ci.naturalHeight);
+  }else{
+    const t=m.frame?4:-4; ctx.fillStyle = m.hit>0 ? '#e8e36a' : '#4f6e4a'; ctx.lineWidth=3; ctx.strokeStyle=ctx.fillStyle;
+    for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(i*5,4); ctx.quadraticCurveTo(i*7,16, i*6+(i%2?t:-t),24); ctx.stroke(); }
+    ctx.beginPath(); ctx.ellipse(0,0,15,14,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f5d24a'; ctx.beginPath(); ctx.arc(-5,-2,3.2,0,Math.PI*2); ctx.arc(5,-2,3.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(-5,-2,1.4,0,Math.PI*2); ctx.arc(5,-2,1.4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  ctx.fillStyle='#00000066'; ctx.fillRect(mx-22,my-92,44,5);
+  ctx.fillStyle='#c2503e'; ctx.fillRect(mx-21,my-91, 42*(m.hp/MON_HP), 3);
+}
+
+function loop(){if(S){update();draw();}requestAnimationFrame(loop);}
 /* ---------- sheets ---------- */
 function openSheet(h){document.getElementById('sheet').innerHTML=h;document.getElementById('mask').classList.add('show');}
 function closeSheet(){document.getElementById('mask').classList.remove('show'); unfreezeNpcs();}
@@ -2844,7 +3336,7 @@ function openTravel(){
     ${card('office','🏠','辦公室')}`);
 }
 function goScene(name){
-  spicyScene=null;
+  spicyScene=null;if(name!=='fishing'){ const fu=document.getElementById('fishUI'); if(fu) fu.style.display='none'; const fw=document.getElementById('fishWeaponBtn'); if(fw) fw.style.display='none'; }
   if(name==='port'){ if(S.era<18){ toast('港口在 18 世紀才會開放'); return; }
     if(!S.port.merchants.length || Date.now()-(S.port.lastTs||0)>PORT_REFRESH_MS) refreshPort(); else buildPortObjects();
     buildPortNpcs(); }
@@ -2876,6 +3368,7 @@ function startGame(n){
   // migration safety
   if(!S.animals.cow)S.animals.cow=[];if(!S.animals.pig)S.animals.pig=[];
   if(!S.cafe.goods)S.cafe.goods={};if(!S.curRecipe)S.curRecipe='strawberry_tart';
+  if(!S.recipesUnlocked)S.recipesUnlocked={};
   if(!S.crops)S.crops={};if(!S.era)S.era=17;if(!S.port)S.port={merchants:[],relations:{},lastTs:0};if(!S.maxHp)S.maxHp=20;if(S.hp===undefined)S.hp=S.maxHp;if(S.toxins===undefined)S.toxins=0;if(!S.cookBy)S.cookBy='self';
   if(!S.wardrobe)S.wardrobe={owned:['default'],wearing:'default'};
   if(!S.kitchenPickups)S.kitchenPickups=[];
@@ -2912,6 +3405,264 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.sty
 
 renderSaveList();
 loop();
+/* ===================== 🌷 鬱金香 / 商店老闆 霍蘭德 ===================== */
+
+/* --- 圖檔：商店背景 + 前景 --- */
+loadBg('shop', 'shop.png');        // 老闆畫在這張圖的 x14~19,y6~9
+loadFg('shop', 'shop_fg.png');     // 不需要前景就把這行刪掉
+
+/* --- 鬱金香資料表（要調平衡就改這裡） --- */
+const TULIP_COLORS={
+  red:   {nm:'紅', w:26},
+  yellow:{nm:'黃', w:24},
+  pink:  {nm:'粉', w:20},
+  orange:{nm:'橙', w:14},
+  purple:{nm:'紫', w:9},
+  white: {nm:'白', w:5},
+  black: {nm:'黑', w:2},   // w = 開花機率權重，黑鬱金香最稀有
+};
+const TULIP_TIERS={               // 階層 → 基準賣價
+  N:  {nm:'N',   base:30 },
+  R:  {nm:'R',   base:90 },
+  SR: {nm:'SR',  base:260},
+  SSR:{nm:'SSR', base:650},
+};
+const TULIP_TIER_COLOR={N:'#9aa', R:'#3b82f6', SR:'#a855f7', SSR:'#f59e0b'};
+const TULIP_BULB_PRICE=60;        // 球根售價（向老闆買）
+
+/* --- 老闆台詞（奸商、話少、不親切） --- */
+const KEEPER_LINES=[
+  '「…要買，還是要賣？別站在那兒發呆。」',
+  '「（壓低帽簷，從鼻子裡哼了一聲）……錢，帶夠了嗎？」',
+  '「我這兒的價，沒得商量。嫌貴，門在那邊。」',
+  '「看你這外行樣……嗯，那對我倒是好事。」',
+  '「Goedendag。少廢話，要做生意就做。」',
+];
+const KEEPER_TULIP_LINES=[
+  '「鬱金香。整個歐洲都瘋了的東西。趁你還買得起，買。」',
+  '「球根嫌貴？等它開出花，你會回來跪著謝我的……也許。」',
+  '「紅的紫的黑的——運氣好，一顆球根讓你翻身；運氣差，就當餵土。」',
+  '「我勸你多囤幾顆。這價，明天可不保證。」',
+];
+
+/* --- 把鬱金香登記成農作物（沿用你的種植/生長引擎） --- */
+FARM_CROPS.tulip={ nm:'鬱金香', img:'tulip.png', fw:32, fh:32,
+  stages:['播種','發芽','成長','含苞','綻放'], frame:[0,1,2,3,4],
+  grow:60000, yield:1, seed:TULIP_BULB_PRICE, hidden:true };  // hidden=不出現在一般種子店
+FARM_CROPS.tulip._img=new Image(); FARM_CROPS.tulip._img.src=FARM_CROPS.tulip.img;
+FARM_CROPS.tulip.stageMs=FARM_CROPS.tulip.grow/(FARM_CROPS.tulip.stages.length-1);
+
+/* --- 老闆的位置（互動區域），想搬就改這四個數字 --- */
+const KEEPER={scene:'shop', x1:14, y1:6, x2:19, y2:9};
+function nearKeeper(){
+  if(curScene!==KEEPER.scene) return false;
+  const px=Math.round(player.x), py=Math.round(player.y);
+  return px>=KEEPER.x1-1 && px<=KEEPER.x2+1 && py>=KEEPER.y1-1 && py<=KEEPER.y2+1;
+}
+/* --- 回農場的門：踩進這塊區域就回農牧地（區域＝無碰撞） --- */
+const SHOP_DOOR={scene:'shop', x1:8, y1:13, x2:11, y2:17};
+function inShopDoor(){
+  if(curScene!==SHOP_DOOR.scene) return false;
+  const px=Math.round(player.x), py=Math.round(player.y);
+  return px>=SHOP_DOOR.x1 && px<=SHOP_DOOR.x2 && py>=SHOP_DOOR.y1 && py<=SHOP_DOOR.y2;
+}
+/* --- 咖啡廳⇄廚房：踩到門口就自動切換（不用按互動） --- */
+function autoDoors(){
+  if(!S) return;
+  const px=Math.round(player.x), py=Math.round(player.y);
+  if(curScene==='cafe'    && px>=1 && px<=4 && py>=3 && py<=7){ goScene('kitchen'); return; }  // 前台→廚房
+  if(curScene==='kitchen' && px>=1 && px<=2  && py===7 ){ goScene('cafe');    return; }  // 廚房→前台
+}
+/* --- 開花顏色（依權重隨機） --- */
+function rollTulipColor(){
+  let tot=0; for(const c in TULIP_COLORS) tot+=TULIP_COLORS[c].w;
+  let r=Math.random()*tot;
+  for(const c in TULIP_COLORS){ r-=TULIP_COLORS[c].w; if(r<=0) return c; }
+  return 'red';
+}
+
+/* --- 每天重洗：各色階層 + 賣價 --- */
+function rollTulipMarket(){
+  if(!S) return;
+  const pool=['N','N','N','R','R','R','SR','SR','SSR'];   // 抽中機率
+  S.tulipDay={}; S.tulipPx={};
+  for(const c in TULIP_COLORS){
+    const tier=pool[(Math.random()*pool.length)|0];
+    S.tulipDay[c]=tier;
+    S.tulipPx[c]=Math.round(TULIP_TIERS[tier].base*(0.85+Math.random()*0.30));
+  }
+  // 保證每天至少有一色 SR 以上
+  const cs=Object.keys(TULIP_COLORS);
+  if(!cs.some(c=>S.tulipDay[c]==='SR'||S.tulipDay[c]==='SSR')){
+    const c=cs[(Math.random()*cs.length)|0];
+    S.tulipDay[c]='SR'; S.tulipPx[c]=Math.round(TULIP_TIERS.SR.base*(0.85+Math.random()*0.30));
+  }
+}
+
+/* --- 老闆對話 + 買賣總入口 --- */
+function openKeeper(){
+  const line=KEEPER_LINES[(Math.random()*KEEPER_LINES.length)|0];
+  const push=KEEPER_TULIP_LINES[(Math.random()*KEEPER_TULIP_LINES.length)|0];
+  openSheet(`<div class="sheethead"><h3>🎩 霍蘭德</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div style="text-align:center;font-size:52px;margin:2px 0 8px">🎩</div>
+    <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px;font-size:14px;line-height:1.7">${line}<br><span style="color:var(--gold)">${push}</span></div>
+    <button class="btn" style="width:100%;margin-bottom:6px" onclick="openShopBuy()">🧺 我要採購</button>
+    <button class="btn green" style="width:100%;margin-bottom:6px" onclick="openShopSell()">💵 我要賣貨</button>
+    <button class="btn gold" style="width:100%;margin-bottom:6px" onclick="openTulip()">🌷 鬱金香 / 球根</button>
+    <button class="btn ghost" style="width:100%" onclick="closeSheet()">離開</button>`);
+}
+
+/* --- 鬱金香子商店 --- */
+function openTulip(){
+  if(!S.tulips)S.tulips={};
+  if(!S.tulipDay || !Object.keys(S.tulipDay).length) rollTulipMarket();
+  const order=Object.keys(TULIP_COLORS).sort((a,b)=>(S.tulipPx[b]||0)-(S.tulipPx[a]||0));
+  let market='';
+  for(const c of order){ const tier=S.tulipDay[c], px=S.tulipPx[c], have=S.tulips[c]||0;
+    const badge=`<span style="background:${TULIP_TIER_COLOR[tier]};color:#fff;border-radius:6px;padding:1px 7px;font-weight:700;font-size:12px">${tier}</span>`;
+    market+=`<div class="row"><div class="e">🌷</div><div class="info"><div class="n">${TULIP_COLORS[c].nm}鬱金香 ${badge}</div>
+      <div class="d">持有 ${have}</div></div><div class="price">$${px}</div>
+      <button class="btn sm ${have<=0?'dis':'green'}" onclick="sellTulip('${c}')">全賣</button></div>`;
+  }
+  const bulb=Math.round(TULIP_BULB_PRICE*shopBuyMul());
+  openSheet(`<div class="sheethead"><h3>🌷 鬱金香交易</h3><button class="close" onclick="openKeeper()">✕</button></div>
+    <div class="small">💰 現金 $${fmt(S.cash)}・球根背包 ${S.seeds.tulip||0} 顆</div>
+    <div class="small" style="color:var(--ink2);margin:4px 0 8px">每天各色階層（N→SSR）重洗，價格跟著變。買球根去農田種，會隨機開出不同顏色。</div>
+    <div class="hr"></div>
+    <div class="row" style="background:var(--card);border:2px solid var(--gold);border-radius:12px;padding:8px">
+      <div class="e">🧅</div><div class="info"><div class="n">鬱金香球根</div><div class="d">種下後隨機開花，可能是任何顏色</div></div>
+      <div class="price">$${bulb}</div><button class="btn sm gold" onclick="buyBulb()">買球根</button></div>
+    <div class="hr"></div>
+    <b class="small">今日各色行情 / 你的花</b>${market}`);
+}
+function buyBulb(){
+  const cost=Math.round(TULIP_BULB_PRICE*shopBuyMul());
+  if(S.cash<cost){ toast('現金不足'); return; }
+  spend(cost,'向霍蘭德買鬱金香球根');
+  S.seeds.tulip=(S.seeds.tulip||0)+1;
+  toast('🧅 買了 1 顆球根（去農田種）'); openTulip(); save();
+}
+function sellTulip(c){
+  if(!S.tulips)S.tulips={};
+  const have=S.tulips[c]||0; if(have<=0) return;
+  const total=Math.round((S.tulipPx[c]||0)*have*shopSellMul());
+  S.tulips[c]=0; earn(total,`賣${TULIP_COLORS[c].nm}鬱金香×${have}`);
+  toast(`💰 +$${fmt(total)}`); openTulip(); save();
+}
+
+/* --- 掛鉤到既有函式（覆寫，不動原本程式碼） --- */
+const _origRollMarket=rollMarket;
+rollMarket=function(){ _origRollMarket(); if(!S.tulips)S.tulips={}; rollTulipMarket(); };
+
+const _origHarvestTile=harvestTile;
+harvestTile=function(key){
+  const c=S.crops[key];
+  if(c && c.crop==='tulip'){
+    if(!S.tulips)S.tulips={};
+    const col=rollTulipColor();
+    S.tulips[col]=(S.tulips[col]||0)+1;
+    delete S.crops[key]; closeSheet();
+    toast(`🌷 開出了【${TULIP_COLORS[col].nm}】鬱金香！`); save(); return;
+  }
+  return _origHarvestTile(key);
+};
+
+const _origInteract=interact;
+interact=function(ev){
+  if(curScene==='shop' && !sitting){
+    if(nearKeeper()){ if(ev&&ev.preventDefault)ev.preventDefault(); openKeeper(); return; }
+    if(inShopDoor()){ if(ev&&ev.preventDefault)ev.preventDefault(); goScene('farm'); return; }
+  }
+  return _origInteract(ev);
+};
+/* =================== 🌷 鬱金香系統 結束 =================== */
+/* ===================== 🍱 桌上擺盤（背包食物） ===================== */
+/* 食物會畫在這些格子上，想改位置/數量就改這個陣列（格座標） */
+/* 四張桌子。ix,iy=互動格（要對到上面物件座標）；slots=這張桌子的擺放格 */
+const FOOD_TABLES={
+  table1:{ slots:[{x:11,y:11}] },
+  table2:{ slots:[{x:16,y:11}] },
+  table3:{ slots:[{x:22,y:7}] },
+  table4:{ slots:[{x:24,y:7}] },
+  table5:{ slots:[{x:28.4,y:7}] },
+  table6:{ slots:[{x:30.6,y:7}] },
+  table7:{ slots:[{x:35.3,y:7}] },
+};
+function tablePlaced(tbl){ if(!S.cafe.placed||Array.isArray(S.cafe.placed)) S.cafe.placed={}; if(!S.cafe.placed[tbl]) S.cafe.placed[tbl]=[]; return S.cafe.placed[tbl]; }
+function drawCafeFood(ox,oy){
+  if(curScene!=='cafe' || !S || !S.cafe || !S.cafe.placed || Array.isArray(S.cafe.placed)) return;
+  ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const tbl in FOOD_TABLES){
+    const placed=S.cafe.placed[tbl]||[];
+    const slots=FOOD_TABLES[tbl].slots;
+    placed.forEach((k,i)=>{ const s=slots[i]; if(!k||!s) return;
+      const cx=(s.x+0.5)*TS-ox, by=(s.y+1)*TS-oy-FOOD_LIFT;
+      const img=FOOD_IMG[k];
+      if(img && img.complete && img.naturalWidth){
+        ctx.drawImage(img, cx-16, by-32, 32, 32);
+      }else{
+        ctx.font='13px serif'; ctx.fillText((RECIPES[k]&&RECIPES[k].e)||'🍽️', cx, by-8);
+      }
+    });
+  }
+  ctx.restore();
+}
+function openFoodTable(tbl){
+  tbl=tbl||'table1';
+  const T=FOOD_TABLES[tbl]; if(!T) return;
+  const placed=tablePlaced(tbl), cap=T.slots.length;
+  const used=placed.filter(Boolean).length;
+  const bag=[]; for(const k in S.cafe.goods){ if(S.cafe.goods[k]>0 && RECIPES[k]) bag.push(k); }
+  const bagBody = bag.length ? bag.map(k=>{ const r=RECIPES[k];
+    return `<div class="row"><div class="e">${r.e}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div></div>
+      <button class="btn sm ${used>=cap?'dis':'green'}" onclick="placeFood('${tbl}','${k}')">擺上桌</button></div>`;
+  }).join('') : '<div class="empty-note">沒有加工成品，先去廚房做。</div>';
+  const placedBody = placed.map((k,i)=> k?`<div class="row"><div class="e">${RECIPES[k]?RECIPES[k].e:'🍽️'}</div>
+      <div class="info"><div class="n">${RECIPES[k]?RECIPES[k].nm:k}</div></div>
+      <button class="btn sm" onclick="takeFood('${tbl}',${i})">收回</button></div>`:'').join('');
+  openSheet(`<div class="sheethead"><h3>🍱 擺盤（桌上 ${used}/${cap}）</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    ${placed.some(Boolean)?`<b class="small">這張桌上的成品</b>${placedBody}<div class="hr"></div>`:''}
+    <b class="small">加工成品</b>${bagBody}`);
+}
+function placeFood(tbl,k){
+  const T=FOOD_TABLES[tbl]; if(!T) return;
+  const placed=tablePlaced(tbl);
+  if((S.cafe.goods[k]||0)<=0){ toast('沒有這個成品'); return; }
+  let slot=-1; for(let i=0;i<T.slots.length;i++){ if(!placed[i]){ slot=i; break; } }
+  if(slot<0){ toast('這張桌子滿了'); return; }
+  placed[slot]=k; S.cafe.goods[k]--; toast(`擺上 ${RECIPES[k]?RECIPES[k].nm:k}`);
+  openFoodTable(tbl); save();
+}
+function takeFood(tbl,i){
+  const placed=tablePlaced(tbl);
+  const k=placed[i]; if(!k) return;
+  S.cafe.goods[k]=(S.cafe.goods[k]||0)+1; placed[i]=null;
+  toast(`收回 ${RECIPES[k]?RECIPES[k].nm:k}`); openFoodTable(tbl); save();
+}
+
+/* 食物圖（32×32）。檔名對應你的圖；沒列到的就用 emoji */
+const FOOD_IMG_SRC={
+  strawberry:'food_strawberry.png',
+  strawberry_tart:'food_strawberry_tart.png',
+  pancake:'food_pancake.png',
+  blueberry :'food_blueberry.png',
+  corn      :'food_corn.png',
+  tomato    :'food_tomato.png',
+  papaya    :'food_papaya.png',
+  banana    :'food_banana.png',
+  guava     :'food_guava.png',
+  lemon     :'food_lemon.png',
+  egg       :'food_egg.png',
+  milk      :'food_milk.png',
+  pork      :'food_pork.png',
+  beef      :'food_beef.png',
+  chicken_meat:'food_chicken.png',
+  turkey_meat :'food_turkey.png',
+};
+const FOOD_IMG={};
+for(const k in FOOD_IMG_SRC){ const im=new Image(); im.src=FOOD_IMG_SRC[k]; FOOD_IMG[k]=im; }
+const FOOD_LIFT=0;   // 想讓食物往上坐在桌面，就把這個調大（單位 px）
+/* =================== 🍱 擺盤 結束 =================== */
 </script>
 </body>
 </html>
