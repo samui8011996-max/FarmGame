@@ -1761,10 +1761,11 @@ const SCENES={
     {id:'recipepick',x:13,y:7,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
     
   ]},
-shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
-    {x:8,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,sense:1,lines:['這些花值這麼多錢嗎...']},
-    {x:4,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,sense:1,lines:['這些是藍瓷?好美，但價格不便宜']},
+  shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
+{x:8,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,lines:['這些花值這麼多錢嗎...']},
+{x:4,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,lines:['這是藍瓷?好美']},
   ]},
+  port:{title:'港口', big:true, spawn:{x:9,y:14}, objects:[]},
   
 };
 
@@ -2000,8 +2001,7 @@ function facingObject(){
   let best=null, bestScore=Infinity;
   for(const o of sceneDef().objects){
     const dx=o.x-bx, dy=o.y-by;
-    const reach=(o.sense!=null)?o.sense:SENSE;                  // 物件可自帶範圍，沒寫就用全域
-    if(Math.max(Math.abs(dx),Math.abs(dy))>reach) continue;     // 在各自範圍內
+    if(Math.max(Math.abs(dx),Math.abs(dy))>SENSE) continue;     // 在範圍內
     const align=dx*d.x+dy*d.y;                                   // >0 = 在面前方向
     const score=(Math.abs(dx)+Math.abs(dy))-align*0.6;           // 近的、面前的優先
     if(score<bestScore){ bestScore=score; best=o; }
