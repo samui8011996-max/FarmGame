@@ -3572,9 +3572,40 @@ function startGame(n){
 document.getElementById('nickInput').addEventListener('keydown',e=>{if(e.key==='Enter')submitNick();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S){tick();refreshTop();save();}});
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity=0,1500);}
-
 renderSaveList();
 loop();
+
+/* ===== 彈出面板：離開觸發物自動關閉 ===== */
+let sheetAnchor=null;   // 記住這個 sheet 是被哪個觸發物打開的
+
+const _openSheet=openSheet;
+openSheet=function(h){
+  if(!document.getElementById('mask').classList.contains('show')){
+    let ax=null, ay=null;
+    const o=facingObject();
+    if(o){ ax=o.x; ay=o.y; }                       // 面對物件→用物件座標
+    else if(curScene==='shop' && typeof nearKeeper==='function' && nearKeeper()){
+      ax=Math.round((KEEPER.x1+KEEPER.x2)/2);      // 在老闆區→用老闆中心當錨點
+      ay=Math.round((KEEPER.y1+KEEPER.y2)/2);
+    }
+    sheetAnchor = (ax!=null) ? {x:ax, y:ay, scene:curScene} : null;
+  }
+  _openSheet(h);
+};
+
+const _closeSheet=closeSheet;
+closeSheet=function(){ sheetAnchor=null; _closeSheet(); };   // 手動關也清掉錨點
+
+const _updAutoClose=update;
+update=function(){
+  _updAutoClose();
+  // 每幀檢查：面板還開著、且當初的觸發物已經走遠（或換場景）→ 自動關
+  if(sheetAnchor && document.getElementById('mask').classList.contains('show')){
+    const bx=Math.round(player.x), by=Math.round(player.y);
+    const dist=Math.max(Math.abs(sheetAnchor.x-bx), Math.abs(sheetAnchor.y-by));
+    if(curScene!==sheetAnchor.scene || dist>SENSE){ closeSheet(); }
+  }
+};
 /* ===================== 🌷 鬱金香 / 商店老闆 霍蘭德 ===================== */
 
 /* --- 圖檔：商店背景 + 前景 --- */
@@ -3608,6 +3639,7 @@ const KEEPER_LINES=[
   '「看你這外行樣……嗯，那對我倒是好事。」',
   '「Goedendag。少廢話，要做生意就做。」',
 ];
+
 const KEEPER_TULIP_LINES=[
   '「鬱金香。整個歐洲都瘋了的東西。趁你還買得起，買。」',
   '「球根嫌貴？等它開出花，你會回來跪著謝我的……也許。」',
