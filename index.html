@@ -268,8 +268,8 @@ const PRODUCTS={
   guava:{nm:'芭樂',e:'🟢',base:3,volat:'small'},
   lemon:{nm:'檸檬',e:'🍋',base:5,volat:'mid'},
   apple:{nm:'蘋果',e:'🍎',base:6,volat:'small'},
-  egg:{nm:'egg',e:'📦',base:10,volat:'mid'},
-  milk:{nm:'milk',e:'📦',base:10,volat:'mid'},
+  egg:{nm:'雞蛋',e:'🥚',base:10,volat:'mid'},
+  milk:{nm:'牛奶',e:'🥛',base:10,volat:'mid'},
   pork:{nm:'豬肉',e:'🥓',base:10,volat:'mid'},
   beef:{nm:'牛肉',e:'🥩',base:12,volat:'mid'},
   chicken_meat:{nm:'雞肉',e:'🍗',base:6,volat:'small'},
@@ -1428,13 +1428,39 @@ const PORT_ZONE={x1:1,y1:4,x2:18,y2:15};   // 商人活動範圍（碼頭地面�
 let portNpcs={};
 function portWalkable(x,y){ const ix=Math.floor(x),iy=Math.floor(y),g=GRID.port;
   if(iy<0||ix<0||iy>=g.length||ix>=g[0].length) return false; return !blocked(g[iy][ix]); }
+/* ---------- 商會座位：坐在商會裡（全圖立繪，位置畫死在圖裡） ---------- */
+const MERCHANT_SEAT={
+  // id : { img:'全圖立繪檔名', x,y:互動格（要對到圖裡那個人坐的位置） }
+  Francis:{ img:'guild_Francis.png', x:21, y:8 },
+  Pedro:  { img:'guild_Pedro.png',   x:36, y:8 },
+  Antonio:{ img:'guild_Antonio.png', x:28, y:8 },
+  Alfred: { img:'guild_Alfred.png',  x:56, y:8 },
+};
+const SIT_SWITCH_MIN=12000, SIT_SWITCH_MAX=25000;   // 每隔這麼久考慮換一次「坐/走」
+function hasSeat(id){ return !!MERCHANT_SEAT[id]; }
+function schedSwitch(n){ n.nextSwitch=Date.now()+SIT_SWITCH_MIN+Math.random()*(SIT_SWITCH_MAX-SIT_SWITCH_MIN); }
+function enterSit(n){
+  const seat=MERCHANT_SEAT[n.mid]; if(!seat) return;
+  n.mode='sit'; n.moving=false; n.frame=0;
+  n.x=seat.x; n.y=seat.y; n.tx=seat.x; n.ty=seat.y;   // 邏輯位置貼到座位→互動點也在座位
+  schedSwitch(n);
+}
+function enterWalk(n){
+  n.mode='walk';
+  const slot=PORT_SLOTS[(S.port.merchants||[]).indexOf(n.mid)]||{x:9,y:6};
+  n.x=slot.x; n.y=slot.y;   // 起身：先回碼頭區，再開始晃（不要從商會橫越半張地圖）
+  schedSwitch(n); pickPortTarget(n);
+}
 function buildPortNpcs(){
   portNpcs={};
   (S.port.merchants||[]).forEach((id,i)=>{
     const m=MERCHANTS[id]; if(!m) return;
     const slot=PORT_SLOTS[i]||{x:9,y:6};
-    portNpcs['mc_'+id]={ x:slot.x,y:slot.y, tx:slot.x,ty:slot.y, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
-      zone:PORT_ZONE, img:npcImg('partner_'+id+'.png'), fallback:m.e };
+    const n={ x:slot.x,y:slot.y, tx:slot.x,ty:slot.y, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
+      zone:PORT_ZONE, img:npcImg('partner_'+id+'.png'), fallback:m.e, mid:id, mode:'walk' };
+    schedSwitch(n);
+    portNpcs['mc_'+id]=n;
+    if(hasSeat(id) && Math.random()<0.5) enterSit(n);   // 進場時一半機率正坐在商會
   });
 }
 function pickPortTarget(n){
@@ -1449,6 +1475,12 @@ function updatePortNpcs(){
   for(const id in portNpcs){
     const n=portNpcs[id];
     if(n.frozen){ n.moving=false; n.frame=0; continue; }
+    if(n.mode==='sit'){                                // 坐著：不移動，互動點固定在座位
+      n.moving=false; n.frame=0;
+      const o=SCENES.port.objects.find(ob=>ob.id===id);
+      if(o){ o.x=Math.round(n.x); o.y=Math.round(n.y); }
+      continue;
+    }
     const dx=n.tx-n.x, dy=n.ty-n.y, d=Math.hypot(dx,dy);
     if(d<0.12){
       n.moving=false;
@@ -1468,9 +1500,25 @@ function updatePortNpcs(){
     if(o){ o.x=Math.round(n.x); o.y=Math.round(n.y); }
   }
 }
+function drawGuildSitters(ox,oy){
+  for(const id in portNpcs){
+    const n=portNpcs[id];
+    if(n.mode!=='sit') continue;
+    const seat=MERCHANT_SEAT[n.mid]; if(!seat) continue;
+    const img=npcImg(seat.img);
+    if(img && img.complete && img.naturalWidth){
+      ctx.drawImage(img, -ox, -oy, mapCols()*TS, mapRows()*TS);   // 全圖：位置畫死在圖裡
+    }else{   // 沒圖→先用 emoji 站在座位，補上圖後自動換成立繪
+      const px=seat.x*TS+TS/2-ox, py=seat.y*TS+TS/2-oy;
+      ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText((MERCHANTS[n.mid]||{}).e||'🙂', px, py);
+    }
+  }
+}
 function drawPortNpcs(ox,oy){
   for(const id in portNpcs){
     const n=portNpcs[id];
+    if(n.mode==='sit') continue;   // 坐著→交給 drawGuildSitters，不畫走路版（兩種不同時出現）
     const px=n.x*TS+TS/2-ox, py=n.y*TS+TS/2-oy;
     ctx.globalAlpha=1; ctx.fillStyle='#00000022';
     ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
@@ -1557,17 +1605,17 @@ const MAPS={
    ".FFFFFFFFFFFFF......FFFFFFFFF",
    "....................FFFFFFFFF",
    "....................FFFFFFFFF",
+   "........FFFF........FFFFFFFFF",
    "........FFFF..........FFFFFFF",
-   "........FFFF..........FFFFFFF",
-   "..FFFF..FFFF..FFFF....F......",
-   "..FFFF..FFFF..FFFF....F......",
-   "..FFFF..FFFF..FFFF....F......",
-   "..FFFF..FFFF..FFFF....F......",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "..FFFF..FFFF..FFFF....FFFFFFF",
+   "......................FFFFFFF",
+   "......................FFFFFFF",
+   "......................FFFFFFF",
+   "......................FFFFFFF",
+   "......................FFFFFFF",
    ".............................",
   ],
   office:[
@@ -1658,9 +1706,9 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..............FFFFF",
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..............FFF..",
-   "...............FF......FF......FF......FF..............FFF..",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..............FF...",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF..............FF...",
+   "...............FF......FF......FF......FF..............FF...",
    "...............FF......FF......FF......FF...................",
    "...............FF.....FFF......FF......FF...................",
    "...............FF.....FFF......FF......FF......FFFFFFFFFFFFF",
@@ -1710,7 +1758,7 @@ const SCENES={
     {id:'board',x:13,y:9,e:'🔪',nm:'備料台（放食材）',kind:'cut',hide:true},
     {id:'table',x:18,y:7,e:'🫓',nm:'桌子（揉/拌）',kind:'knead',hide:true},
     {id:'oven',x:9,y:6,e:'🔥',nm:'烤箱',kind:'oven',hide:true},
-    {id:'recipepick',x:1,y:15,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
+    {id:'recipepick',x:13,y:7,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
     
   ]},
   shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[]},
@@ -2307,7 +2355,7 @@ function openMenu(){
   let body='';
   for(const k in RECIPES){const r=RECIPES[k];const on=S.cafe.menu.includes(k);const made=S.cafe.goods[k]||0;
     body+=`<div class="menucard${on?' on':''}" style="display:flex;align-items:center;gap:8px">
-      <div style="font-size:22px">${r.e}</div><div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">成品 ${made}・售$${r.price}</span></div></div>
+      <div style="font-size:22px">${dishIcon(k)}</div><div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">成品 ${made}・售$${r.price}</span></div></div>
       <button class="btn sm ${on?'green':'ghost'}" onclick="toggleMenu('${k}')">${on?'已上架':'上架'}</button></div>`;}
   const cap=10+S.cafe.menu.length*6;
   openSheet(`<div class="sheethead"><h3>📋 上架菜單</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -2491,7 +2539,7 @@ function openShopBuy(){
     if(recipeEra(k)>S.era) continue;                // 沒到時代不賣（想全賣就刪這行）
     const known=recipeKnown(k);
     const cost=Math.round((r.learnCost||60)*shopBuyMul());
-    recipes+=`<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm}配方</div>
+    recipes+=`<div class="row"><div class="e"><img src="recipe.png" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated;vertical-align:middle"></div><div class="info"><div class="n">${r.nm}配方</div>
       <div class="d">${known?'已學會（看食譜本）':'買了才知道做法'}</div></div>
       <div class="price">$${cost}</div>
       <button class="btn sm ${known?'dis':''}" onclick="buyRecipe('${k}')">${known?'已學會':'買'}</button></div>`;
@@ -2910,7 +2958,10 @@ if(o.kind==='oven'&&prep.inOven){const t=Date.now()-prep.ovenStart;icon=t>BURN_M
 const FLAPS=[
   { scene:'cafe', img:'cafe_flap.png', tx:5, ty:8, near:2.0 },
   // 港口以後加，例如：
-  // { scene:'port', img:'port_flap.png', tx:18, ty:8, near:1.4 },
+  { scene:'port', img:'port_flap1.png', tx:19, ty:18, near:3.0 },
+  { scene:'port', img:'port_flap2.png', tx:27, ty:18, near:3.0 },
+  { scene:'port', img:'port_flap3.png', tx:36, ty:18, near:3.0 },
+  { scene:'port', img:'port_flap4.png', tx:44, ty:18, near:3.0 },
 ];
 function drawFlaps(ox,oy){
   for(const f of FLAPS){
@@ -2957,7 +3008,7 @@ function drawFlaps(ox,oy){
   if(curScene==='farm') drawAppleDrops(ox,oy);
   if(curScene==='farm') drawFarmNpcs(ox,oy);
   if(curScene==='office') drawOfficeNpcs(ox,oy);
-  if(curScene==='port') drawPortNpcs(ox,oy);
+  if(curScene==='port'){ drawGuildSitters(ox,oy); drawPortNpcs(ox,oy); }
    // === 烤箱運作：兩楨地圖動畫（畫在人物下面）===
   if (curScene==='kitchen' && prep.inOven){
     const bf=BAKE_IMG[Math.floor(Date.now()/350)%BAKE_IMG.length];
@@ -3732,10 +3783,10 @@ function openFoodTable(tbl){
   const used=placed.filter(Boolean).length;
   const bag=[]; for(const k in S.cafe.goods){ if(S.cafe.goods[k]>0 && RECIPES[k]) bag.push(k); }
   const bagBody = bag.length ? bag.map(k=>{ const r=RECIPES[k];
-    return `<div class="row"><div class="e">${r.e}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div></div>
+    return `<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div></div>
       <button class="btn sm ${used>=cap?'dis':'green'}" onclick="placeFood('${tbl}','${k}')">擺上桌</button></div>`;
   }).join('') : '<div class="empty-note">沒有加工成品，先去廚房做。</div>';
-  const placedBody = placed.map((k,i)=> k?`<div class="row"><div class="e">${RECIPES[k]?RECIPES[k].e:'🍽️'}</div>
+  const placedBody = placed.map((k,i)=> k?`<div class="row"><div class="e">${dishIcon(k)}</div>
       <div class="info"><div class="n">${RECIPES[k]?RECIPES[k].nm:k}</div></div>
       <button class="btn sm" onclick="takeFood('${tbl}',${i})">收回</button></div>`:'').join('');
   openSheet(`<div class="sheethead"><h3>🍱 擺盤（桌上 ${used}/${cap}）</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -3763,6 +3814,7 @@ const FOOD_IMG_SRC={
   strawberry:'food_strawberry.png',
   strawberry_tart:'food_strawberry_tart.png',
   stargazy_pie:'food_stargazy_pie.png',
+  scone:'food_scone.png',
   pancake:'food_pancake.png',
   blueberry :'food_blueberry.png',
   corn      :'food_corn.png',
@@ -3850,7 +3902,7 @@ const DOORS=[
   { from:'port',    area:{x1:1, y1:21, x2:4, y2:21}, to:'shop',                    label:'🚪 去商店' },
   { from:'shop',    area:{x1:8, y1:13, x2:11, y2:17},to:'port',    at:{x:2,y:21}, era:18, label:'🚪 去港口', fallback:'farm' },  // 17世紀港口沒開→去農牧地
   // 港口 ⇄ 辦公室
-  { from:'port',    area:{x1:58, y1:8, x2:59, y2:10},to:'office',                  label:'🚪 回辦公室' },
+  { from:'port',    area:{x1:58, y1:7, x2:59, y2:10},to:'office',                  label:'🚪 回辦公室' },
   { from:'office',  area:{x1:13, y1:15, x2:16, y2:16},to:'port',   at:{x:58,y:8}, era:18, label:'🚪 去港口' },
   // 港口 ⇄ 咖啡廳
   { from:'port',    area:{x1:54, y1:21, x2:57, y2:21},to:'cafe',   at:{x:9,y:16}, label:'🚪 去咖啡廳' },
