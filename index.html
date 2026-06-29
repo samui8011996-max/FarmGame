@@ -118,7 +118,7 @@
   .small{font-size:12px;color:var(--ink2)}
   .row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line)}
   .row:last-child{border-bottom:none}
-  .row .e{font-size:22px;width:28px;text-align:center}
+  .row .e{font-size:22px;width:32px;text-align:center}
   .row .info{flex:1;min-width:0}
   .row .info .n{font-weight:700;font-size:14px}
   .row .info .d{font-size:12px;color:var(--ink2)}
@@ -282,13 +282,16 @@ const PRODUCTS={
 };
 const EXTRAS={flour:{nm:'麵粉',e:'🌾',price:2},sugar:{nm:'糖',e:'🧂',price:1}};
 const RECIPES={
-  strawberry_tart:{nm:'草莓塔',e:'🍰',price:28,batch:30,knead:4,
+  // 旗標：known=一開始就會（免猜免買）；shop=商店可買（learnCost當售價）。都不寫＝只能瞎猜解鎖
+  scone:{nm:'斯康餅',e:'🥯',price:16,batch:30,knead:2,bakeMs:5000,known:true,
+    ingredients:{milk:1, egg:1, flour:1}},
+  strawberry_tart:{nm:'草莓塔',e:'🍰',price:28,batch:30,knead:4,shop:true,learnCost:60,
     ingredients:{strawberry:2, flour:1, sugar:1}},
   banana_pudding:{nm:'香蕉布丁',e:'🍮',price:12,batch:30,knead:3,
     ingredients:{banana:2, sugar:1}},
-  pancake:{nm:'鬆餅',e:'🥞',price:18,batch:30,knead:3,bakeMs:5000,locked:true,learnCost:80,
+  pancake:{nm:'鬆餅',e:'🥞',price:18,batch:30,knead:3,bakeMs:5000,shop:true,learnCost:80,
     ingredients:{egg:2, milk:1, flour:1, sugar:1}},
-  stargazy_pie:{nm:'仰望星空派',e:'🥧',price:45,batch:30,knead:4,bakeMs:10000,
+  stargazy_pie:{nm:'仰望星空派',e:'🥧',price:45,batch:30,knead:4,bakeMs:10000,shop:true,learnCost:120,
     ingredients:{herring:4, egg:1, flour:1, potato:1}},
 };
 const QUAL_MUL={bad:0.5,normal:1,good:1.8};
@@ -336,6 +339,7 @@ const CROP_ERA={ strawberry:17, tomato:17, guava:17, lemon:17, corn:17, potato:1
 const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19, stargazy_pie:17 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
+function recipeKnown(k){ const r=RECIPES[k]; return !!(r && (r.known || (S&&S.recipesCooked&&S.recipesCooked[k]))); }
 /* ---------- 裝潢系統 ---------- */
 const DECOR={
   17:{
@@ -2319,11 +2323,11 @@ function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}co
 function openPickRecipe(){
   let body='';
   for(const k in RECIPES){ if(recipeEra(k)>S.era) continue;
-    if(!(S.recipesCooked&&S.recipesCooked[k])) continue;   // 沒做過 → 不顯示
+    if(!recipeKnown(k)) continue;   // 預設(known)或做過/買過 → 顯示
     const r=RECIPES[k];
     const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
     const bakeTxt=`揉${r.knead||4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
-    body+=`<div class="menucard" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${r.e}</div>
+    body+=`<div class="menucard" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${dishIcon(k)}</div>
       <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div>
       <div class="small">${ingTxt}・${bakeTxt}</div></div></div>`;
   }
@@ -2483,11 +2487,11 @@ function openShopBuy(){
       <div class="price">$${x.price}</div><button class="btn sm" onclick="buyExtra('${k}',10)">買10</button></div>`;}
   let recipes='';
   for(const k in RECIPES){ const r=RECIPES[k];
-    if(!r.locked) continue;                         // 只賣鎖住的配方
+    if(!r.shop) continue;                           // 只賣標了 shop:true 的配方
     if(recipeEra(k)>S.era) continue;                // 沒到時代不賣（想全賣就刪這行）
-    const known=S.recipesCooked&&S.recipesCooked[k];
+    const known=recipeKnown(k);
     const cost=Math.round((r.learnCost||60)*shopBuyMul());
-    recipes+=`<div class="row"><div class="e">${r.e}</div><div class="info"><div class="n">${r.nm}配方</div>
+    recipes+=`<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm}配方</div>
       <div class="d">${known?'已學會（看食譜本）':'買了才知道做法'}</div></div>
       <div class="price">$${cost}</div>
       <button class="btn sm ${known?'dis':''}" onclick="buyRecipe('${k}')">${known?'已學會':'買'}</button></div>`;
@@ -2522,7 +2526,7 @@ function buyFert(q){const c=Math.round((S._fp||6)*q*shopBuyMul());if(S.cash<c){t
 
 function buyExtra(k,q){const c=Math.round(EXTRAS[k].price*q*shopBuyMul());if(S.cash<c){toast('現金不足');return;}spend(c,`買${EXTRAS[k].nm}×${q}`);S.extras[k]=(S.extras[k]||0)+q;toast(`+${q}${EXTRAS[k].nm}`);openShopBuy();save();}
 function buyRecipe(k){
-  if(!RECIPES[k]||!RECIPES[k].locked) return;
+  if(!RECIPES[k]||!RECIPES[k].shop) return;
   if(S.recipesCooked&&S.recipesCooked[k]){ toast('食譜本已經有這道了'); return; }
   const cost=Math.round((RECIPES[k].learnCost||60)*shopBuyMul());
   if(S.cash<cost){ toast('現金不足'); return; }
@@ -2549,7 +2553,7 @@ function openShopSell(){
     if(have>0)any=true;}
   let goods='';
   for(const k in RECIPES){const have=S.cafe.goods[k]||0;
-    goods+=`<div class="row"><div class="e">${RECIPES[k].e}</div><div class="info"><div class="n">${RECIPES[k].nm}</div><div class="d">庫存 ${have}</div></div>
+    goods+=`<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${RECIPES[k].nm}</div><div class="d">庫存 ${have}</div></div>
       <div class="price">$${RECIPES[k].price}</div>${qtyOpts('sg_'+k,have)}<button class="btn sm ${have<=0?'dis':'green'}" onclick="sellGood('${k}')">賣</button></div>`;}
   openSheet(`<div class="sheethead"><h3>💵 收購</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small">賣價每天浮動，會暴漲暴跌。${any?'':'（農畜產庫存空）'}${perk('Pedro')?'・<b style="color:var(--accent2)">佩德羅同居中：收購 +20%</b>':''}</div><div class="hr"></div>
@@ -2574,7 +2578,7 @@ function openBag(){
   let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱'; const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
   let prod=Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>`<span class="seedchip">${PRODUCTS[k].e}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
   let goods=Object.keys(S.cafe.goods).filter(k=>S.cafe.goods[k]>0).map(k=>{const r=RECIPES[k];const heal=Math.max(2,Math.round(r.price/6));
-    return `<div class="row"><div class="e">${r.e}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div><div class="d">吃一個回 ${heal} 血</div></div>
+    return `<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div><div class="d">吃一個回 ${heal} 血</div></div>
       <button class="btn sm green" onclick="eatDish('${k}')">吃</button></div>`;}).join('')||'<div class="empty-note">無</div>';
   let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0).map(k=>`<span class="seedchip">${EXTRAS[k].e}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
   openSheet(`<div class="sheethead"><h3>🎒 背包</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -3776,6 +3780,11 @@ const FOOD_IMG_SRC={
 };
 const FOOD_IMG={};
 for(const k in FOOD_IMG_SRC){ const im=new Image(); im.src=FOOD_IMG_SRC[k]; FOOD_IMG[k]=im; }
+function dishIcon(k){
+  const src=FOOD_IMG_SRC[k], e=(RECIPES[k]&&RECIPES[k].e)||'🍽️';
+  if(!src) return e;   // 沒登記自畫圖 → 退回 emoji
+  return `<img src="${src}" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated;vertical-align:middle" onerror="this.outerHTML='${e}'">`;
+}
 const FOOD_LIFT=0;   // 想讓食物往上坐在桌面，就把這個調大（單位 px）
 /* =================== 🍱 擺盤 結束 =================== */
 /* ===================== 🍎 蘋果樹（搖樹掉蘋果） ===================== */
