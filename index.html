@@ -1732,19 +1732,18 @@ const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:10,y:14}, objects:[
     {id:'appletree',x:18,y:5,e:'🍎',nm:'蘋果樹',kind:'appletree',hide:true},
   ]},
-  office:{title:'辦公室', big:false, spawn:{x:14,y:16}, objects:[
-   
+office:{title:'辦公室', big:false, spawn:{x:14,y:16}, objects:[
     {id:'era',x:18,y:14,e:'📅',nm:'時代進程',kind:'eraBoard',hide:true},
     {id:'crib',x:22,y:8,e:'',nm:'阿爾弗雷德',kind:'child',npc:true,avatar:'🧒',hide:true},
     {id:'wardrobe',x:12,y:6,e:'🧥',nm:'衣櫃',kind:'wardrobe',hide:true},
     {id:'cat',x:37,y:7,e:'🐱',nm:'妖精桑',kind:'npc',npc:true,avatar:'🐱',hide:true,
       lines:['（在曬太陽）','今天也辛苦了。','摸摸我（並不會回血）。']},
+    {id:'chair',x:4,y:15,e:'🪑',nm:'書桌',kind:'chair',hide:true},
   ]},
   cafe:{title:'咖啡廳（前台）', big:true, spawn:{x:2,y:7}, objects:[
     {id:'counter',x:16,y:6,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew',hide:true},
     {id:'menu',x:10,y:8,e:'📋',nm:'上架菜單',kind:'menu',hide:true},
     {id:'till',x:13,y:6,e:'💰',nm:'收銀台',kind:'till',hide:true},
-    {id:'decor',x:2,y:9,e:'🎨',nm:'裝潢店面',kind:'decor'},
     {id:'table1',x:11,y:10,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table1',hide:true},
     {id:'table2',x:16,y:10,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table2',hide:true},
     {id:'table3',x:22,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table3',hide:true},
@@ -2066,7 +2065,6 @@ function interact(ev){
     case 'ledger': return openLedger();
     case 'employee': return openEmployee();
     case 'menu': return openMenu();
-    case 'decor': return openDecor();
     case 'eraBoard': return openEra();
     case 'child': return openChild();
     case 'merchant': return openMerchant(o.mid);
@@ -2088,6 +2086,8 @@ function interact(ev){
     case 'gotoKitchen': return goScene('kitchen');
     case 'gotoCafe': return goScene('cafe');
     case 'gotoFarm': return goScene('farm');
+    case 'wardrobe': return openWardrobe();
+    case 'chair': return askSit();
   }
 }
 function goCafeDoor(x,y){ goScene('cafe'); player.x=x; player.y=y; player.facing='up'; return true; }
@@ -2319,7 +2319,8 @@ function openDeskMenu(){
   openSheet(`<div class="sheethead"><h3>🪑 書桌</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:12px">坐在書桌前，要做什麼？</div>
     <button class="btn green" style="width:100%;margin-bottom:8px" onclick="openLedger()">📒 看帳本</button>
-    <button class="btn" style="width:100%" onclick="openEmployee()">👷 雇用人員</button>`);
+    <button class="btn" style="width:100%;margin-bottom:8px" onclick="openEmployee()">👷 雇用人員</button>
+    <button class="btn gold" style="width:100%" onclick="openDecor()">🎨 裝潢店面</button>`);
 }
 function openLedger(){
   const rows=S.ledger.length?S.ledger.slice(0,14).map(x=>`<div class="row"><div style="flex:1">${x.l}</div><div class="${x.a>=0?'up':'down'}">${x.a>=0?'+':''}$${fmt(x.a)}</div></div>`).join(''):'<div class="empty-note">還沒有紀錄</div>';
@@ -2746,7 +2747,8 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
       const ec=document.getElementById('equipCount'); if(ec){ ec.textContent=S.toxins||0; ec.style.color=on?'#ffffffcc':'var(--ink2)'; }
     }else{ eb.style.display='none'; }
   }
-  const onChair = (curScene===CHAIR.scene && Math.round(player.x)===CHAIR.x && Math.round(player.y)===CHAIR.y);
+  const _faceChair = (()=>{ const o=facingObject(); return !!(o && o.kind==='chair'); })();
+  const onChair = _faceChair;
   const onBed = (curScene===BED.scene
     && Math.round(player.x)>=BED.x1 && Math.round(player.x)<=BED.x2
     && Math.round(player.y)>=BED.y1 && Math.round(player.y)<=BED.y2);
