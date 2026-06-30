@@ -630,8 +630,11 @@ function refreshPort(){
   S.port.merchants.forEach(id=>{ if(!S.port.relations[id]) S.port.relations[id]={aff:0,met:false,lastChat:0}; });
   buildPortObjects();
 }
+const PORT_STATIC=[
+  {id:'arthur',x:17,y:18,e:'🌷',nm:'波諾弗瓦酒莊商行',kind:'npc',npc:true,avatar:'🌷',sense:1,lines:['販售高品質葡萄酒  成立於1738 '],hide:true},
+];
 function buildPortObjects(){
-  const objs=[];
+  const objs=PORT_STATIC.slice();   // 先放固定物件，再疊商人
   S.port.merchants.forEach((id,i)=>{
     const m=MERCHANTS[id], slot=PORT_SLOTS[i]; if(!m||!slot) return;
     objs.push({ id:'mc_'+id, x:slot.x, y:slot.y, e:m.e, nm:m.nm, kind:'merchant', mid:id, npc:true, avatar:m.e, lines:m.lines });
@@ -1732,7 +1735,7 @@ const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:10,y:14}, objects:[
     {id:'appletree',x:18,y:5,e:'🍎',nm:'蘋果樹',kind:'appletree',hide:true},
   ]},
-office:{title:'辦公室', big:false, spawn:{x:14,y:16}, objects:[
+office:{title:'辦公室', big:false, spawn:{x:12,y:10}, objects:[
     {id:'era',x:18,y:14,e:'📅',nm:'時代進程',kind:'eraBoard',hide:true},
     {id:'crib',x:22,y:8,e:'',nm:'阿爾弗雷德',kind:'child',npc:true,avatar:'🧒',hide:true},
     {id:'wardrobe',x:12,y:6,e:'🧥',nm:'衣櫃',kind:'wardrobe',hide:true},
@@ -1760,12 +1763,15 @@ office:{title:'辦公室', big:false, spawn:{x:14,y:16}, objects:[
     {id:'recipepick',x:13,y:7,e:'📖',nm:'食譜本（選甜點）',kind:'pickrecipe',hide:true},
     
   ]},
-shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
+  shop:{title:'商店', big:false, spawn:{x:9,y:12}, objects:[
     {x:8,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,sense:1,lines:['這些花值這麼多錢嗎...']},
     {x:4,y:7,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,sense:1,lines:['這些是藍瓷?好美，但價格不便宜']},
   ]},
-  port:{title:'港口', big:true, spawn:{x:9,y:14}, objects:[]},
+
+    port:{title:'港口', big:true, spawn:{x:9,y:14}, objects:[
+  {x:16,y:19,e:'🌷',nm:'亞瑟',kind:'npc',npc:true,hide:true,sense:1,lines:['這些是藍瓷?好美，但價格不便宜']},
   
+  ]},
 };
 
 const FARM_ZONES = [
