@@ -88,15 +88,7 @@
     .dpad{display:none}      /* 電腦版隱藏上下左右 */
     .kbhint{display:flex}    /* 電腦版顯示 WASD/SPACE 提示 */
 
-    /* 背包：釘左側，跟導覽列同一條垂直線、稍微往上一點 */
-    .controls .bag{
-      position:fixed;
-      left:max(12px, calc(50vw - 800px));
-      top:calc(50% - 150px);
-      z-index:40;
-      width:68px;height:68px;
-    }
-    /* 攻擊鈕區塊：釘右側，與背包左右對稱 */
+    /* 攻擊鈕區塊：釘右側 */
     .controls > div:last-child{
       position:fixed;
       right:max(12px, calc(50vw - 400px));
@@ -105,6 +97,21 @@
     }
     /* controls 本身只剩中間的鍵盤提示，置中即可 */
     .controls{justify-content:center}
+
+    /* 背包：自成一塊獨立卡片，浮在導覽列上方、跟它對齊同一欄 */
+    .controls .bag{
+      position:fixed;
+      left:max(12px, calc(50vw - 400px));
+      top:calc(50% - 210px);          /* 背包那塊的高度，想上下移就改這個 */
+      width:68px;height:68px;
+      flex-direction:column;
+      border:2px solid var(--line2);
+      border-radius:14px;
+      box-shadow:0 3px 0 var(--shadow);
+      z-index:41;
+    }
+    .controls .bag span{ font-size:11px; margin-top:2px; }
+    /* 攻擊鈕區塊維持靠右（這段你已經有，確認還在就好） */
   }
 
   .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex;margin-top:auto}
@@ -117,7 +124,7 @@
     .nav{
       position:fixed;
       left:max(12px, calc(50vw - 400px));
-      top:50%;
+      top:calc(50% + 30px);     /* 往下挪，跟上方背包分開 */
       transform:translateY(-50%);
       flex-direction:column;
       width:68px;
