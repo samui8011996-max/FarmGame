@@ -78,6 +78,35 @@
   .actbtn.dim{background:var(--line2)}
   .actbtn.throw{background:var(--accent2)}
 
+  /* 電腦版鍵盤提示：手機隱藏，電腦（滑鼠鍵盤）才顯示 */
+  .kbhint{display:none;align-items:center;gap:8px;font-size:12px;
+    color:var(--ink2);font-weight:700}
+  .kbhint .keys{font-size:12px;color:var(--ink);background:var(--card);
+    border:2px solid var(--line2);border-radius:8px;padding:3px 9px;
+    letter-spacing:1px;box-shadow:0 2px 0 var(--shadow)}
+  @media (min-width:820px){
+    .dpad{display:none}      /* 電腦版隱藏上下左右 */
+    .kbhint{display:flex}    /* 電腦版顯示 WASD/SPACE 提示 */
+
+    /* 背包：釘左側，跟導覽列同一條垂直線、稍微往上一點 */
+    .controls .bag{
+      position:fixed;
+      left:max(12px, calc(50vw - 800px));
+      top:calc(50% - 150px);
+      z-index:40;
+      width:68px;height:68px;
+    }
+    /* 攻擊鈕區塊：釘右側，與背包左右對稱 */
+    .controls > div:last-child{
+      position:fixed;
+      right:max(12px, calc(50vw - 400px));
+      top:calc(50% - 60px);
+      z-index:40;
+    }
+    /* controls 本身只剩中間的鍵盤提示，置中即可 */
+    .controls{justify-content:center}
+  }
+
   .nav{background:var(--paper2);border-top:2px solid var(--line2);display:flex;margin-top:auto}
   .nav button{flex:1;padding:7px 2px 8px;font-size:11px;color:var(--ink2);display:flex;
     flex-direction:column;align-items:center;gap:1px;font-weight:700}
@@ -204,6 +233,10 @@
   <path d="M4 11L17 3L17 19L4 11Z" fill="#4a3b2a" transform="rotate(180 11 11)"/>
 </svg></button>
     </div>
+    <div class="kbhint">
+      <span class="keys">WASD</span>移動
+      <span class="keys">SPACE</span>互動
+    </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
     <button id="fishWeaponBtn" ontouchstart="weaponBtn(event)" onmousedown="weaponBtn(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">⚔️<span style="font-size:10px;color:var(--ink2)">攻擊</span></button>
      <button id="equipBtn" ontouchstart="throwToxin(event)" onmousedown="throwToxin(event)"  style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🧪<span id="equipCount" style="font-size:10px;color:var(--ink2)">0</span></button>
@@ -220,7 +253,7 @@
   </div>
   <nav class="nav" id="nav">
     <button data-s="farm" onclick="goScene('farm')"><span class="ic">🌱</span>農牧地</button>
-    <button data-s="cafe" onclick="goScene('cafe')"><span class="ic">☕</span>咖啡廳</button>
+    <button data-s="cafe" onclick="goScene('cafe')"><span class="ic">🍽️</span>餐廳</button>
     <button data-s="office" onclick="goScene('office')"><span class="ic">🏠</span>辦公室</button>
     <button onclick="openTravel()"><span class="ic">🗺️</span>前往</button>
   </nav>
@@ -245,12 +278,7 @@ ctx.imageSmoothingEnabled=false;
 /* ---------- static data ---------- */
 const CROPS={
   strawberry:{nm:'草莓',e:'🍓',base:8,seed:3,grow:DAY,volat:'big'},
-  blueberry:{nm:'藍莓',e:'🫐',base:8,seed:3,grow:DAY,volat:'mid'},
-  tomato:{nm:'番茄',e:'🍅',base:5,seed:2,grow:DAY,volat:'small'},
-  papaya:{nm:'木瓜',e:'🫛',base:5,seed:2,grow:DAY,volat:'mid'},
-  banana:{nm:'香蕉',e:'🍌',base:3,seed:1,grow:DAY,volat:'small'},
-  guava:{nm:'芭樂',e:'🟢',base:3,seed:1,grow:DAY,volat:'small'},
-  lemon:{nm:'檸檬',e:'🍋',base:5,seed:2,grow:DAY,volat:'mid'},
+
 };
 const ANIMALS={
   chicken:{nm:'雞',e:'🐔',cub:5,feed:1,prod:'egg',cycle: 30000,mode:'produce',growFeed:2},
@@ -259,17 +287,13 @@ const ANIMALS={
 };
 const PRODUCTS={
   strawberry:{nm:'草莓',e:'🍓',base:8,volat:'big'},
-  blueberry:{nm:'藍莓',e:'🫐',base:8,volat:'mid'},
   corn:{nm:'玉米',e:'🌽',base:4,volat:'small'},
   potato:{nm:'馬鈴薯',e:'🥔',base:4,volat:'small'},
-  tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'},
-  papaya:{nm:'木瓜',e:'🫛',base:5,volat:'mid'},
-  banana:{nm:'香蕉',e:'🍌',base:3,volat:'small'},
-  guava:{nm:'芭樂',e:'🟢',base:3,volat:'small'},
-  lemon:{nm:'檸檬',e:'🍋',base:5,volat:'mid'},
   apple:{nm:'蘋果',e:'🍎',base:6,volat:'small'},
   egg:{nm:'雞蛋',e:'🥚',base:10,volat:'mid'},
   milk:{nm:'牛奶',e:'🥛',base:10,volat:'mid'},
+  cheese:{nm:'乳酪',e:'🧀',base:18,volat:'mid'},
+  butter:{nm:'奶油',e:'🧈',base:14,volat:'mid'},
   pork:{nm:'豬肉',e:'🥓',base:10,volat:'mid'},
   beef:{nm:'牛肉',e:'🥩',base:12,volat:'mid'},
   chicken_meat:{nm:'雞肉',e:'🍗',base:6,volat:'small'},
@@ -305,25 +329,7 @@ const FARM_CROPS={
   corn:{ nm:'玉米', img:'corn.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:40000, yield:4, seed:2 },
-  blueberry:{ nm:'藍莓', img:'blueberry.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  tomato:{ nm:'番茄', img:'tomato.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  papaya:{ nm:'木瓜', img:'papaya.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  banana:{ nm:'香蕉', img:'banana.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  guava:{ nm:'芭樂', img:'guava.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  lemon:{ nm:'檸檬', img:'lemon.png', fw:32, fh:32,
-    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
-    grow:30000, yield:3 },
-  potato:{ nm:'馬鈴薯', img:'potato.png', fw:32, fh:32,
+    potato:{ nm:'馬鈴薯', img:'potato.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3, seed:2 },
 };
@@ -334,8 +340,8 @@ for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段
 function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.ceil(s/60)+'分':s+'秒';}     // 之後可加品質/施肥
 
 /* ---------- 時代系統（第一步：解鎖門檻） ---------- */
-const CROP_ERA={ strawberry:17, tomato:17, guava:17, lemon:17, corn:17, potato:17,
-                 blueberry:18, papaya:18, banana:19 };              
+const CROP_ERA={ strawberry:17,  corn:17, potato:17,
+                  };              
 const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19, stargazy_pie:17 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
@@ -609,16 +615,16 @@ function childLeaveHome(){
 const MERCHANTS={
   Francis:{ nm:'弗朗西斯', e:'🧝‍♀️', job:'bake',
     lines:['這批貨可是遠渡重洋來的。','你的甜點店，我聽說過呢。','下次入港不知是何時了。'],
-    goods:[ {kind:'seed', k:'blueberry', price:6}, {kind:'extra', k:'sugar', price:10, qty:10} ] },
+    goods:[ {kind:'seed', k:'strawberry', price:6}, {kind:'extra', k:'sugar', price:10, qty:10} ] },
   Pedro:{ nm:'佩德羅', e:'🧔', job:'farm',
     lines:['海上的日子，靠的就是好貨。','種子？我這的最耐長。','錢給夠，什麼都好談。'],
-    goods:[ {kind:'seed', k:'corn', price:3}, {kind:'seed', k:'tomato', price:2} ] },
+    goods:[ {kind:'seed', k:'corn', price:3} ] },
   Antonio:{ nm:'安東尼奧', e:'👩‍🦰', job:'farm',
     lines:['香料是甜點的靈魂喔。','嚐過異國的味道嗎？','我認得出識貨的人。'],
-    goods:[ {kind:'extra', k:'flour', price:20, qty:10}, {kind:'seed', k:'papaya', price:5} ] },
+    goods:[ {kind:'extra', k:'flour', price:20, qty:10} ] },
   Alfred:{ nm:'阿爾弗雷德', e:'🤵', job:'rich', era:19,
     lines:['錢嘛，我從來不缺。','跟著我，你不會吃苦的。','這點小東西，當見面禮。'],
-    goods:[ {kind:'extra', k:'sugar', price:4, qty:30}, {kind:'seed', k:'banana', price:6} ] },
+    goods:[ {kind:'extra', k:'sugar', price:4, qty:30} ] },
 };
 const PORT_SLOTS=[{x:4,y:11},{x:9,y:11},{x:14,y:11}];
 const PORT_REFRESH_MS=60000;
@@ -632,6 +638,8 @@ function refreshPort(){
 }
 const PORT_STATIC=[
   {id:'arthur',x:17,y:18,e:'🌷',nm:'波諾弗瓦酒莊商行',kind:'npc',npc:true,avatar:'🌷',sense:1,lines:['販售高品質葡萄酒  成立於1738 '],hide:true},
+  {id:'arthur',x:10,y:20,e:'🌷',nm:'黃金鬱金香雜貨店',kind:'npc',npc:true,avatar:'🌷',sense:1,lines:['種苗、飼料、雜貨、骨董 '],hide:true},
+  {id:'arthur',x:52,y:20,e:'🌷',nm:'餐廳',kind:'npc',npc:true,avatar:'🌷',sense:1,lines:['各式餐點 '],hide:true},
 ];
 function buildPortObjects(){
   const objs=PORT_STATIC.slice();   // 先放固定物件，再疊商人
@@ -649,7 +657,7 @@ function openMerchant(id){
   rel.met=true;
   const goods=m.goods.map((g,gi)=>{
     const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):EXTRAS[g.k].nm;
-    const e =g.kind==='seed'?((PRODUCTS[g.k]&&PRODUCTS[g.k].e)||'🌱'):EXTRAS[g.k].e;
+    const e = prodIcon(g.k, 24);
     const qty=g.qty||1;
     return `<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${nm}${qty>1?' ×'+qty:''}</div></div>
       <div class="price">$${g.price}</div><button class="btn sm" onclick="buyMerchantGood('${id}',${gi})">買</button></div>`;
@@ -686,9 +694,7 @@ function openGift(id){
     const nm=it.kind==='seed'?((FARM_CROPS[it.k]?FARM_CROPS[it.k].nm:it.k)+'種子')
            :it.kind==='extra'?(EXTRAS[it.k]?EXTRAS[it.k].nm:it.k)
            :(PRODUCTS[it.k]?PRODUCTS[it.k].nm:(FARM_CROPS[it.k]?FARM_CROPS[it.k].nm:it.k));
-    const e =it.kind==='seed'?((PRODUCTS[it.k]&&PRODUCTS[it.k].e)||'🌱')
-           :it.kind==='extra'?(EXTRAS[it.k]?EXTRAS[it.k].e:'📦')
-           :((PRODUCTS[it.k]&&PRODUCTS[it.k].e)||'📦');
+    const e = prodIcon(it.k, 24);
     return `<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${nm} <span class="small">×${it.n}</span></div></div>
       <button class="btn sm gold" onclick="giveGift('${id}','${it.kind}','${it.k}')">送</button></div>`;
   }).join(''):'<div class="empty-note">背包沒有可送的東西。</div>';
@@ -718,7 +724,7 @@ function isPartnerWorking(){ return !!(S.partner && S.partner.working); }
 function partnerBuff(job){ return (isPartnerWorking() && S.partner.job===job) ? 1 : 0; }
 /* ---------- 同居人被動加成（依對象，住在一起就生效，與上班無關） ---------- */
 const PARTNER_PERK={
-  Francis:{ cafeCap:12, batchMul:1.5 },   // 咖啡廳客流↑、伴侶下廚一批更多
+  Francis:{ cafeCap:12, batchMul:1.5 },   // 餐廳客流↑、伴侶下廚一批更多
   Pedro:  { buyMul:0.8, sellMul:1.2 },     // 採購 8 折、收購 +20%
   Antonio:{ atkMul:2,   defMul:0.5 },      // 毒物傷害↑（可一擊）、被蛇咬傷害減半
 };
@@ -1595,12 +1601,12 @@ const MAPS={
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "F.....FFFFFFFFFFFFFFFFFFFFFFF",
-   "..FFF.FFFFFFFFFFFFFFFFFFFFFFF",
-   ".FFFF.FFFFFFFFFFFFFFFFFFFFFFF",
-   ".FFFF.FFFFFFFF......FFFFFFFFF",
-   ".FFFF.FFFFFFFF......FFFFFFFFF",
-   ".FFFF.FFFF...F......FFFFFFFFF",
+   ".......FFFFFFFFFFFFFFFFFFFFFF",
+   ".......FFFFFFFFFFFFFFFFFFFFFF",
+   ".FFFF..FFFFFFFFFFFFFFFFFFFFFF",
+   ".FFFF..FFFFFFF......FFFFFFFFF",
+   ".FFFF.....FFFF......FFFFFFFFF",
+   ".FFFF........F......FFFFFFFFF",
    ".FF..........F......FFFFFFFFF",
    ".FF..........F......FFFFFFFFF",
    ".FFFFFFFFFFFFF......FFFFFFFFF",
@@ -1734,6 +1740,7 @@ for(const k in MAPS){ GRID[k]=MAPS[k].map(r=>r.padEnd(MAPS[k][0].length,r[0]).sp
 const SCENES={
   farm:{title:'農牧地', big:true, spawn:{x:10,y:14}, objects:[
     {id:'appletree',x:18,y:5,e:'🍎',nm:'蘋果樹',kind:'appletree',hide:true},
+    {id:'dairy',x:8,y:6,e:'🧀',nm:'乳品加工處',kind:'dairy',sense:2.5,hide:true},
   ]},
 office:{title:'辦公室', big:false, spawn:{x:12,y:10}, objects:[
     {id:'era',x:18,y:14,e:'📅',nm:'時代進程',kind:'eraBoard',hide:true},
@@ -1743,7 +1750,7 @@ office:{title:'辦公室', big:false, spawn:{x:12,y:10}, objects:[
       lines:['（在曬太陽）','今天也辛苦了。','摸摸我（並不會回血）。']},
     {id:'chair',x:4,y:15,e:'🪑',nm:'書桌',kind:'chair',hide:true},
   ]},
-  cafe:{title:'咖啡廳（前台）', big:true, spawn:{x:2,y:7}, objects:[
+  cafe:{title:'餐廳（前台）', big:true, spawn:{x:2,y:7}, objects:[
     {id:'counter',x:16,y:6,e:'☕',nm:'吧檯（泡咖啡）',kind:'brew',hide:true},
     {id:'menu',x:10,y:8,e:'📋',nm:'上架菜單',kind:'menu',hide:true},
     {id:'till',x:13,y:6,e:'💰',nm:'收銀台',kind:'till',hide:true},
@@ -1844,7 +1851,7 @@ function openTileFarm(key){
     for(const id in FARM_CROPS){ 
     if(cropEra(id) > S.era) continue;  // ← 加這行
     const d=FARM_CROPS[id];
-    const e=(PRODUCTS[id]&&PRODUCTS[id].e)||'🌱'; const have=S.seeds[id]||0;
+    const e=prodIcon(id,24); const have=S.seeds[id]||0;
 
       btns+=`<button class="btn green ${have<=0?'dis':''}" style="width:100%;margin-bottom:6px" onclick="plantTile('${key}','${id}')">${e} 播種${d.nm}（種子 ${have}）</button>`; }
     btns+=`<button class="btn ghost" style="width:100%" onclick="closeSheet();goScene('shop')">🏪 去商店買種子</button>`;
@@ -1852,7 +1859,7 @@ function openTileFarm(key){
       <div class="small" style="margin-bottom:10px">選要種的作物（需要種子）。</div>${btns}`);
     return;
   }
-  const def=FARM_CROPS[c.crop], last=def.stages.length-1, e=(PRODUCTS[c.crop]&&PRODUCTS[c.crop].e)||'🌱';
+  const def=FARM_CROPS[c.crop], last=def.stages.length-1, e=prodIcon(c.crop,24);
   if(c.stage>=last){
     openSheet(`<div class="sheethead"><h3>${e} ${def.nm}（可收成）</h3><button class="close" onclick="closeSheet()">✕</button></div>
       <button class="btn green" style="width:100%" onclick="harvestTile('${key}')">🧺 收成</button>`);
@@ -2078,6 +2085,7 @@ function interact(ev){
     case 'partner': return openPartner();
     case 'wardrobe': return openWardrobe();
     case 'appletree': return shakeAppleTree();
+    case 'dairy': return openDairy();
     case 'till': return collectTill();
     case 'brew': return toast('☕ （試作）泡咖啡：之後接咖啡商品');
     case 'foodtable': return openFoodTable(o.tbl);
@@ -2149,7 +2157,7 @@ function openAnimals(type){
     const sinceFed=Date.now()-(a.fed||a.born);const hrs=Math.floor(sinceFed/HOUR);
     if(type==='chicken'){
       const turkey=a.species==='turkey', adult=isHen(a);
-      const e=turkey?'🦃':(adult?'🐔':'🐤'), nm=turkey?'火雞':'雞';
+      const e=animalIcon('chicken',a,28), nm=turkey?'火雞':'雞';
       const wt = (turkey&&adult) ? weightTxt('chicken',a) : '';
       let act = turkey
         ? (adult?`<button class="btn sm gold" onclick="confirmKillBird(${idx})">宰殺</button>`:`<span class="small">養大中</span>`)
@@ -2159,7 +2167,7 @@ function openAnimals(type){
         ${act}</div>`;
     }
     if(type==='pig'){
-      const grown=isGrownPig(a), e=grown?'🐖':'🐷';
+      const grown=isGrownPig(a), e=animalIcon('pig',a,28);
       const wt = grown ? weightTxt('pig',a) : '';
       let act = !grown ? `<span class="small">小豬養大中</span>`
         : `<button class="btn sm gold" onclick="confirmSellPig(${idx})">宰殺</button>`;
@@ -2168,7 +2176,7 @@ function openAnimals(type){
         ${act}</div>`;
     }
     if(type==='cow'){
-      const grown=isGrownCow(a), e=grown?'🐄':'🐮';
+      const grown=isGrownCow(a), e=animalIcon('cow',a,28);
       const wt = grown ? weightTxt('cow',a) : '';
       let act = !grown ? `<span class="small">小牛養大中</span>`
         : `<button class="btn sm ${a.pending?'green':'dis'}" onclick="collect('cow',${idx})">擠奶${a.pending?'('+a.pending+')':''}</button> <button class="btn sm gold" onclick="confirmSellCow(${idx})">宰殺</button>`;
@@ -2179,7 +2187,7 @@ function openAnimals(type){
     let act = def.mode==='produce'
       ? `<button class="btn sm ${a.pending?'green':'dis'}" onclick="collect('${type}',${idx})">${def.prod==='egg'?'取蛋':'擠奶'}${a.pending?'('+a.pending+')':''}</button>`
       : (a.fat?`<button class="btn sm gold" onclick="confirmSellPig(${idx})">賣豬</button>`:`<span class="small">養肥中</span>`);
-    return `<div class="row"><div class="e">${def.e}</div>
+    return `<div class="row"><div class="e">${animalIcon(type,null,28)}</div>
       <div class="info"><div class="n">${def.nm} #${idx+1}</div><div class="d">距餵食 ${hrs}時${S.employee?'（雇員顧）':''}</div></div>
       ${act}</div>`;
   }).join('') : `<div class="empty-note">還沒有${def.nm}，去商店買幼崽。</div>`;
@@ -2191,7 +2199,7 @@ const feedAllBtn = list.length
     const total=eggTotalPending(), boxes=eggBoxes();
     eggBtns=`<button class="btn gold ${total>0?'':'dis'}" style="width:100%;margin-bottom:10px" onclick="collectTopEggBox()">🥚 取蛋（還有 ${boxes} 箱・共 ${total} 顆）</button>`;
   }
-  openSheet(`<div class="sheethead"><h3>${def.e} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
+  openSheet(`<div class="sheethead"><h3>${animalIcon(type,null,24)} ${def.nm}（${list.length}/10）</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:8px">飼料庫存 ${S.feed} 份。幼崽/飼料到商店買。${type==='chicken'?`<br>🥚 蛋箱 ${eggTotalPending()}/${eggCap()}・使用 ${eggBoxes()}/${EGG_BOX_COUNT} 箱（滿了暫停產蛋，收蛋後再生）`:''}</div>${feedAllBtn}${eggBtns}${rows}`);
 }
 function feedAll(type){
@@ -2376,7 +2384,7 @@ function openMenu(){
 function toggleMenu(k){const i=S.cafe.menu.indexOf(k);if(i>=0)S.cafe.menu.splice(i,1);
   else{if((S.cafe.goods[k]||0)<=0){toast('沒有成品可上架，先去廚房做');return;}S.cafe.menu.push(k);}openMenu();save();}
 function toggleCafeStaff(){S.cafe.staff=!S.cafe.staff;openMenu();save();}
-function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}const t=Math.round(S.cafe.till);earn(t,'咖啡廳營收');S.cafe.till=0;toast(`☕ 收了 $${fmt(t)}`);save();}
+function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}const t=Math.round(S.cafe.till);earn(t,'餐廳營收');S.cafe.till=0;toast(`🍽️ 收了 $${fmt(t)}`);save();}
 
 /* ---------- KITCHEN ---------- */
 function openPickRecipe(){
@@ -2416,15 +2424,36 @@ function addIng(k){
   prep.slots[k]=(prep.slots[k]||0)+1; toast(`放入 ${ingNm(k)}`);
   kCut(); save();
 }
+function recipeCheatList(){
+  let cards='';
+  for(const k in RECIPES){
+    if(recipeEra(k)>S.era) continue;
+    if(!recipeKnown(k)) continue;
+    const r=RECIPES[k];
+    const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
+    const bakeTxt=`揉${r.knead||4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+    cards+=`<div class="menucard" style="display:flex;align-items:center;gap:8px;padding:6px">
+      <div style="font-size:20px">${dishIcon(k)}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13px">${r.nm}</div>
+      <div class="small">${ingTxt}・${bakeTxt}</div></div></div>`;
+  }
+  if(!cards) cards='<div class="empty-note" style="padding:8px">還沒學會任何食譜，到食譜本或商店學。</div>';
+  return `<div style="margin-top:8px">${cards}</div>`;
+}
+function toggleKCutRecipes(){ prep._showRecipes=!prep._showRecipes; kCut(); }
 function kCut(){
   let body=`<div class="small" style="margin-bottom:6px">放入食材，揉製後進烤箱。食材＋揉次＋烤秒數對上某道食譜就會做出來。</div>
     <div class="small">已用料台 ${slotsUsed()}/5 種</div>
-    <button class="btn ghost sm" style="margin-top:6px;color:var(--danger)${slotsUsed()?'':';opacity:.4'}" onclick="discardPrep()">🗑️ 倒掉料台食材（不回收）</button>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn ghost sm" style="color:var(--danger)${slotsUsed()?'':';opacity:.4'}" onclick="discardPrep()">🗑️ 倒掉料台食材（不回收）</button>
+      <button class="btn ghost sm" onclick="toggleKCutRecipes()">📖 ${prep._showRecipes?'收起食譜 ▲':'看食譜 ▼'}</button>
+    </div>
+    ${prep._showRecipes?recipeCheatList():''}
     <div class="hr"></div><b class="small">放入食材</b>`;
   const avail=[];
   for(const k in S.store) if(S.store[k]>0) avail.push({k,n:S.store[k]});
   for(const k in S.extras) if(S.extras[k]>0) avail.push({k,n:S.extras[k]});
-  body+= avail.length? avail.map(it=>`<div class="row"><div class="e">${ingE(it.k)}</div>
+  body+= avail.length? avail.map(it=>`<div class="row"><div class="e">${prodIcon(it.k,28)}</div>
     <div class="info"><div class="n">${ingNm(it.k)} <span class="small">庫存 ${it.n}・已放 ${prep.slots[it.k]||0}</span></div></div>
     <button class="btn sm" onclick="addIng('${it.k}')">放入</button></div>`).join('')
     : '<div class="empty-note">沒有食材，去農田收成或商店買。</div>';
@@ -2529,20 +2558,20 @@ function finishBake(t){
 /* ---------- SHOP ---------- */
 function openShopBuy(){
   let seeds='';
-  for(const k in FARM_CROPS){ if(cropEra(k)>S.era) continue; if(FARM_CROPS[k].hidden) continue; const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱';
+  for(const k in FARM_CROPS){ if(cropEra(k)>S.era) continue; if(FARM_CROPS[k].hidden) continue; const d=FARM_CROPS[k]; const e=prodIcon(k,28);
     seeds+=`<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${d.nm}種子</div>
       <div class="d">背包 ${S.seeds[k]||0}</div></div>
       <div class="price">$${d.seed}</div><button class="btn sm" onclick="buyCropSeed('${k}')">買</button></div>`;}
   let animals='';
   for(const k in ANIMALS){const d=ANIMALS[k];const cnt=S.animals[k].length;
-    animals+=`<div class="row"><div class="e">${d.e}</div><div class="info"><div class="n">${d.nm} <span class="small">${cnt}/10</span></div></div>
+    animals+=`<div class="row"><div class="e">${animalIcon(k,null,28)}</div><div class="info"><div class="n">${d.nm} <span class="small">${cnt}/10</span></div></div>
       <div class="price">$${d.cub}</div><button class="btn sm ${cnt>=10?'dis':''}" onclick="buyAnimal('${k}')">買</button></div>`;}
   {const cnt=S.animals.chicken.length;
-    animals+=`<div class="row"><div class="e">🦃</div><div class="info"><div class="n">火雞 <span class="small">養雞舍・${cnt}/10</span></div></div>
+    animals+=`<div class="row"><div class="e">${animalIcon(null,'turkey',28)}</div><div class="info"><div class="n">火雞 <span class="small">養雞舍・${cnt}/10</span></div></div>
       <div class="price">$8</div><button class="btn sm ${cnt>=10?'dis':''}" onclick="buyTurkey()">買</button></div>`;}
   let extras='';
   for(const k in EXTRAS){const x=EXTRAS[k];
-    extras+=`<div class="row"><div class="e">${x.e}</div><div class="info"><div class="n">${x.nm}</div><div class="d">庫存 ${S.extras[k]||0}</div></div>
+    extras+=`<div class="row"><div class="e">${prodIcon(k,28)}</div><div class="info"><div class="n">${x.nm}</div><div class="d">庫存 ${S.extras[k]||0}</div></div>
       <div class="price">$${x.price}</div><button class="btn sm" onclick="buyExtra('${k}',10)">買10</button></div>`;}
   let recipes='';
   for(const k in RECIPES){ const r=RECIPES[k];
@@ -2561,9 +2590,9 @@ function openShopBuy(){
     <b class="small">種子</b>${seeds}<div class="hr"></div>
     <b class="small">幼崽（直接進牧地）</b>${animals}<div class="hr"></div>
     <b class="small">飼料 / 肥料 / 咖啡材料</b>
-    <div class="row"><div class="e">🌾</div><div class="info"><div class="n">飼料</div><div class="d">庫存 ${S.feed}</div></div><div class="price">$${fe}</div>
+    <div class="row"><div class="e">${miscIcon('feed','🌾',28)}</div><div class="info"><div class="n">飼料</div><div class="d">庫存 ${S.feed}</div></div><div class="price">$${fe}</div>
       <button class="btn sm" onclick="buyFeed(10)">買10</button><button class="btn sm ghost" onclick="buyFeed(50)">買50</button></div>
-    <div class="row"><div class="e">💩</div><div class="info"><div class="n">肥料</div><div class="d">庫存 ${S.fert}</div></div><div class="price">$${fp}</div>
+    <div class="row"><div class="e">${miscIcon('fert','💩',28)}</div><div class="info"><div class="n">肥料</div><div class="d">庫存 ${S.fert}</div></div><div class="price">$${fp}</div>
       <button class="btn sm" onclick="buyFert(1)">買1</button><button class="btn sm ghost" onclick="buyFert(5)">買5</button></div>${extras}${recipes?`<div class="hr"></div><b class="small">📖 配方</b>${recipes}`:''}`);
 }
 function buySeed(c,q){const cost=Math.round(CROPS[c].seed*QUAL_MUL[q]);if(S.cash<cost){toast('現金不足');return;}spend(cost,`買${CROPS[c].nm}種子`);S.seeds[seedKey(c,q)]=(S.seeds[seedKey(c,q)]||0)+1;toast(`買了${CROPS[c].nm}種子`);openShopBuy();save();}
@@ -2606,7 +2635,7 @@ function openShopSell(){
   let raw='';let any=false;
   for(const k in PRODUCTS){const have=S.store[k]||0;const price=priceOf(k);const dir=priceDir(k);
     const arrow=dir>0?'<span class="up">▲</span>':dir<0?'<span class="down">▼</span>':'';
-    raw+=`<div class="row"><div class="e">${PRODUCTS[k].e}</div><div class="info"><div class="n">${PRODUCTS[k].nm} <span class="small">基準$${PRODUCTS[k].base}</span></div>
+    raw+=`<div class="row"><div class="e">${prodIcon(k,28)}</div><div class="info"><div class="n">${PRODUCTS[k].nm} <span class="small">基準$${PRODUCTS[k].base}</span></div>
       <div class="d">庫存 ${have}</div></div><div class="price">$${price} ${arrow}</div>
       ${qtyOpts('sq_'+k,have)}<button class="btn sm ${have<=0?'dis':'green'}" onclick="sellProduct('${k}')">賣</button></div>`;
     if(have>0)any=true;}
@@ -2634,18 +2663,18 @@ function sellGood(k){
 }
 /* ---------- BAG ---------- */
 function openBag(){
-  let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=(PRODUCTS[k]&&PRODUCTS[k].e)||'🌱'; const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
-  let prod=Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>`<span class="seedchip">${PRODUCTS[k].e}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
+  let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=prodIcon(k,20); const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
+  let prod=Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>`<span class="seedchip">${prodIcon(k,20)}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
   let goods=Object.keys(S.cafe.goods).filter(k=>S.cafe.goods[k]>0).map(k=>{const r=RECIPES[k];const heal=Math.max(2,Math.round(r.price/6));
     return `<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div><div class="d">吃一個回 ${heal} 血</div></div>
       <button class="btn sm green" onclick="eatDish('${k}')">吃</button></div>`;}).join('')||'<div class="empty-note">無</div>';
-  let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0).map(k=>`<span class="seedchip">${EXTRAS[k].e}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
+  let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0).map(k=>`<span class="seedchip">${prodIcon(k,20)}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
   openSheet(`<div class="sheethead"><h3>🎒 背包</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <b class="small">種子</b><div style="margin:4px 0 8px">${seeds}</div>
     <b class="small">農畜產品</b><div style="margin:4px 0 8px">${prod}</div>
     <b class="small">加工品成品</b><div style="margin:4px 0 8px">${goods}</div>
     <b class="small">咖啡材料</b><div style="margin:4px 0 8px">${ext}</div>
-    <div class="hr"></div><div class="small">飼料 ${S.feed}・肥料 ${S.fert}・🧪 毒物 ${S.toxins||0}</div>`);
+    <div class="hr"></div><div class="small">飼料 ${S.feed}・肥料 ${S.fert}・${miscIcon('toxin','🧪',16)} 毒物 ${S.toxins||0}</div>`);
 }
 
 /* ---------- dialogue ---------- */
@@ -2806,6 +2835,7 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     if(_atKeeper){ if(dlgNpc!=='keeper'){ dlgNpc='keeper'; dlgIdx=(Math.random()*KEEPER_NPC.lines.length)|0; showDlg(KEEPER_NPC); } hint.textContent='🎩 霍蘭德（互動鍵）'; hint.classList.add('show'); }
     else if(_door){ dlgNpc=null; if(!say._t) idleDlg(); hint.textContent=doorLabel(_door)+'（互動鍵）'; hint.classList.add('show'); }
     else if(near&&near.kind==='appletree'){ dlgNpc=null; if(!say._t) idleDlg(); hint.textContent='🍎 搖蘋果樹（互動鍵）'; hint.classList.add('show'); }
+    else if(near&&near.kind==='dairy'){ dlgNpc=null; if(!say._t) idleDlg(); hint.textContent='🧀 乳品加工處（互動鍵）'; hint.classList.add('show'); }
     else if(near&&near.npc){if(dlgNpc!==near.id){dlgNpc=near.id;dlgIdx=0;showDlg(near);}hint.classList.remove('show');}
     else if(onTile){dlgNpc=null;if(!say._t)idleDlg();
       const c=S.crops[onTile];
@@ -2898,7 +2928,7 @@ function draw(){
   const sy=big?Math.floor(cam.y)-1:0, ey=big?Math.floor(cam.y)+VIEW_ROWS+1:mapRows();
   let _bgScene=curScene;
   if(curScene==='office' && ((S.child && S.child.stage>=1) || S.childLeftHome)) _bgScene='office_grown';
-  if(curScene==='cafe') _bgScene='cafe_17';   // 咖啡廳固定用這張，不隨時代換
+  if(curScene==='cafe') _bgScene='cafe_17';   // 餐廳固定用這張，不隨時代換
   const bg = SCENE_BG[_bgScene+'_'+S.era] || SCENE_BG[_bgScene] || SCENE_BG[curScene+'_'+S.era] || SCENE_BG[curScene];
   if (bg && bg.complete && bg.naturalWidth) {
     // 這個場景有底圖且載入好了 → 鋪滿整個舞台
@@ -2986,7 +3016,7 @@ function drawFlaps(ox,oy){
     ctx.drawImage(img, sx,0, fw,img.naturalHeight, -ox,-oy, mapCols()*TS, mapRows()*TS);
   }
 }
-  drawCafeFood(ox,oy);   // 咖啡廳擺盤食物：畫在物件之後、人物之前 → 會被人物蓋住
+  drawCafeFood(ox,oy);   // 餐廳擺盤食物：畫在物件之後、人物之前 → 會被人物蓋住
   if(curScene==='farm'){
     const SZ=CELL*TS;
     for(const key in S.crops){
@@ -3508,7 +3538,7 @@ function openTravel(){
     ${card('port','⚓','港口', portLock?'18世紀解鎖':'', portLock)}
     <div class="hr"></div>
     <b class="small">店面</b>
-    ${card('cafe','☕','咖啡廳')}
+    ${card('cafe','🍽️','餐廳')}
     ${card('kitchen','👩‍🍳','廚房')}
     <div class="hr"></div>
     <b class="small">家</b>
@@ -3680,7 +3710,7 @@ function inShopDoor(){
   const px=Math.round(player.x), py=Math.round(player.y);
   return px>=SHOP_DOOR.x1 && px<=SHOP_DOOR.x2 && py>=SHOP_DOOR.y1 && py<=SHOP_DOOR.y2;
 }
-/* --- 咖啡廳⇄廚房：踩到門口就自動切換（不用按互動） --- */
+/* --- 餐廳⇄廚房：踩到門口就自動切換（不用按互動） --- */
 function autoDoors(){
   if(!S) return;
 }
@@ -3860,13 +3890,7 @@ const FOOD_IMG_SRC={
   stargazy_pie:'food_stargazy_pie.png',
   scone:'food_scone.png',
   pancake:'food_pancake.png',
-  blueberry :'food_blueberry.png',
   corn      :'food_corn.png',
-  tomato    :'food_tomato.png',
-  papaya    :'food_papaya.png',
-  banana    :'food_banana.png',
-  guava     :'food_guava.png',
-  lemon     :'food_lemon.png',
   egg       :'food_egg.png',
   milk      :'food_milk.png',
   pork      :'food_pork.png',
@@ -3937,19 +3961,19 @@ function drawAppleDrops(ox,oy){
    label   : 互動提示文字（不填＝自動「去○○」）
    noFace : true=傳送後不強制朝上（很少用）
    要「互通」就寫成兩筆（A→B、B→A），各自一行。 */
-const SCENE_NM={ farm:'農牧地', shop:'商店', port:'港口', cafe:'咖啡廳', kitchen:'廚房', office:'辦公室' };
+const SCENE_NM={ farm:'農牧地', shop:'商店', port:'港口', cafe:'餐廳', kitchen:'廚房', office:'辦公室' };
 const DOORS=[
-  // 咖啡廳 ⇄ 廚房
+  // 餐廳 ⇄ 廚房
   { from:'cafe',    area:{x1:1, y1:3, x2:4, y2:7},   to:'kitchen', at:{x:3,y:8},   label:'🚪 去廚房' },
-  { from:'kitchen', area:{x1:1, y1:7, x2:2, y2:7},   to:'cafe',    at:{x:2,y:7},   label:'🚪 回咖啡廳' },
+  { from:'kitchen', area:{x1:1, y1:7, x2:2, y2:7},   to:'cafe',    at:{x:2,y:7},   label:'🚪 回餐廳' },
   // 港口 ⇄ 商店
   { from:'port',    area:{x1:1, y1:21, x2:4, y2:21}, to:'shop',                    label:'🚪 去商店' },
   { from:'shop',    area:{x1:8, y1:13, x2:11, y2:17},to:'port',    at:{x:2,y:21}, era:18, label:'🚪 去港口', fallback:'farm' },  // 17世紀港口沒開→去農牧地
   // 港口 ⇄ 辦公室
   { from:'port',    area:{x1:58, y1:7, x2:59, y2:10},to:'office',                  label:'🚪 回辦公室' },
   { from:'office',  area:{x1:13, y1:15, x2:16, y2:16},to:'port',   at:{x:58,y:8}, era:18, label:'🚪 去港口' },
-  // 港口 ⇄ 咖啡廳
-  { from:'port',    area:{x1:54, y1:21, x2:57, y2:21},to:'cafe',   at:{x:9,y:16}, label:'🚪 去咖啡廳' },
+  // 港口 ⇄ 餐廳
+  { from:'port',    area:{x1:54, y1:21, x2:57, y2:21},to:'cafe',   at:{x:9,y:12}, label:'🚪 去餐廳' },
   { from:'cafe',    area:{x1:6, y1:15, x2:13, y2:16},to:'port',   at:{x:55,y:21},era:18, label:'🚪 去港口' },
 ];
 // 找出玩家「目前正站在哪道門上」（且世紀達標），沒有就回 null
@@ -3977,6 +4001,117 @@ function useDoor(d){
 }
 function doorLabel(d){ return d.label || ('🚪 去'+(SCENE_NM[d.to]||d.to)); }
 /* =================== 🚪 門表系統 結束 =================== */
+/* ===================== 🧀 乳品加工處（牛奶→乳酪＋奶油） ===================== */
+/* 玩法：放牛奶進去，等一段時間自動變成乳酪和奶油，收回後可當料理食材。
+   要調平衡只改下面這張表，其他都不用動。 */
+const DAIRY={
+  inMilk: 2,                    // 每批投入幾瓶牛奶
+  ms: 30000,                    // 一批加工時間（毫秒）
+  out: { cheese:1, butter:1 },  // 一批產出（key 要對到 PRODUCTS）
+  cap: 4,                       // 最多同時加工幾批
+};
+function dairyOutTxt(){
+  return Object.keys(DAIRY.out).map(k=>`${prodIcon(k,18)}${PRODUCTS[k].nm}${DAIRY.out[k]}`).join('・');
+}
+function tickDairy(now){
+  if(!S) return;
+  if(!S.dairy) S.dairy={batches:[],ready:{}};
+  if(!S.dairy.batches) S.dairy.batches=[];
+  if(!S.dairy.ready)   S.dairy.ready={};
+  for(let i=S.dairy.batches.length-1;i>=0;i--){
+    if(now-S.dairy.batches[i].startTs>=DAIRY.ms){           // 這批做好了
+      for(const k in DAIRY.out) S.dairy.ready[k]=(S.dairy.ready[k]||0)+DAIRY.out[k];
+      S.dairy.batches.splice(i,1);
+    }
+  }
+}
+function openDairy(){
+  if(!S.dairy) S.dairy={batches:[],ready:{}};
+  tickDairy(Date.now());                                    // 先結算，畫面才即時
+  const milk=S.store.milk||0, proc=S.dairy.batches.length;
+  const rc=S.dairy.ready.cheese||0, rb=S.dairy.ready.butter||0, hasReady=rc>0||rb>0;
+  let procTxt='';
+  if(proc>0){
+    const now=Date.now();
+    const t=S.dairy.batches.map(b=>Math.max(0,DAIRY.ms-(now-b.startTs))).sort((a,b)=>a-b);
+    procTxt=`<div class="small" style="margin-bottom:8px">${prodIcon('milk',18)} 加工中 ${proc}/${DAIRY.cap} 批・最快還要 ${fmtSec(t[0])}</div>`;
+  }
+  const canPut = milk>=DAIRY.inMilk && proc<DAIRY.cap;
+  openSheet(`<div class="sheethead"><h3>${prodIcon('cheese',24)} 乳品加工處</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">把牛奶放進去，等一會兒就會變成乳酪和奶油。<br>${prodIcon('milk',18)} 牛奶庫存 ${milk}</div>
+    ${procTxt}
+    ${hasReady?`<button class="btn green" style="width:100%;margin-bottom:8px" onclick="collectDairy()">🧺 取出成品（${prodIcon('cheese',18)}${rc}・${prodIcon('butter',18)}${rb}）</button>`:''}
+    <button class="btn ${canPut?'':'dis'}" style="width:100%" onclick="putMilkDairy()">${prodIcon('milk',18)} 投入 ${DAIRY.inMilk} 牛奶 → ${fmtSec(DAIRY.ms)}後得 ${dairyOutTxt()}</button>`);
+}
+function putMilkDairy(){
+  if(!S.dairy) S.dairy={batches:[],ready:{}};
+  if(S.dairy.batches.length>=DAIRY.cap){ toast('加工槽滿了，等做好再放'); return; }
+  if((S.store.milk||0)<DAIRY.inMilk){ toast('牛奶不夠'); return; }
+  S.store.milk-=DAIRY.inMilk;
+  S.dairy.batches.push({startTs:Date.now()});
+  toast(`🥛 放入 ${DAIRY.inMilk} 牛奶，開始加工`);
+  openDairy(); save();
+}
+function collectDairy(){
+  if(!S.dairy) return;
+  const r=S.dairy.ready||{}; let got=0; const msg=[];
+  for(const k in r){ if(r[k]>0){ addStore(k,r[k]); msg.push(`${PRODUCTS[k].e}${PRODUCTS[k].nm}${r[k]}`); got+=r[k]; } }
+  if(!got){ toast('還沒有成品'); return; }
+  S.dairy.ready={};
+  toast(`🧺 取出 ${msg.join('・')}`);
+  openDairy(); save();
+}
+/* 掛到 tick：跑遊戲時鐘時順便結算乳品（沿用 _orig 覆寫法，不動原本 tick） */
+const _dairyOrigTick=tick;
+tick=function(){ _dairyOrigTick.apply(this,arguments); tickDairy(Date.now()); };
+/* =================== 🧀 乳品加工處 結束 =================== */
+/* ===================== 🎨 統一圖示系統（取代 emoji） ===================== */
+/* 作物：用生長圖「第六格(index 5)」當圖示，重用 FARM_CROPS[k].img，不必另存檔。
+   → 你的生長圖要從 5 格(160×32) 擴成 6 格(192×32)，第六格畫成品圖示。
+   其他物品：用各自 PNG；載不到圖時自動退回 emoji，不會壞。 */
+const ITEM_IMG_SRC={
+  apple:'food_apple.png',
+  herring:'fish_herring.png', mackerel:'fish_mackerel.png',
+  cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
+  cheese:'food_cheese.png', butter:'food_butter.png',
+  flour:'item_flour.png', sugar:'item_sugar.png',
+};
+// egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
+const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };
+const ANIMAL_ICON_SRC={
+  chick:'icon_chick.png', hen:'icon_hen.png', turkey:'icon_turkey.png',
+  piglet:'icon_piglet.png', pig:'icon_pig.png',
+  calf:'icon_calf.png', cow:'icon_cow.png',
+};
+
+function _imgTag(src,e,px){ px=px||32;
+  return `<img src="${src}" style="width:${px}px;height:${px}px;object-fit:contain;image-rendering:pixelated;vertical-align:middle" onerror="this.outerHTML='${e}'">`;
+}
+/* 作物圖示＝生長圖第六格，用 CSS 裁切（背景縮到高度=px，每格剛好 px 寬，往左推 5 格） */
+function cropIcon(k,px){ px=px||32; const d=FARM_CROPS[k]; if(!d) return '';
+  return `<div style="display:inline-block;width:${px}px;height:${px}px;background:url('${d.img}') ${-5*px}px 0 no-repeat;background-size:auto ${px}px;image-rendering:pixelated;vertical-align:middle"></div>`;
+}
+/* 通用物品（作物/產品/魚/咖啡材料 都走這個） */
+function prodIcon(k,px){
+  if(FARM_CROPS[k]) return cropIcon(k,px);                       // 作物→第六格
+  const src=ITEM_IMG_SRC[k]||FOOD_IMG_SRC[k];
+  const e=(PRODUCTS[k]&&PRODUCTS[k].e)||(EXTRAS[k]&&EXTRAS[k].e)||'📦';
+  return src ? _imgTag(src,e,px) : e;
+}
+function miscIcon(key,e,px){ const src=MISC_IMG_SRC[key]; return src?_imgTag(src,e,px):e; }
+/* 動物：傳 (type,a) 自動判斷幼/成；或直接傳字串 key 指定（如 'turkey'） */
+function animalIcon(type,a,px){
+  if(typeof a==='string'){ const e={chick:'🐤',hen:'🐔',turkey:'🦃',piglet:'🐷',pig:'🐖',calf:'🐮',cow:'🐄'}[a]||'🐾';
+    return ANIMAL_ICON_SRC[a]?_imgTag(ANIMAL_ICON_SRC[a],e,px):e; }
+  let key,e;
+  if(type==='chicken'){ const turkey=a&&a.species==='turkey', adult=a?isHen(a):true;
+    key=turkey?'turkey':(adult?'hen':'chick'); e=turkey?'🦃':(adult?'🐔':'🐤'); }
+  else if(type==='pig'){ const g=a?isGrownPig(a):true; key=g?'pig':'piglet'; e=g?'🐖':'🐷'; }
+  else if(type==='cow'){ const g=a?isGrownCow(a):true; key=g?'cow':'calf'; e=g?'🐄':'🐮'; }
+  else { key=type; e=(ANIMALS[type]&&ANIMALS[type].e)||'🐾'; }
+  return ANIMAL_ICON_SRC[key]?_imgTag(ANIMAL_ICON_SRC[key],e,px):e;
+}
+/* =================== 🎨 圖示系統 結束 =================== */
 </script>
 </body>
 </html>
