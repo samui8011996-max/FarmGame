@@ -297,6 +297,9 @@ const PRODUCTS={
   corn:{nm:'玉米',e:'🌽',base:4,volat:'small'},
   potato:{nm:'馬鈴薯',e:'🥔',base:4,volat:'small'},
   apple:{nm:'蘋果',e:'🍎',base:6,volat:'small'},
+  tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'},
+  lemon:{nm:'檸檬',e:'🍋',base:6,volat:'small'},
+  olive_oil:{nm:'橄欖油',e:'🫒',base:12,volat:'mid'},
   egg:{nm:'雞蛋',e:'🥚',base:10,volat:'mid'},
   milk:{nm:'牛奶',e:'🥛',base:10,volat:'mid'},
   cheese:{nm:'乳酪',e:'🧀',base:18,volat:'mid'},
@@ -311,7 +314,7 @@ const PRODUCTS={
   salmon:{nm:'鮭魚',e:'🐟',base:34,volat:'big'},
   halibut:{nm:'大比目魚',e:'🐠',base:70,volat:'big'},
 };
-const EXTRAS={flour:{nm:'麵粉',e:'🌾',price:2},sugar:{nm:'糖',e:'🧂',price:1}};
+const EXTRAS={flour:{nm:'麵粉',e:'🌾',price:2},sugar:{nm:'糖',e:'🧂',price:1},olive_oil:{nm:'橄欖油',e:'🫒',price:8}};
 const RECIPES={
   // 旗標：known=一開始就會（免猜免買）；shop=商店可買（learnCost當售價）。都不寫＝只能瞎猜解鎖
   scone:{nm:'斯康餅',e:'🥯',price:16,batch:30,knead:2,bakeMs:5000,known:true,
@@ -324,6 +327,12 @@ const RECIPES={
     ingredients:{egg:2, milk:1, flour:1, sugar:1}},
   stargazy_pie:{nm:'仰望星空派',e:'🥧',price:45,batch:30,knead:4,bakeMs:10000,shop:true,learnCost:120,
     ingredients:{herring:4, egg:1, flour:1, potato:1}},
+    pasta:{nm:'義大利麵',e:'🍝',price:22,batch:30,knead:5,bakeMs:8000,
+    ingredients:{tomato:1, olive_oil:1, flour:1}},
+  grilled_fish:{nm:'烤魚',e:'🐟',price:30,batch:30,knead:0,bakeMs:10000,
+    ingredients:{mackerel:1, olive_oil:1, lemon:1}},
+  pork_knuckle:{nm:'烤豬腳',e:'🍖',price:35,batch:30,knead:0,bakeMs:10000,
+    ingredients:{pork:1, potato:1}},
 };
 const QUAL_MUL={bad:0.5,normal:1,good:1.8};
 const STORE_CAP=200;
@@ -339,6 +348,12 @@ const FARM_CROPS={
     potato:{ nm:'馬鈴薯', img:'potato.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:30000, yield:3, seed:2 },
+    tomato:{ nm:'番茄', img:'tomato.png', fw:32, fh:32,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:30000, yield:3, seed:2 },
+  lemon:{ nm:'檸檬', img:'lemon.png', fw:32, fh:32,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:40000, yield:3, seed:3 },
 };
 for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段時間
   d._img=new Image(); d._img.src=d.img;
@@ -347,8 +362,8 @@ for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段
 function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.ceil(s/60)+'分':s+'秒';}     // 之後可加品質/施肥
 
 /* ---------- 時代系統（第一步：解鎖門檻） ---------- */
-const CROP_ERA={ strawberry:17,  corn:17, potato:17,
-                  };              
+const CROP_ERA={ strawberry:17, corn:17, potato:17, tomato:17, lemon:17,
+                  };          
 const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19, stargazy_pie:17 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
@@ -628,7 +643,7 @@ const MERCHANTS={
     goods:[ {kind:'seed', k:'corn', price:3} ] },
   Antonio:{ nm:'安東尼奧', e:'👩‍🦰', job:'farm',
     lines:['香料是甜點的靈魂喔。','嚐過異國的味道嗎？','我認得出識貨的人。'],
-    goods:[ {kind:'extra', k:'flour', price:20, qty:10} ] },
+    goods:[ {kind:'extra', k:'flour', price:20, qty:10}, {kind:'extra', k:'olive_oil', price:10, qty:5} ] },
   Alfred:{ nm:'阿爾弗雷德', e:'🤵', job:'rich', era:19,
     lines:['錢嘛，我從來不缺。','跟著我，你不會吃苦的。','這點小東西，當見面禮。'],
     goods:[ {kind:'extra', k:'sugar', price:4, qty:30} ] },
@@ -2055,7 +2070,7 @@ function ingNm(k){ return PRODUCTS[k]?PRODUCTS[k].nm:(FARM_CROPS[k]?FARM_CROPS[k
 function ingE(k){ return (PRODUCTS[k]&&PRODUCTS[k].e)||(EXTRAS[k]&&EXTRAS[k].e)||'🥣'; }
 function prepReady(){ const need=curRecipe().ingredients||{}; for(const k in need){ if((prep.slots[k]||0)<need[k]) return false; } return true; }
 function slotsUsed(){ return Object.keys(prep.slots).filter(k=>prep.slots[k]>0).length; }
-function kStep(){ const r=curRecipe(); if(!prepReady())return 0; if(prep.knead<(r.knead||4))return 1; return 2; }
+function kStep(){ const r=curRecipe(); if(!prepReady())return 0; if(prep.knead<(r.knead??4))return 1; return 2; }
 
 /* ---------- interact dispatch ---------- */
 let dlgNpc=null, dlgIdx=0;
@@ -2400,7 +2415,7 @@ function openPickRecipe(){
     if(!recipeKnown(k)) continue;   // 預設(known)或做過/買過 → 顯示
     const r=RECIPES[k];
     const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
-    const bakeTxt=`揉${r.knead||4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+    const bakeTxt=`揉${r.knead??4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
     body+=`<div class="menucard" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${dishIcon(k)}</div>
       <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div>
       <div class="small">${ingTxt}・${bakeTxt}</div></div></div>`;
@@ -2438,7 +2453,7 @@ function recipeCheatList(){
     if(!recipeKnown(k)) continue;
     const r=RECIPES[k];
     const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
-    const bakeTxt=`揉${r.knead||4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+    const bakeTxt=`揉${r.knead??4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
     cards+=`<div class="menucard" style="display:flex;align-items:center;gap:8px;padding:6px">
       <div style="font-size:20px">${dishIcon(k)}</div>
       <div style="flex:1"><div style="font-weight:700;font-size:13px">${r.nm}</div>
@@ -2534,7 +2549,7 @@ function matchRecipe(t){
     for(const ing in need){ if((prep.slots[ing]||0)!==need[ing]){ ok=false; break; } }
     if(!ok) continue;
     // 3. 揉製次數要夠
-    if(prep.knead<(r.knead||4)) continue;
+    if(prep.knead<(r.knead??4)) continue;
     // 4. 烤秒數要對（±1.5秒）
     const bm=r.bakeMs||BAKE_MS;
     if(Math.abs(t-bm)>1500) continue;
@@ -3894,6 +3909,7 @@ function takeFood(tbl,i){
 const FOOD_IMG_SRC={
   strawberry:'food_strawberry.png',
   strawberry_tart:'food_strawberry_tart.png',
+  pasta:'food_pasta.png',
   stargazy_pie:'food_stargazy_pie.png',
   scone:'food_scone.png',
   pancake:'food_pancake.png',
@@ -4082,6 +4098,7 @@ const ITEM_IMG_SRC={
   cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
   cheese:'food_cheese.png', butter:'food_butter.png',
   flour:'item_flour.png', sugar:'item_sugar.png',
+  olive_oil:'item_olive_oil.png', 
 };
 // egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
 const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };
@@ -4119,6 +4136,96 @@ function animalIcon(type,a,px){
   return ANIMAL_ICON_SRC[key]?_imgTag(ANIMAL_ICON_SRC[key],e,px):e;
 }
 /* =================== 🎨 圖示系統 結束 =================== */
+/* ===================== 🍝 菲利奇亞諾客人系統 ===================== */
+/* 進度：S.feli.stage  0=等義大利麵 1=等烤魚 2=等豬腳 3=全解
+   每階段對應要做出的料理，做出來就推進，並換下一位家人來坐。 */
+const FELI_SEAT={ x:22, y:12 };          // 他坐在哪一格（table3 的位子）
+const FELI_STAGE=[
+  { recipe:'pasta',        convo:'pasta', avatar:'🇮🇹' },
+  { recipe:'grilled_fish', convo:'fish',  avatar:'😄' },
+  { recipe:'pork_knuckle', convo:'pork',  avatar:'😄' },
+];
+
+/* 把三人的臉接進既有對話系統（charFace/charName 會查 CHARS，這裡補上） */
+for(const id in FELI_FACES){
+  CHARS[id]={ nm:FELI_FACES[id].nm, face:FELI_FACES[id] };
+}
+
+function feliStage(){ if(!S.feli) S.feli={stage:0}; return S.feli.stage; }
+function feliCurRecipe(){ const s=feliStage(); return s<3 ? FELI_STAGE[s].recipe : null; }
+
+/* 在餐廳放上／移除菲利奇亞諾的座位互動點 */
+function syncFeliSeat(){
+  SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.id!=='feli');
+  const s=feliStage();
+  const av = s<3 ? FELI_STAGE[s].avatar : '🥰';
+  SCENES.cafe.objects.push({ id:'feli', x:FELI_SEAT.x, y:FELI_SEAT.y, e:av,
+    nm:'菲利奇亞諾', kind:'feli', npc:true, avatar:av, hide:true, sense:1.6 });
+}
+
+/* 對話入口：講完劇情→給選項；若手上剛好有這道料理成品，可直接請他吃來推進 */
+function openFeli(){
+  freezeNpcById('feli');
+  const s=feliStage();
+  if(s>=3){
+    const pool=FELI_CONVOS.done;
+    const ln=pool[Math.floor(Math.random()*pool.length)];
+    _convoCid=ln.who;
+    dlgLine(ln, [ {t:'再會', cls:'green', run:()=>closeSheet()} ]);
+    return;
+  }
+  const stage=FELI_STAGE[s], rk=stage.recipe, r=RECIPES[rk];
+  const have=(S.cafe.goods[rk]||0)>0;
+  const lines=FELI_CONVOS[stage.convo];
+  _convoCid=lines[0].who;
+  const endBtns=[
+    have ? {t:`🍽️ 請他吃${r.nm}`, cls:'gold', run:()=>serveFeli()} : null,
+    {t:'知道了', cls:'green', run:()=>closeSheet()},
+  ].filter(Boolean);
+  runScript(lines, endBtns);
+}
+
+/* 請菲利奇亞諾吃指定料理→消耗一份成品、推進階段、換下一位家人 */
+function serveFeli(){
+  const s=feliStage(); if(s>=3) return;
+  const rk=FELI_STAGE[s].recipe, r=RECIPES[rk];
+  if((S.cafe.goods[rk]||0)<=0){ toast('你還沒做出這道料理'); return; }
+  S.cafe.goods[rk]--;
+  earn(r.price, `招待菲利奇亞諾・${r.nm}`);
+  S.feli.stage++;
+  syncFeliSeat();
+  if(curScene==='cafe'){ const o=SCENES.cafe.objects.find(ob=>ob.id==='feli'); }
+  addLog(`🍝 菲利奇亞諾吃到了${r.nm}，非常滿意！`);
+  closeSheet(); refreshTop(); save();
+  const next = S.feli.stage<3 ? '他說下次要帶家人再來。' : '一家人都成了常客！';
+  toast(`🍝 ${r.nm}大成功！${next}`);
+}
+
+/* 接進互動分派：面對 feli 座位按互動→開對話 */
+const _feliOrigInteract=interact;
+interact=function(ev){
+  const o=(!sitting) ? facingObject() : null;
+  if(o && o.kind==='feli'){ if(ev&&ev.preventDefault)ev.preventDefault(); openFeli(); return; }
+  return _feliOrigInteract(ev);
+};
+
+/* 進餐廳時擺好他的座位 */
+const _feliOrigGoScene=goScene;
+goScene=function(name){
+  _feliOrigGoScene(name);
+  if(name==='cafe'){ if(!S.feli) S.feli={stage:0}; syncFeliSeat(); }
+};
+
+/* 存檔相容：舊檔補欄位 */
+const _feliOrigStart=startGame;
+startGame=function(n){
+  _feliOrigStart(n);
+  if(!S.feli) S.feli={stage:0};
+  if(S.feli.stage===undefined) S.feli.stage=0;
+  if(curScene==='cafe') syncFeliSeat();
+  save();
+};
+/* =================== 🍝 菲利奇亞諾客人系統 結束 =================== */
 </script>
 </body>
 </html>
