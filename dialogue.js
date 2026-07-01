@@ -405,3 +405,51 @@ const KEEPER_NPC={ id:'keeper', nm:'霍蘭德', avatar:'🎩', lines:[
   '鬱金香球根要不要來一顆？……賭一把。',
   '（盯著你的錢袋）有錢就進來，沒錢別擋路。',
 ] };
+/* ===================== 🍝 菲利奇亞諾一家（餐廳客人） ===================== */
+/* 三階段對話。每階段講完會「揭示」下一道要做的料理。
+   進度由主程式的 S.feli.stage 控制：0=還沒解義大利麵、1=解了在等烤魚、2=解了在等豬腳、3=全解。*/
+const FELI_CONVOS = {
+  // 第一次見面：想吃義大利麵
+  pasta: [
+    {who:'feli',mood:'happy',t:'Ciao～！這裡就是傳說中的餐廳嗎？我從好遠的地方聞著香味過來的！'},
+    {who:'me',mood:'warm',t:'「歡迎光臨，找位子坐吧。」'},
+    {who:'feli',mood:'happy',t:'我是菲利奇亞諾！我最愛吃好吃的東西了～尤其是異國料理，一吃到就好幸福喔！'},
+    {who:'feli',mood:'neutral',t:'說到這個…你們有沒有義大利麵呢？就是番茄、橄欖油那種，簡單卻要命的好吃！'},
+    {who:'me',mood:'think',t:'「義大利麵…材料我記一下。」'},
+    {who:'feli',mood:'happy',t:'麵團揉個五下就好，別太用力喔！下鍋煮個八秒，起鍋——benissimo！'},
+    {who:'feli',mood:'love',t:'要是真的做出來，我一定會再來的！好吃的話…嘿嘿，我還想帶我哥哥一起來呢！'},
+  ],
+  // 吃到義大利麵後回訪：帶哥哥羅維諾，想吃烤魚
+  fish: [
+    {who:'feli',mood:'love',t:'那盤義大利麵…嗚，我感動到哭了啦！所以我把哥哥也帶來了！'},
+    {who:'lovino',mood:'neutral',t:'哼，別亂拉我。……不過這味道，聞起來是還可以啦。'},
+    {who:'feli',mood:'happy',t:'哥哥嘴硬，其實他超期待的！這次我們想吃烤魚，海邊的味道最對味了～'},
+    {who:'me',mood:'think',t:'「烤魚…是哪種魚？」'},
+    {who:'feli',mood:'happy',t:'鯖魚最棒！配上橄欖油和檸檬，不用揉麵團，直接進烤箱烤個十秒就好！'},
+    {who:'lovino',mood:'neutral',t:'……做得好我就承認你有兩下子。做不好我可是會嫌的。'},
+    {who:'feli',mood:'love',t:'做出來的話，下次我要把我男友也帶來！他很挑食的，可是我相信你！'},
+  ],
+  // 吃到烤魚後回訪：帶男友路德維希，想吃豬腳
+  pork: [
+    {who:'feli',mood:'love',t:'那烤魚連我哥都讚不絕口耶！所以…路德維希，就是這家店！'},
+    {who:'ludwig',mood:'neutral',t:'……看起來確實乾淨整潔，管理得不錯。我先保留評價。'},
+    {who:'feli',mood:'happy',t:'路德最愛吃豬腳了！德國人嘛，對這個特別講究～'},
+    {who:'me',mood:'think',t:'「豬腳…用什麼做？」'},
+    {who:'feli',mood:'happy',t:'豬肉配上馬鈴薯就行！不用揉麵團，烤箱裡烤十秒，外皮才會香脆！'},
+    {who:'ludwig',mood:'neutral',t:'火候要精準。差一秒都不行——我會仔細看的。'},
+    {who:'feli',mood:'love',t:'我相信你一定做得到！做好了，我們一家都會變成常客的～'},
+  ],
+  // 全部解完後的閒聊（隨機一句）
+  done: [
+    {who:'feli',mood:'love',t:'這家店已經是我們全家的最愛了！謝謝你做出這麼多好吃的～'},
+    {who:'feli',mood:'happy',t:'哥哥嘴上不說，其實每週都吵著要來呢，嘿嘿。'},
+    {who:'feli',mood:'happy',t:'路德還說要把食譜學起來…才不給他呢，這是我們的秘密基地！'},
+  ],
+};
+
+/* 三位角色的臉（給對話系統的 charFace 用）。有立繪就放檔名，沒有就用 emoji。 */
+const FELI_FACES = {
+  feli:   { nm:'菲利奇亞諾', neutral:'🇮🇹', happy:'😄', love:'🥰', shy:'😊', sad:'😢', think:'🤔' },
+  lovino: { nm:'羅維諾',     neutral:'😒', happy:'😏', love:'😳', shy:'😤', sad:'😞', think:'🤨' },
+  ludwig: { nm:'路德維希',   neutral:'😐', happy:'🙂', love:'😌', shy:'😳', sad:'😔', think:'🧐' },
+};
