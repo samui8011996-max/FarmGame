@@ -316,7 +316,13 @@ const PRODUCTS={
   salmon:{nm:'鮭魚',e:'🐟',base:34,volat:'big'},
   halibut:{nm:'大比目魚',e:'🐠',base:70,volat:'big'},
 };
-const EXTRAS={flour:{nm:'麵粉',e:'🌾',price:2},sugar:{nm:'糖',e:'🧂',price:1},olive_oil:{nm:'橄欖油',e:'🫒',price:8}};
+const EXTRAS={
+  flour:{nm:'麵粉',e:'🌾',price:2},
+  sugar:{nm:'糖',e:'🧂',price:1},
+  w:{nm:'糖',e:'🧂',price:1},
+  olive_oil:{nm:'橄欖油',e:'🫒',price:8}};
+  
+
 const RECIPES={
   // 旗標：known=一開始就會（免猜免買）；shop=商店可買（learnCost當售價）。都不寫＝只能瞎猜解鎖
   scone:{nm:'斯康餅',e:'🥯',price:16,batch:30,knead:2,bakeMs:5000,known:true,
@@ -1705,8 +1711,8 @@ const MAPS={
    "F.........FFFFFFFFFF",
    "F.........FFFFFFFFFF",
    "F.........FFFFFFFFFF",
-   "F..................F",
-   "F.................FF",
+   "FFF................F",
+   "FFF...............FF",
    "FFF.FFFFFFFFFFFFFFFF",
    "FFF.FFFFFFFFFFFFFFFF",
    "FFFFFFFFFFFFFFFFFFFF",
@@ -2699,7 +2705,7 @@ function openBag(){
     <b class="small">種子</b><div style="margin:4px 0 8px">${seeds}</div>
     <b class="small">農畜產品</b><div style="margin:4px 0 8px">${prod}</div>
     <b class="small">加工品成品</b><div style="margin:4px 0 8px">${goods}</div>
-    <b class="small">咖啡材料</b><div style="margin:4px 0 8px">${ext}</div>
+    <b class="small">材料</b><div style="margin:4px 0 8px">${ext}</div>
     <div class="hr"></div><div class="small">飼料 ${S.feed}・肥料 ${S.fert}・${miscIcon('toxin','🧪',16)} 毒物 ${S.toxins||0}</div>`);
 }
 
@@ -4149,7 +4155,7 @@ function animalIcon(type,a,px){
 const GUESTS={
   feli:{
     nm:'菲利奇亞諾',
-    seat:{x:22,y:12},           // 坐哪一格
+    seat:{x:19,y:7},           // 坐哪一格
     table:'table3',             // 他的桌子（FOOD_TABLES 的 key）
 doneAvatar:'🥰',
     doneImg:'feli_family.png',      // 三關全解後常駐的圖
@@ -4269,8 +4275,8 @@ const RAND_SKINS=[
 ];
 const RAND_SEATS={   // 每桌的客人座位格（先估的，之後照畫面上的 (x,y) 微調）
   table1:{x:10,y:10}, table2:{x:15,y:10},
-  table4:{x:24,y:12}, table5:{x:28,y:12},
-  table6:{x:31,y:12}, table7:{x:35,y:12},
+  table4:{x:26,y:6}, table5:{x:27,y:6},
+  table6:{x:33,y:6}, table7:{x:34,y:6},
 };   // table3 留給菲力，不要加進來
 const RAND_CHANCE=0.6;   // 每桌今天有客人的機率
 const RAND_LINES={
@@ -4506,8 +4512,8 @@ animalIcon=function(type,a,px){
    之後想在別的場景放桶子，照樣加一行就好。 */
 const STORAGE_POINTS=[
   { id:'kitchen1', scene:'kitchen', x:18, y:11, nm:'儲物桶 A' },
-  { id:'kitchen2', scene:'kitchen', x:2, y:16, nm:'儲物桶 B' },
-  { id:'kitchen3', scene:'kitchen', x:3, y:16, nm:'儲物桶 C' },
+  { id:'kitchen2', scene:'kitchen', x:1, y:14, nm:'儲物桶 B' },
+  { id:'kitchen3', scene:'kitchen', x:1, y:16, nm:'儲物桶 C' },
 ];
 const STORAGE_SLOTS=30;   // 一個桶最多放幾「種」東西（數量不限）
 
@@ -4605,6 +4611,179 @@ function drawStorageBarrels(ox,oy){
   }
 }
 /* =================== 🛢️ 儲物桶系統 結束 =================== */
+/* ===================== ⭐ 餐廳商譽系統 ===================== */
+const REP_CFG={
+  max:100,          // 商譽上限
+  tipRate:0.25,     // 小費 = 售價 × 比例（至少 $1）
+  gainStory:5,      // 招待故事客人（菲利等）+商譽
+  gainRand:2,       // 招待隨機客人 +商譽
+  revPerRep:0.005,  // 每點商譽 → 每日營收 +0.5%（100點=+50%）
+};
+function repMul(){ return 1 + Math.min(REP_CFG.max, S.rep||0)*REP_CFG.revPerRep; }
+function gainRep(n){
+  const before=S.rep||0;
+  S.rep=Math.min(REP_CFG.max, before+n);
+  const got=S.rep-before;
+  if(got>0) toast(`⭐ 商譽 +${got}（${S.rep}/${REP_CFG.max}）`);
+}
+function giveTip(price,who){
+  const tip=Math.max(1, Math.round(price*REP_CFG.tipRate));
+  earn(tip, `小費・${who}`);
+  toast(`💰 收到小費 +$${tip}`);
+}
+
+/* 故事客人：serveGuest 成功（stage 有前進）→ 小費＋商譽 */
+const _repOrigServeGuest=serveGuest;
+serveGuest=function(gid){
+  const before=guestStage(gid);
+  _repOrigServeGuest(gid);
+  if(guestStage(gid)>before){
+    const st=GUESTS[gid].stages[before], r=RECIPES[st.recipe];
+    giveTip(st.pay??r.price, GUESTS[gid].nm);
+    gainRep(REP_CFG.gainStory);
+    save();
+  }
+};
+
+/* 隨機客人：serveRandGuest 成功（served 由 false 變 true）→ 小費＋商譽 */
+const _repOrigServeRand=serveRandGuest;
+serveRandGuest=function(tbl){
+  const g=S.randGuests && S.randGuests.seats[tbl];
+  const was=g?g.served:true;
+  _repOrigServeRand(tbl);
+  if(g && !was && g.served){
+    giveTip(RECIPES[g.dish].price, '客人');
+    gainRep(REP_CFG.gainRand);
+    save();
+  }
+};
+
+/* 每日結算加成：包住 runCafe，只放大「這次新增的營收」 */
+const _repOrigRunCafe=runCafe;
+runCafe=function(now){
+  const before=S.cafe.till||0;
+  _repOrigRunCafe(now);
+  const gained=(S.cafe.till||0)-before;
+  if(gained>0 && (S.rep||0)>0){
+    S.cafe.till=before + Math.round(gained*repMul());
+  }
+};
+
+/* 頂欄加 ⭐ 商譽顯示 */
+(function(){
+  const bar=document.querySelector('.topbar');
+  if(bar && !document.getElementById('rep')){
+    const sp=document.createElement('span');
+    sp.className='stat'; sp.innerHTML='⭐<b id="rep">0</b>';
+    bar.insertBefore(sp, document.getElementById('clock'));
+  }
+})();
+const _repOrigRefreshTop=refreshTop;
+refreshTop=function(){
+  _repOrigRefreshTop();
+  const el=document.getElementById('rep');
+  if(el) el.textContent=(S.rep||0);
+};
+
+/* 存檔相容 */
+const _repOrigStartGame=startGame;
+startGame=function(n){
+  _repOrigStartGame(n);
+  if(S.rep===undefined) S.rep=0;
+  refreshTop(); save();
+};
+/* ===== 商人專賣商品 + 伴侶免費拿貨 ===== */
+
+/* 1) 新增商品到 EXTRAS，標記 merchantOnly（只有這三位商人賣，一般採購看不到） */
+Object.assign(EXTRAS, {
+  wine:{nm:'葡萄酒',e:'🍷',price:20,merchantOnly:true},
+  white_wine:{nm:'白葡萄酒',e:'🥂',price:20,merchantOnly:true},
+  brandy:{nm:'白蘭地',e:'🥃',price:28,merchantOnly:true},
+  champagne:{nm:'香檳',e:'🍾',price:32,merchantOnly:true},
+  nutmeg:{nm:'肉豆蔻',e:'🌰',price:12,merchantOnly:true},
+  cinnamon:{nm:'肉桂',e:'🟤',price:10,merchantOnly:true},
+  bay_leaf:{nm:'月桂葉',e:'🍃',price:8,merchantOnly:true},
+  black_pepper:{nm:'黑胡椒',e:'⚫',price:10,merchantOnly:true},
+  ginger:{nm:'薑',e:'🫚',price:6,merchantOnly:true},
+  pineapple:{nm:'鳳梨',e:'🍍',price:14,merchantOnly:true},
+  ex_tomato:{nm:'番茄',e:'🍅',price:5,merchantOnly:true},
+  citrus:{nm:'柑橘',e:'🍊',price:8,merchantOnly:true},
+  cocoa:{nm:'可可豆',e:'🫘',price:16,merchantOnly:true},
+  coconut:{nm:'椰子',e:'🥥',price:12,merchantOnly:true},
+});
+
+/* 2) 換掉三位商人賣的東西（原本的整組覆蓋） */
+if(MERCHANTS.Francis) MERCHANTS.Francis.goods=[
+  {kind:'extra',k:'wine',price:20},{kind:'extra',k:'white_wine',price:20},
+  {kind:'extra',k:'brandy',price:28},{kind:'extra',k:'champagne',price:32} ];
+if(MERCHANTS.Pedro) MERCHANTS.Pedro.goods=[
+  {kind:'extra',k:'nutmeg',price:12},{kind:'extra',k:'cinnamon',price:10},
+  {kind:'extra',k:'bay_leaf',price:8},{kind:'extra',k:'black_pepper',price:10},
+  {kind:'extra',k:'ginger',price:6} ];
+if(MERCHANTS.Antonio) MERCHANTS.Antonio.goods=[
+  {kind:'extra',k:'pineapple',price:14},{kind:'extra',k:'ex_tomato',price:5},
+  {kind:'extra',k:'citrus',price:8},{kind:'extra',k:'cocoa',price:16},
+  {kind:'extra',k:'coconut',price:12} ];
+
+/* 3) 一般採購面板隱藏 merchantOnly 商品（疊加 override，不動原函式） */
+if(typeof openShopBuy==='function'){
+  const _origOpenShopBuy=openShopBuy;
+  openShopBuy=function(){
+    _origOpenShopBuy.apply(this,arguments);
+    const sheet=document.getElementById('sheet'); if(!sheet) return;
+    sheet.querySelectorAll('[onclick^="buyExtra("]').forEach(btn=>{
+      const mm=(btn.getAttribute('onclick')||'').match(/buyExtra\('([^']+)'/);
+      if(mm && EXTRAS[mm[1]] && EXTRAS[mm[1]].merchantOnly){ const row=btn.closest('.row'); if(row) row.remove(); }
+    });
+  };
+}
+
+/* 4) 伴侶免費：若向你的伴侶買，改走「免費拿」 */
+if(typeof buyMerchantGood==='function'){
+  const _origBuyMerchantGood=buyMerchantGood;
+  buyMerchantGood=function(id,gi){
+    if(S.partner && S.partner.id===id){ takePartnerGood(gi); return; }
+    return _origBuyMerchantGood(id,gi);
+  };
+}
+function takePartnerGood(gi){
+  const p=S.partner; if(!p){ toast('還沒有伴侶'); return; }
+  const g=MERCHANTS[p.id].goods[gi], qty=g.qty||1;
+  if(g.kind==='seed') S.seeds[g.k]=(S.seeds[g.k]||0)+qty; else S.extras[g.k]=(S.extras[g.k]||0)+qty;
+  toast(`💞 伴侶特惠・免費拿了 ${g.kind==='seed'?FARM_CROPS[g.k].nm+'種子':EXTRAS[g.k].nm}${qty>1?' ×'+qty:''}`);
+  if(document.getElementById('mask').classList.contains('show')) openPartnerGoods();
+  save();
+}
+
+/* 5) 伴侶搬回家後會離開港口，所以在「伴侶」面板加一個免費拿貨入口 */
+function openPartnerGoods(){
+  const p=S.partner; if(!p){ toast('還沒有伴侶'); return; }
+  const m=MERCHANTS[p.id];
+  const goods=(m.goods||[]).map((g,gi)=>{
+    const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):EXTRAS[g.k].nm;
+    const e =g.kind==='seed'?((PRODUCTS[g.k]&&PRODUCTS[g.k].e)||'🌱'):EXTRAS[g.k].e;
+    const qty=g.qty||1;
+    return `<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${nm}${qty>1?' ×'+qty:''}</div></div>
+      <button class="btn sm green" onclick="takePartnerGood(${gi})">免費拿</button></div>`;
+  }).join('');
+  openSheet(`<div class="sheethead"><h3>🎁 ${m.nm} 的貨</h3><button class="close" onclick="openPartner()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">和 ${m.nm} 同居中，這些商品免費拿。</div>${goods}`);
+}
+if(typeof openPartner==='function'){
+  const _origOpenPartner=openPartner;
+  openPartner=function(){
+    _origOpenPartner.apply(this,arguments);
+    if(!S.partner) return;
+    const m=MERCHANTS[S.partner.id];
+    if(!m||!m.goods||!m.goods.length) return;
+    const sheet=document.getElementById('sheet'); if(!sheet) return;
+    const btn=document.createElement('button');
+    btn.className='btn gold'; btn.style.cssText='width:100%;margin-top:10px';
+    btn.textContent='🎁 免費拿貨（伴侶特惠）';
+    btn.onclick=openPartnerGoods;
+    sheet.appendChild(btn);
+  };
+}
 </script>
 </body>
 </html>
