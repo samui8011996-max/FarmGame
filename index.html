@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>快樂農場</title>
 <style>
+  
   *{ -webkit-tap-highlight-color:transparent; }
   html,body{ -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
   input,textarea,[contenteditable]{ -webkit-user-select:text; user-select:text; }
@@ -270,6 +271,7 @@
 <div id="toast"></div>
 <script src="dialogue.js"></script>
 <script>
+  
 /* =========================================================
    快樂農場 — 整合版（走動 + 經營）
    引擎共用：移動/碰撞/鏡頭/對話/互動
@@ -4475,6 +4477,27 @@ serveFeli=function(){
   closeSheet(); refreshTop(); save();
   const next=S.feli.stage<3?'他說下次要帶家人再來。':'一家人都成了常客！';
   toast(`🍝 ${r.nm}大成功！${next}`);
+};
+/* 牲畜圖示：改用你畫的成年/幼獸走路圖，只取第 1 楨當 icon */
+const LIVESTOCK_SPRITE={
+  chick:'chick.png', hen:'Hen.png', turkey:'turkey.png',
+  piglet:'piglet.png', pig:'pig.png', calf:'calf.png', cow:'cow.png',
+};
+function _spriteIcon(key,px){
+  const img=LIVESTOCK_SPRITE[key]; if(!img) return null; px=px||32;
+  return `<span style="display:inline-block;width:${px}px;height:${px}px;overflow:hidden;`+
+    `vertical-align:middle;background:url('${img}') 0 0 no-repeat;`+
+    `background-size:auto ${px}px;image-rendering:pixelated"></span>`;
+}
+/* 覆寫 animalIcon：先算 key（沿用原本判斷），有走路圖就用，沒有就退回原本 */
+const _origAnimalIcon=animalIcon;
+animalIcon=function(type,a,px){
+  let key=null;
+  if(typeof a==='string') key=a;
+  else if(type==='chicken'){ const turkey=a&&a.species==='turkey', adult=a?isHen(a):true; key=turkey?'turkey':(adult?'hen':'chick'); }
+  else if(type==='pig'){ key=(a?isGrownPig(a):true)?'pig':'piglet'; }
+  else if(type==='cow'){ key=(a?isGrownCow(a):true)?'cow':'calf'; }
+  return (key&&_spriteIcon(key,px)) || _origAnimalIcon(type,a,px);
 };
 </script>
 </body>
