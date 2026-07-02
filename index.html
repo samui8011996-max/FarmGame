@@ -3043,6 +3043,7 @@ function drawFlaps(ox,oy){
   }
 }
 drawCafeFood(ox,oy);   // 餐廳擺盤食物：畫在物件之後、人物之前 → 會被人物蓋住
+drawStorageBarrels(ox,oy);   // 桶子：畫在人物之前 → 人會站在桶子前面
   if(curScene==='farm'){
     const SZ=CELL*TS;
     for(const key in S.crops){
@@ -4504,9 +4505,9 @@ animalIcon=function(type,a,px){
 /* 加桶子＝在這張表加一筆：id 不能重複、scene 場景、x,y 格座標、nm 顯示名。
    之後想在別的場景放桶子，照樣加一行就好。 */
 const STORAGE_POINTS=[
-  { id:'kitchen1', scene:'kitchen', x:1, y:11, nm:'儲物桶 甲' },
-  { id:'kitchen2', scene:'kitchen', x:2, y:11, nm:'儲物桶 乙' },
-  { id:'kitchen3', scene:'kitchen', x:3, y:11, nm:'儲物桶 丙' },
+  { id:'kitchen1', scene:'kitchen', x:1, y:16, nm:'儲物桶 A' },
+  { id:'kitchen2', scene:'kitchen', x:2, y:16, nm:'儲物桶 B' },
+  { id:'kitchen3', scene:'kitchen', x:3, y:16, nm:'儲物桶 C' },
 ];
 const STORAGE_SLOTS=30;   // 一個桶最多放幾「種」東西（數量不限）
 
@@ -4590,12 +4591,10 @@ update=function(){
     if(h){ h.textContent='🛢️ '+(o.nm||'儲物桶')+'（互動鍵）'; h.classList.add('show'); } }
 };
 
-/* ---- 畫桶子（barrel.png，32×32；沒圖先用 emoji） ---- */
-const _storageOrigDraw=draw;
-draw=function(){
-  _storageOrigDraw();
-  if(!S || curScene==='fishing') return;
-  const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS), img=npcImg('barrel.png');
+/* 畫桶子（barrel.png，32×32；沒圖先用 emoji）→ 由 draw 在「人物之前」呼叫 */
+function drawStorageBarrels(ox,oy){
+  if(!S) return;
+  const img=npcImg('barrel.png');
   for(const sp of STORAGE_POINTS){
     if(sp.scene!==curScene) continue;
     const cx=sp.x*TS+TS/2-ox, by=(sp.y+1)*TS-oy;
@@ -4604,7 +4603,7 @@ draw=function(){
     if(img && img.complete && img.naturalWidth){ ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight, cx-16, by-32, 32,32); }
     else{ ctx.font='20px serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#000'; ctx.fillText('🛢️',cx,by-4); }
   }
-};
+}
 /* =================== 🛢️ 儲物桶系統 結束 =================== */
 </script>
 </body>
