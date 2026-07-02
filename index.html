@@ -4499,6 +4499,112 @@ animalIcon=function(type,a,px){
   else if(type==='cow'){ key=(a?isGrownCow(a):true)?'cow':'calf'; }
   return (key&&_spriteIcon(key,px)) || _origAnimalIcon(type,a,px);
 };
+/* ===================== 🛢️ 儲物桶系統 ===================== */
+/* 加桶子＝在這張表加一筆：id 不能重複、scene 場景、x,y 格座標、nm 顯示名。
+   之後想在別的場景放桶子，照樣加一行就好。 */
+const STORAGE_POINTS=[
+  { id:'kitchen1', scene:'kitchen', x:1, y:11, nm:'儲物桶 甲' },
+  { id:'kitchen2', scene:'kitchen', x:2, y:11, nm:'儲物桶 乙' },
+  { id:'kitchen3', scene:'kitchen', x:3, y:11, nm:'儲物桶 丙' },
+];
+const STORAGE_SLOTS=30;   // 一個桶最多放幾「種」東西（數量不限）
+
+/* 把桶子登記成場景物件（hide:true→不畫方塊，但會擋路＋能互動） */
+for(const sp of STORAGE_POINTS){
+  const sc=SCENES[sp.scene]; if(!sc) continue;
+  sc.objects.push({ id:'storage_'+sp.id, sid:sp.id, x:sp.x, y:sp.y,
+    e:'🛢️', nm:sp.nm, kind:'storage', hide:true, sense:1.4 });
+}
+
+/* ---- 存取邏輯 ---- */
+function storageBank(id){ if(!S.storage)S.storage={}; if(!S.storage[id])S.storage[id]={}; return S.storage[id]; }
+function storagePool(cat){ return cat==='seed'?S.seeds : cat==='store'?S.store : cat==='extra'?S.extras : S.cafe.goods; }
+function storageName(cat,k){ return cat==='seed'?((FARM_CROPS[k]?FARM_CROPS[k].nm:k)+'種子') : cat==='good'?(RECIPES[k]?RECIPES[k].nm:k) : ingNm(k); }
+function storageIcon(cat,k,px){ return cat==='good'?dishIcon(k):prodIcon(k,px); }
+function _selId(pfx,key){ return pfx+key.replace(/[^a-zA-Z0-9]/g,'_'); }
+function storageBagList(){
+  const out=[];
+  for(const k in S.seeds)      if(S.seeds[k]>0)      out.push({cat:'seed', k, n:S.seeds[k]});
+  for(const k in S.store)      if(S.store[k]>0)      out.push({cat:'store',k, n:S.store[k]});
+  for(const k in S.extras)     if(S.extras[k]>0)     out.push({cat:'extra',k, n:S.extras[k]});
+  for(const k in S.cafe.goods) if(S.cafe.goods[k]>0) out.push({cat:'good', k, n:S.cafe.goods[k]});
+  return out;
+}
+function openStorage(id){
+  const sp=STORAGE_POINTS.find(s=>s.id===id), nm=sp?sp.nm:'儲物桶';
+  const bank=storageBank(id);
+  const keys=Object.keys(bank).filter(kk=>bank[kk]>0);
+  const inside = keys.length ? keys.map(kk=>{ const [cat,k]=kk.split(':'), n=bank[kk];
+    return `<div class="row"><div class="e">${storageIcon(cat,k,28)}</div>
+      <div class="info"><div class="n">${storageName(cat,k)} <span class="small">×${n}</span></div></div>
+      ${qtyOpts(_selId('wd_',kk),n)}<button class="btn sm green" onclick="storageWithdraw('${id}','${kk}')">取出</button></div>`;
+  }).join('') : '<div class="empty-note">桶子是空的。</div>';
+  const bag=storageBagList();
+  const put = bag.length ? bag.map(it=>
+    `<div class="row"><div class="e">${storageIcon(it.cat,it.k,28)}</div>
+      <div class="info"><div class="n">${storageName(it.cat,it.k)} <span class="small">×${it.n}</span></div></div>
+      ${qtyOpts('dp_'+it.cat+'_'+it.k,it.n)}<button class="btn sm" onclick="storageDeposit('${id}','${it.cat}','${it.k}')">存入</button></div>`
+  ).join('') : '<div class="empty-note">背包沒有東西可以存。</div>';
+  openSheet(`<div class="sheethead"><h3>🛢️ ${nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    <div class="small" style="margin-bottom:8px">容量 ${keys.length}/${STORAGE_SLOTS} 種</div>
+    <b class="small">桶內物品</b>${inside}<div class="hr"></div>
+    <b class="small">背包物品</b>${put}`);
+}
+function storageDeposit(id,cat,k){
+  const bank=storageBank(id), pool=storagePool(cat), have=pool[k]||0;
+  if(have<=0){ toast('背包沒有這個'); return; }
+  const slotKey=cat+':'+k, existing=bank[slotKey]||0;
+  if(!existing && Object.keys(bank).filter(kk=>bank[kk]>0).length>=STORAGE_SLOTS){ toast(`這個桶滿了（最多 ${STORAGE_SLOTS} 種）`); return; }
+  const sel=document.getElementById('dp_'+cat+'_'+k);
+  let q=sel?(parseInt(sel.value)||have):have; q=Math.min(q,have);
+  pool[k]=have-q; bank[slotKey]=existing+q;
+  toast(`存入 ${storageName(cat,k)} ×${q}`); openStorage(id); save();
+}
+function storageWithdraw(id,slotKey){
+  const bank=storageBank(id), have=bank[slotKey]||0;
+  if(have<=0){ toast('桶內沒有這個'); return; }
+  const sel=document.getElementById(_selId('wd_',slotKey));
+  let q=sel?(parseInt(sel.value)||have):have; q=Math.min(q,have);
+  const [cat,k]=slotKey.split(':'), pool=storagePool(cat);
+  pool[k]=(pool[k]||0)+q; bank[slotKey]=have-q;
+  if(bank[slotKey]<=0) delete bank[slotKey];
+  toast(`取出 ${storageName(cat,k)} ×${q}`); openStorage(id); save();
+}
+
+/* ---- 互動：面對桶子按互動鍵→開面板 ---- */
+const _storageOrigInteract=interact;
+interact=function(ev){
+  if(!sitting){ const o=facingObject();
+    if(o && o.kind==='storage'){ if(ev&&ev.preventDefault)ev.preventDefault(); openStorage(o.sid); return; } }
+  return _storageOrigInteract(ev);
+};
+
+/* ---- 提示文字：面對桶子時顯示 ---- */
+const _storageOrigUpdate=update;
+update=function(){
+  _storageOrigUpdate();
+  if(!S||sitting) return;
+  const o=facingObject();
+  if(o && o.kind==='storage'){ const h=document.getElementById('hint');
+    if(h){ h.textContent='🛢️ '+(o.nm||'儲物桶')+'（互動鍵）'; h.classList.add('show'); } }
+};
+
+/* ---- 畫桶子（barrel.png，32×32；沒圖先用 emoji） ---- */
+const _storageOrigDraw=draw;
+draw=function(){
+  _storageOrigDraw();
+  if(!S || curScene==='fishing') return;
+  const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS), img=npcImg('barrel.png');
+  for(const sp of STORAGE_POINTS){
+    if(sp.scene!==curScene) continue;
+    const cx=sp.x*TS+TS/2-ox, by=(sp.y+1)*TS-oy;
+    ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+    ctx.beginPath(); ctx.ellipse(cx,by-2,9,4,0,0,Math.PI*2); ctx.fill();
+    if(img && img.complete && img.naturalWidth){ ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight, cx-16, by-32, 32,32); }
+    else{ ctx.font='20px serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#000'; ctx.fillText('🛢️',cx,by-4); }
+  }
+};
+/* =================== 🛢️ 儲物桶系統 結束 =================== */
 </script>
 </body>
 </html>
