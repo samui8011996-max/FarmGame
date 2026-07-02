@@ -329,8 +329,7 @@ const RECIPES={
     ingredients:{milk:1, egg:1, flour:1}},
   strawberry_tart:{nm:'草莓塔',e:'🍰',price:28,batch:30,knead:4,shop:true,learnCost:60,
     ingredients:{strawberry:2, flour:1, sugar:1}},
-  banana_pudding:{nm:'香蕉布丁',e:'🍮',price:12,batch:30,knead:3,
-    ingredients:{banana:2, sugar:1}},
+
   pancake:{nm:'鬆餅',e:'🥞',price:18,batch:30,knead:3,bakeMs:5000,shop:true,learnCost:80,
     ingredients:{egg:2, milk:1, flour:1, sugar:1}},
   stargazy_pie:{nm:'仰望星空派',e:'🥧',price:45,batch:30,knead:4,bakeMs:10000,shop:true,learnCost:120,
@@ -372,7 +371,7 @@ function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.cei
 /* ---------- 時代系統（第一步：解鎖門檻） ---------- */
 const CROP_ERA={ strawberry:17, corn:17, potato:17, tomato:17, lemon:17,
                   };          
-const RECIPE_ERA={ strawberry_tart:17, banana_pudding:19, stargazy_pie:17 };
+const RECIPE_ERA={ strawberry_tart:17, stargazy_pie:17 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
 function recipeKnown(k){ const r=RECIPES[k]; return !!(r && (r.known || (S&&S.recipesCooked&&S.recipesCooked[k]))); }
@@ -1650,8 +1649,8 @@ const MAPS={
    "..FFFF..FFFF..FFFF....FFFFFFF",
    "..FFFF..FFFF..FFFF....FFFFFFF",
    "..FFFF..FFFF..FFFF....FFFFFFF",
-   "......................FFFFFFF",
-   "......................FFFFFFF",
+   "..FFFF........FFFF....FFFFFFF",
+   "..FFFF........FFFF....FFFFFFF",
    "......................FFFFFFF",
    "......................FFFFFFF",
    "......................FFFFFFF",
@@ -4267,117 +4266,133 @@ startGame=function(n){
   save();
 };
 /* =================== 🍽️ 通用客人系統 結束 =================== */
-/* ===================== 🚶 隨機客人系統（table3 以外） ===================== */
-const RAND_SKINS=[
-  { id:'rg_a', nm:'旅人',     img:'guest_a', face:'🧳' },
-  { id:'rg_b', nm:'老紳士',   img:'guest_b', face:'🎩' },
-  { id:'rg_c', nm:'紅髮小姐', img:'guest_c', face:'👒' },
+/* ===================== 🚶 咖啡廳固定客人＋擺放上菜（走過講話、互動鍵上菜，不開面板） ===================== */
+/* 三位固定客人各坐一桌，每人一張整張地圖大小的疊圖：guest2.png / guest5.png / guest6.png
+   dish 指定他想吃哪道（用 RECIPES 的 key）。座位 (x,y) 先估，之後照畫面微調。
+   plateDx/plateDy：上菜後盤子畫在桌上的位置微調（單位＝格）。 */
+const CAFE_GUESTS=[
+  { id:'cg_2', x:18, y:10, img:'guest2', face:'🧳', nm:'旅人',   dish:'pasta',table:'table2',
+    plateDx:0, plateDy:0.4,
+    orderLine:'走了一整天，好想吃{dish}啊。',
+    doneLines:['就是這個味道，謝謝招待！','歇夠了，繼續上路～'] },
+  { id:'cg_5', x:27, y:6,  img:'guest5', face:'🎩', nm:'老紳士', dish:'strawberry_tart',table:'table5',
+    plateDx:0, plateDy:0.4,
+    orderLine:'來一份{dish}配咖啡，正好。',
+    doneLines:['手藝真不錯，下次再訪。','年輕人，經營得很用心。'] },
+  { id:'cg_6', x:33, y:6,  img:'guest6', face:'👒', nm:'紅髮小姐', dish:'strawberry_tart',
+    plateDx:0, plateDy:0.4,
+    orderLine:'聽說這裡的{dish}很有名，來一份！',
+    doneLines:['太幸福了～','下次一定還要再來坐坐。'] },
 ];
-const RAND_SEATS={   // 每桌的客人座位格（先估的，之後照畫面上的 (x,y) 微調）
-  table1:{x:10,y:10}, table2:{x:15,y:10},
-  table4:{x:26,y:6}, table5:{x:27,y:6},
-  table6:{x:33,y:6}, table7:{x:34,y:6},
-};   // table3 留給菲力，不要加進來
-const RAND_CHANCE=0.6;   // 每桌今天有客人的機率
-const RAND_LINES={
-  order:[ '老闆，想吃一份{dish}！', '聽說這裡的{dish}很有名，來一份！', '今天就決定是{dish}了。' ],
-  served:[ '太好吃了，謝謝招待！', '就是這個味道！', '不虛此行～' ],
-};
-for(const s of RAND_SKINS){ CHARS[s.id]={ nm:s.nm, face:{neutral:s.face} }; }
+for(const g of CAFE_GUESTS){ CHARS[g.id]={ nm:g.nm, face:{neutral:g.face} }; }
+function _cgPick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
-function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
-/* 可被點的菜＝玩家已會做的食譜 */
-function randDishPool(){
-  const p=[]; for(const k in RECIPES){ if(recipeKnown(k)) p.push(k); }
-  return p.length?p:['scone'];
+/* 可被抽到的菜＝當前時代已解鎖的食譜 */
+function cgDishPool(){
+  const p=[]; for(const k in RECIPES){ if(recipeEra(k)<=S.era) p.push(k); }
+  return p.length?p:Object.keys(RECIPES);
 }
-/* 換日重骰：哪幾桌有人、誰、點什麼 */
-function ensureRandGuests(){
-  if(S.randGuests && S.randGuests.day===S.day) return;
-  const seats={};
-  for(const tbl in RAND_SEATS){
-    if(Math.random()<RAND_CHANCE){
-      seats[tbl]={ skin:pick(RAND_SKINS).id, dish:pick(randDishPool()),
-                   line:pick(RAND_LINES.order), served:false };
+/* 這位客人今天點的菜（同一天固定，隔天重抽） */
+function cgDish(g){ return (S.cguests && S.cguests.dish && S.cguests.dish[g.id]) || g.dish; }
+/* 換日重置＋每人重抽一道菜（下次一批新客人點的都不一樣） */
+function ensureCafeGuests(){
+  if(!S.cguests || S.cguests.day!==S.day || !S.cguests.dish){
+    const pool=cgDishPool(), dish={};
+    for(const g of CAFE_GUESTS){ dish[g.id]=_cgPick(pool); }
+    S.cguests={ day:S.day, served:{}, gone:{}, dish:dish };
+  }
+}
+
+/* 擺互動點：npc:true → 走到面前自動講話；kind:'cguest' → 互動鍵交給下面自訂（上菜） */
+function syncCafeGuests(){
+  SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='cguest');
+  for(const g of CAFE_GUESTS){
+    SCENES.cafe.objects.push({ id:g.id, x:g.x, y:g.y, e:g.face, avatar:g.face,
+      nm:g.nm, kind:'cguest', cguest:true, npc:true, hide:true });
+  }
+}
+
+/* 走過去講的台詞：未上菜→點餐（有成品就提示按鍵）；已上菜→滿足台詞 */
+const _cgOrigShowDlg=showDlg;
+showDlg=function(o){
+  if(o && o.cguest){
+    ensureCafeGuests();
+    const g=CAFE_GUESTS.find(x=>x.id===o.id), r=RECIPES[cgDish(g)];
+    document.getElementById('dialogue').classList.remove('idle');
+    document.getElementById('dlgAvatar').textContent=g.face;
+    let line;
+    if(S.cguests.served[g.id]){ line=_cgPick(g.doneLines); }
+    else{
+      const have=(S.cafe.goods[cgDish(g)]||0)>0;
+      line=g.orderLine.replace('{dish}', r.nm) + (have?'（按互動鍵上菜）':`（先去廚房做${r.nm}）`);
     }
-  }
-  S.randGuests={ day:S.day, seats:seats };
-  if(curScene==='cafe') syncRandGuestObjs();
-  save();
-}
-/* 擺互動點 */
-function syncRandGuestObjs(){
-  SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='rguest');
-  if(!S.randGuests) return;
-  for(const tbl in S.randGuests.seats){
-    const g=S.randGuests.seats[tbl], p=RAND_SEATS[tbl]; if(!p) continue;
-    const sk=RAND_SKINS.find(s=>s.id===g.skin)||RAND_SKINS[0];
-    SCENES.cafe.objects.push({ id:'rg_'+tbl, tbl:tbl, x:p.x, y:p.y, e:sk.face,
-      nm:sk.nm, kind:'rguest', npc:true, avatar:sk.face, hide:true, sense:1.6 });
-  }
-}
-/* 對話：一句點餐台詞＋（桌上有菜才出現）上菜按鈕 */
-function openRandGuest(tbl){
-  const g=S.randGuests && S.randGuests.seats[tbl]; if(!g) return;
-  const sk=RAND_SKINS.find(s=>s.id===g.skin)||RAND_SKINS[0];
-  _convoCid=sk.id;
-  if(g.served){
-    dlgLine({who:sk.id,t:pick(RAND_LINES.served)},[{t:'再會',cls:'green',run:()=>closeSheet()}]);
+    document.getElementById('dlgText').innerHTML=`<span class="name">${g.nm}</span>${line}`;
     return;
   }
-  const r=RECIPES[g.dish];
-  const onTable=tablePlaced(tbl).indexOf(g.dish)>=0;
-  dlgLine({who:sk.id, t:g.line.replace('{dish}',r.nm)},[
-    onTable ? {t:`🍽️ 上菜：${r.nm}`, cls:'gold', run:()=>serveRandGuest(tbl)} : null,
-    {t:'馬上來', cls:'green', run:()=>closeSheet()},
-  ].filter(Boolean));
-}
-/* 上菜：吃桌上那份 */
-function serveRandGuest(tbl){
-  const g=S.randGuests.seats[tbl]; if(!g||g.served) return;
-  const r=RECIPES[g.dish];
-  const placed=tablePlaced(tbl), i=placed.indexOf(g.dish);
-  if(i<0){ toast(`先把${r.nm}擺到他桌上`); return; }
-  placed[i]=null;
-  earn(r.price, '招待客人・'+r.nm);
-  g.served=true;
-  addLog(`🍽️ 客人吃到了${r.nm}，心滿意足！`);
-  closeSheet(); refreshTop(); save();
+  return _cgOrigShowDlg(o);
+};
+
+/* 擺放上菜：從 S.cafe.goods 扣一份成品，結帳 +$，客人轉為已上菜 */
+function serveCafeGuest(g){
+  ensureCafeGuests();
+  if(S.cguests.served[g.id]){ toast('這桌已經上過菜囉'); return; }
+  const k=cgDish(g), r=RECIPES[k]; if(!r) return;
+  if((S.cafe.goods[k]||0)<=0){ toast(`還沒有${r.nm}，先去廚房做`); return; }
+  S.cafe.goods[k]--;                            // 端一份上桌
+  earn(r.price, '上菜・'+r.nm);
+  S.cguests.served[g.id]=true;
+  addLog(`🍽️ ${g.nm}吃到了${r.nm}，+$${r.price}`);
   toast(`🍽️ 上菜成功！+$${r.price}`);
+  dlgNpc=null;                                   // 讓下一幀重新跑走過去對話→秀滿足台詞
+  refreshTop(); save();
 }
-/* 畫客人：整張地圖大小的疊圖，位置畫死在圖裡（同港口商人做法） */
-const _rgOrigDrawCafeFood=drawCafeFood;
+
+/* 互動鍵：面前是客人就上菜（不開面板），其餘照舊 */
+const _cgOrigInteract=interact;
+interact=function(ev){
+  if(!sitting){
+    const o=facingObject();
+    if(o && o.cguest){
+      if(ev&&ev.preventDefault) ev.preventDefault();
+      serveCafeGuest(CAFE_GUESTS.find(x=>x.id===o.id));
+      return;
+    }
+  }
+  return _cgOrigInteract(ev);
+};
+
+/* 畫客人疊圖＋已上菜的盤子 */
+const _cgOrigDrawCafeFood=drawCafeFood;
 drawCafeFood=function(ox,oy){
-  _rgOrigDrawCafeFood(ox,oy);
-  if(curScene!=='cafe'||!S||!S.day) return;
-  ensureRandGuests();
+  _cgOrigDrawCafeFood(ox,oy);
+  if(curScene!=='cafe') return;
+  ensureCafeGuests();
   ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
-  for(const tbl in S.randGuests.seats){
-    const g=S.randGuests.seats[tbl], p=RAND_SEATS[tbl]; if(!p) continue;
-    const sk=RAND_SKINS.find(s=>s.id===g.skin)||RAND_SKINS[0];
-    const img=npcImg(`${sk.img}_${tbl}.png`);   // 例如 guest_a_table4.png
+  for(const g of CAFE_GUESTS){
+    if(S.cguests.gone && S.cguests.gone[g.id]) continue;   // 離開的客人不畫（含盤子）
+    const img=npcImg(`${g.img}.png`);
     if(img && img.complete && img.naturalWidth){
       ctx.drawImage(img, -ox, -oy, mapCols()*TS, mapRows()*TS);
-    }else{   // 圖還沒畫好 → 先用 emoji 在座位格頂著
-      const cx=(p.x+0.5)*TS-ox, by=(p.y+1)*TS-oy;
-      ctx.font='13px serif'; ctx.fillText(sk.face, cx, by-8);
+    }else{
+      const cx=(g.x+0.5)*TS-ox, by=(g.y+1)*TS-oy;
+      ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.font='13px serif';
+      ctx.fillText(g.face, cx, by-8);
+    }
+    if(S.cguests.served[g.id]){                  // 上菜後桌上出現那道菜
+      const r=RECIPES[cgDish(g)];
+      const px=(g.x+0.5+(g.plateDx||0))*TS-ox, py=(g.y+(g.plateDy||0.4))*TS-oy;
+      ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.font='14px serif';
+      ctx.fillText(r.e, px, py);
     }
   }
   ctx.restore();
 };
-/* 互動與進場（鏈在客人系統之後） */
-const _rgOrigInteract=interact;
-interact=function(ev){
-  const o=(!sitting)?facingObject():null;
-  if(o && o.kind==='rguest'){ if(ev&&ev.preventDefault)ev.preventDefault(); openRandGuest(o.tbl); return; }
-  return _rgOrigInteract(ev);
-};
-const _rgOrigGoScene=goScene;
-goScene=function(name){
-  _rgOrigGoScene(name);
-  if(name==='cafe'){ ensureRandGuests(); syncRandGuestObjs(); }
-};
-/* =================== 🚶 隨機客人系統 結束 =================== */
+
+/* 進場擺好客人 */
+const _cgOrigGoScene=goScene;
+goScene=function(name){ _cgOrigGoScene(name); if(name==='cafe') syncCafeGuests(); };
+syncCafeGuests();
+/* =================== 🚶 咖啡廳固定客人＋擺放上菜 結束 =================== */
 /* ===== 🍝 故事客人（GUESTS）整張地圖疊圖：跟著階段換圖 ===== */
 const _sgOrigDrawCafeFood=drawCafeFood;
 drawCafeFood=function(ox,oy){
@@ -4398,92 +4413,110 @@ drawCafeFood=function(ox,oy){
   ctx.restore();
 };
 /* ===== 疊圖 結束 ===== */
-/* ===== 🍽️ 上菜規則：把料理擺上 table3 就等於招待菲利奇亞諾 ===== */
-const _feliOrigPlaceFood=placeFood;
-placeFood=function(tbl,k){
-  const before=(S.cafe.goods[k]||0);
-  _feliOrigPlaceFood(tbl,k);
-  if(tbl!=='table3') return;                     // 只有他那桌會觸發
-  if((S.cafe.goods[k]||0)>=before) return;       // 沒真的擺成功（桌滿等）就跳過
-  const rk=feliCurRecipe(); if(!rk) return;      // 三階段全解 → 當普通擺盤
-  if(k!==rk){ toast('🍝 菲利奇亞諾看了看…這不是他想吃的'); return; }
-  toast('🍝 菲利奇亞諾開動了…');
-  setTimeout(()=>{
-    const placed=tablePlaced('table3');
-    const i=placed.indexOf(rk); if(i<0) return;  // 中途被收回就作罷
-    placed[i]=null;                              // 吃掉（不退回背包）
-    const r=RECIPES[rk];
-    earn(r.price, `招待菲利奇亞諾・${r.nm}`);
-    S.feli.stage++; syncFeliSeat();
-    addLog(`🍝 菲利奇亞諾吃到了${r.nm}，非常滿意！`);
-    closeSheet(); refreshTop(); save();
-    const next=S.feli.stage<3?'他說下次要帶家人再來。':'一家人都成了常客！';
-    toast(`🍝 ${r.nm}大成功！${next}`);
-  },900);
+/* ===== 🚶 隨機客人：講完話就離席，重進餐廳換新客人 ===== */
+const CG_LEAVE_MS=1500;   // 講完滿足台詞後幾毫秒離開，想久一點就調大
+const _cgLeaving={};      // 防止重複排程
+
+/* 1) 走過去聽到滿足台詞 → 排程離席（人＋盤子＋互動點一起消失） */
+const _leaveOrigShowDlg=showDlg;
+showDlg=function(o){
+  _leaveOrigShowDlg(o);
+  if(o && o.cguest && S.cguests && S.cguests.served[o.id]
+     && !(S.cguests.gone && S.cguests.gone[o.id]) && !_cgLeaving[o.id]){
+    _cgLeaving[o.id]=true;
+    const g=CAFE_GUESTS.find(x=>x.id===o.id);
+    setTimeout(()=>{
+      _cgLeaving[o.id]=false;
+      if(!S.cguests.gone) S.cguests.gone={};
+      S.cguests.gone[o.id]=true;
+      SCENES.cafe.objects=SCENES.cafe.objects.filter(ob=>ob.id!==o.id);   // 移除互動點
+      if(!S.cguests.plates) S.cguests.plates={};
+      S.cguests.plates[o.id]=true;                                        // 桌上留下空盤
+      syncEmptyPlates();
+      dlgNpc=null; idleDlg();
+      toast(`👋 ${g?g.nm:'客人'}滿足地離開了`);
+      save();
+    }, CG_LEAVE_MS);
+  }
 };
 
-/* 對話裡原本的「請他吃」按鈕改成提示，引導玩家去擺盤 */
-openFeli=function(){
-  freezeNpcById('feli');
-  const s=feliStage();
-  if(s>=3){
-    const pool=FELI_CONVOS.done;
-    const ln=pool[Math.floor(Math.random()*pool.length)];
-    _convoCid=ln.who;
-    dlgLine(ln,[{t:'再會',cls:'green',run:()=>closeSheet()}]);
-    return;
-  }
-  const stage=FELI_STAGE[s], rk=stage.recipe, r=RECIPES[rk];
-  const have=(S.cafe.goods[rk]||0)>0;
-  const lines=FELI_CONVOS[stage.convo];
-  _convoCid=lines[0].who;
-  runScript(lines,[
-    have ? {t:`🍽️ 把${r.nm}擺到他桌上吧`, cls:'gold', run:()=>closeSheet()} : null,
-    {t:'知道了', cls:'green', run:()=>closeSheet()},
-  ].filter(Boolean));
+/* 2) 擺互動點時跳過已離開的客人 */
+const _leaveOrigSync=syncCafeGuests;
+syncCafeGuests=function(){
+  _leaveOrigSync();
+  if(S && S.cguests && S.cguests.gone)
+    SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='cguest' || !S.cguests.gone[o.id]);
 };
-/* ===== 🍽️ 上菜規則：先擺上 table3，再請他吃才算成功 ===== */
-/* 回傳指定料理在 table3 桌上的位置（沒有就 -1） */
-function feliDishOnTable(){
-  const rk=feliCurRecipe(); if(!rk) return -1;
-  return tablePlaced('table3').indexOf(rk);
+
+/* 3) 重進餐廳＝地圖刷新 → 空位補上新客人（重抽菜色、狀態歸零） */
+function refreshGoneGuests(){
+  ensureCafeGuests();
+  if(!S.cguests.gone) return;
+  const pool=cgDishPool();
+  let refreshed=false;
+  for(const id in S.cguests.gone){
+    if(!S.cguests.gone[id]) continue;
+    S.cguests.gone[id]=false;
+    S.cguests.served[id]=false;
+    S.cguests.dish[id]=_cgPick(pool);   // 新客人點新的菜
+    refreshed=true;
+  }
+  if(refreshed) syncCafeGuests();
 }
-
-/* 對話：桌上有那道菜才出現「請他吃」按鈕 */
-openFeli=function(){
-  freezeNpcById('feli');
-  const s=feliStage();
-  if(s>=3){
-    const pool=FELI_CONVOS.done;
-    const ln=pool[Math.floor(Math.random()*pool.length)];
-    _convoCid=ln.who;
-    dlgLine(ln,[{t:'再會',cls:'green',run:()=>closeSheet()}]);
-    return;
+const _leaveOrigGoScene=goScene;
+goScene=function(name){ _leaveOrigGoScene(name); if(name==='cafe') refreshGoneGuests(); };
+/* ===== 隨機客人離席 結束 ===== */
+/* ---- 🍽️ 空盤：客人走了留下盤子，按互動鍵收回 ---- */
+function syncEmptyPlates(){
+  SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='emptyplate');
+  if(!S.cguests || !S.cguests.plates) return;
+  for(const g of CAFE_GUESTS){
+    if(!S.cguests.plates[g.id]) continue;
+    SCENES.cafe.objects.push({ id:'plate_'+g.id, pid:g.id,
+      x:Math.round(g.x+(g.plateDx||0)), y:Math.round(g.y+(g.plateDy||0)),
+      e:'🍽️', nm:'空盤', kind:'emptyplate', hide:true, sense:1.6 });
   }
-  const stage=FELI_STAGE[s], rk=stage.recipe, r=RECIPES[rk];
-  const onTable=feliDishOnTable()>=0;
-  const lines=FELI_CONVOS[stage.convo];
-  _convoCid=lines[0].who;
-  runScript(lines,[
-    onTable ? {t:`🍽️ 請他吃${r.nm}`, cls:'gold', run:()=>serveFeli()} : null,
-    {t:'知道了', cls:'green', run:()=>closeSheet()},
-  ].filter(Boolean));
+}
+function takeEmptyPlate(pid){
+  if(!S.cguests || !S.cguests.plates || !S.cguests.plates[pid]) return;
+  S.cguests.plates[pid]=false;
+  syncEmptyPlates();
+  toast('🍽️ 收走了空盤');
+  save();
+}
+function drawEmptyPlates(ox,oy){
+  if(curScene!=='cafe' || !S.cguests || !S.cguests.plates) return;
+  const img=npcImg('plate_empty.png');
+  for(const g of CAFE_GUESTS){
+    if(!S.cguests.plates[g.id]) continue;
+    const px=(g.x+0.5+(g.plateDx||0))*TS-ox, py=(g.y+(g.plateDy||0.4))*TS-oy;
+    if(img && img.complete && img.naturalWidth){
+      ctx.globalAlpha=1;
+      ctx.drawImage(img, 0,0, img.naturalWidth, img.naturalHeight, px-16, py-16, 32,32);
+    }else{
+      ctx.font='14px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#000'; ctx.fillText('🍽️', px, py);
+    }
+  }
+}
+/* 畫空盤：掛在 drawCafeFood 後面 */
+const _plateOrigDrawCafeFood=drawCafeFood;
+drawCafeFood=function(ox,oy){ _plateOrigDrawCafeFood(ox,oy); drawEmptyPlates(ox,oy); };
+/* 互動鍵：面對空盤→收走 */
+const _plateOrigInteract=interact;
+interact=function(ev){
+  if(!sitting){ const o=facingObject();
+    if(o && o.kind==='emptyplate'){ if(ev&&ev.preventDefault)ev.preventDefault(); takeEmptyPlate(o.pid); return; } }
+  return _plateOrigInteract(ev);
 };
-
-/* 請客改成「吃桌上那份」：桌上沒有就擋下來 */
-serveFeli=function(){
-  const s=feliStage(); if(s>=3) return;
-  const rk=FELI_STAGE[s].recipe, r=RECIPES[rk];
-  const placed=tablePlaced('table3');
-  const i=placed.indexOf(rk);
-  if(i<0){ toast(`先把${r.nm}擺到他桌上再請他吃`); return; }
-  placed[i]=null;                        // 吃掉桌上那份（不退回背包）
-  earn(r.price, `招待菲利奇亞諾・${r.nm}`);
-  S.feli.stage++; syncFeliSeat();
-  addLog(`🍝 菲利奇亞諾吃到了${r.nm}，非常滿意！`);
-  closeSheet(); refreshTop(); save();
-  const next=S.feli.stage<3?'他說下次要帶家人再來。':'一家人都成了常客！';
-  toast(`🍝 ${r.nm}大成功！${next}`);
+/* 提示文字 */
+const _plateOrigUpdate=update;
+update=function(){
+  _plateOrigUpdate();
+  if(!S||sitting||curScene!=='cafe') return;
+  const o=facingObject();
+  if(o && o.kind==='emptyplate'){ const h=document.getElementById('hint');
+    if(h){ h.textContent='🍽️ 收走空盤（互動鍵）'; h.classList.add('show'); } }
 };
 /* 牲畜圖示：改用你畫的成年/幼獸走路圖，只取第 1 楨當 icon */
 const LIVESTOCK_SPRITE={
@@ -4645,14 +4678,14 @@ serveGuest=function(gid){
   }
 };
 
-/* 隨機客人：serveRandGuest 成功（served 由 false 變 true）→ 小費＋商譽 */
-const _repOrigServeRand=serveRandGuest;
-serveRandGuest=function(tbl){
-  const g=S.randGuests && S.randGuests.seats[tbl];
-  const was=g?g.served:true;
-  _repOrigServeRand(tbl);
-  if(g && !was && g.served){
-    giveTip(RECIPES[g.dish].price, '客人');
+/* 固定客人：serveCafeGuest 成功（served 由 false 變 true）→ 小費＋商譽 */
+const _repOrigServeCafe=serveCafeGuest;
+serveCafeGuest=function(g){
+  const was=!!(S.cguests && S.cguests.served && S.cguests.served[g.id]);
+  _repOrigServeCafe(g);
+  const now=!!(S.cguests && S.cguests.served && S.cguests.served[g.id]);
+  if(!was && now){
+    giveTip(RECIPES[cgDish(g)].price, g.nm);
     gainRep(REP_CFG.gainRand);
     save();
   }
