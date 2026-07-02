@@ -4499,6 +4499,7 @@ animalIcon=function(type,a,px){
   else if(type==='cow'){ key=(a?isGrownCow(a):true)?'cow':'calf'; }
   return (key&&_spriteIcon(key,px)) || _origAnimalIcon(type,a,px);
 };
+
 /* ===================== 🛢️ 儲物桶系統 ===================== */
 /* 加桶子＝在這張表加一筆：id 不能重複、scene 場景、x,y 格座標、nm 顯示名。
    之後想在別的場景放桶子，照樣加一行就好。 */
@@ -4583,7 +4584,7 @@ interact=function(ev){
 const _storageOrigUpdate=update;
 update=function(){
   _storageOrigUpdate();
-  if(!S||sitting) return;
+  if(!S||sitting||curScene==='fishing'||!SCENES[curScene]) return;
   const o=facingObject();
   if(o && o.kind==='storage'){ const h=document.getElementById('hint');
     if(h){ h.textContent='🛢️ '+(o.nm||'儲物桶')+'（互動鍵）'; h.classList.add('show'); } }
