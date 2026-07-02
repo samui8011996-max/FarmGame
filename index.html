@@ -4505,7 +4505,7 @@ animalIcon=function(type,a,px){
 /* 加桶子＝在這張表加一筆：id 不能重複、scene 場景、x,y 格座標、nm 顯示名。
    之後想在別的場景放桶子，照樣加一行就好。 */
 const STORAGE_POINTS=[
-  { id:'kitchen1', scene:'kitchen', x:1, y:16, nm:'儲物桶 A' },
+  { id:'kitchen1', scene:'kitchen', x:18, y:11, nm:'儲物桶 A' },
   { id:'kitchen2', scene:'kitchen', x:2, y:16, nm:'儲物桶 B' },
   { id:'kitchen3', scene:'kitchen', x:3, y:16, nm:'儲物桶 C' },
 ];
@@ -4515,7 +4515,7 @@ const STORAGE_SLOTS=30;   // 一個桶最多放幾「種」東西（數量不限
 for(const sp of STORAGE_POINTS){
   const sc=SCENES[sp.scene]; if(!sc) continue;
   sc.objects.push({ id:'storage_'+sp.id, sid:sp.id, x:sp.x, y:sp.y,
-    e:'🛢️', nm:sp.nm, kind:'storage', hide:true, sense:1.4 });
+    e:'🛢️', nm:sp.nm, kind:'storage', hide:true, sense:2});
 }
 
 /* ---- 存取邏輯 ---- */
@@ -4600,7 +4600,7 @@ function drawStorageBarrels(ox,oy){
     const cx=sp.x*TS+TS/2-ox, by=(sp.y+1)*TS-oy;
     ctx.globalAlpha=1; ctx.fillStyle='#00000022';
     ctx.beginPath(); ctx.ellipse(cx,by-2,9,4,0,0,Math.PI*2); ctx.fill();
-    if(img && img.complete && img.naturalWidth){ ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight, cx-16, by-32, 32,32); }
+    if(img && img.complete && img.naturalWidth){ ctx.drawImage(img,0,0,img.naturalWidth,img.naturalHeight, cx-16, by-32, 32,40); }
     else{ ctx.font='20px serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#000'; ctx.fillText('🛢️',cx,by-4); }
   }
 }
