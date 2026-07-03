@@ -4271,15 +4271,18 @@ startGame=function(n){
    dish 指定他想吃哪道（用 RECIPES 的 key）。座位 (x,y) 先估，之後照畫面微調。
    plateDx/plateDy：上菜後盤子畫在桌上的位置微調（單位＝格）。 */
 const CAFE_GUESTS=[
-  { id:'cg_2', x:18, y:10, img:'guest2', face:'🧳', nm:'旅人',   dish:'pasta',table:'table2',
+  { id:'cg_2', x:18, y:10, img:'guest2', face:'🧳', nm:'旅人',   dish:'pasta',
+    table:'table2',
     plateDx:0, plateDy:0.4,
     orderLine:'走了一整天，好想吃{dish}啊。',
     doneLines:['就是這個味道，謝謝招待！','歇夠了，繼續上路～'] },
-  { id:'cg_5', x:27, y:6,  img:'guest5', face:'🎩', nm:'老紳士', dish:'strawberry_tart',table:'table5',
+  { id:'cg_5', x:27, y:6,  img:'guest5', face:'🎩', nm:'老紳士', dish:'strawberry_tart',
+    table:'table5',
     plateDx:0, plateDy:0.4,
     orderLine:'來一份{dish}配咖啡，正好。',
     doneLines:['手藝真不錯，下次再訪。','年輕人，經營得很用心。'] },
   { id:'cg_6', x:33, y:6,  img:'guest6', face:'👒', nm:'紅髮小姐', dish:'strawberry_tart',
+    table:'table6',
     plateDx:0, plateDy:0.4,
     orderLine:'聽說這裡的{dish}很有名，來一份！',
     doneLines:['太幸福了～','下次一定還要再來坐坐。'] },
@@ -4415,9 +4418,10 @@ drawCafeFood=function(ox,oy){
 /* ===== 疊圖 結束 ===== */
 /* ===== 🚶 隨機客人：講完話就離席，重進餐廳換新客人 ===== */
 const CG_LEAVE_MS=1500;   // 講完滿足台詞後幾毫秒離開，想久一點就調大
+const PLATE_SENSE=3;      // 空盤感應範圍（格），收不到就再調大
 const _cgLeaving={};      // 防止重複排程
 
-/* 1) 走過去聽到滿足台詞 → 排程離席（人＋盤子＋互動點一起消失） */
+/* 1) 走過去聽到滿足台詞 → 排程離席（人＋食物＋互動點消失，留下空盤） */
 const _leaveOrigShowDlg=showDlg;
 showDlg=function(o){
   _leaveOrigShowDlg(o);
@@ -4432,6 +4436,8 @@ showDlg=function(o){
       SCENES.cafe.objects=SCENES.cafe.objects.filter(ob=>ob.id!==o.id);   // 移除互動點
       if(!S.cguests.plates) S.cguests.plates={};
       S.cguests.plates[o.id]=true;                                        // 桌上留下空盤
+      if(g && g.table){ const pl=tablePlaced(g.table);                    // 吃掉桌上擺的那份菜
+        for(let i=0;i<pl.length;i++) pl[i]=null; }
       syncEmptyPlates();
       dlgNpc=null; idleDlg();
       toast(`👋 ${g?g.nm:'客人'}滿足地離開了`);
@@ -4448,7 +4454,7 @@ syncCafeGuests=function(){
     SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='cguest' || !S.cguests.gone[o.id]);
 };
 
-/* 3) 重進餐廳＝地圖刷新 → 空位補上新客人（重抽菜色、狀態歸零） */
+/* 3) 重進餐廳＝地圖刷新 → 盤子收了的空位才補新客人（重抽菜色、狀態歸零） */
 function refreshGoneGuests(){
   ensureCafeGuests();
   if(!S.cguests.gone) return;
@@ -4456,26 +4462,42 @@ function refreshGoneGuests(){
   let refreshed=false;
   for(const id in S.cguests.gone){
     if(!S.cguests.gone[id]) continue;
+    if(S.cguests.plates && S.cguests.plates[id]) continue;   // 空盤沒收→這桌不來新客人
     S.cguests.gone[id]=false;
     S.cguests.served[id]=false;
     S.cguests.dish[id]=_cgPick(pool);   // 新客人點新的菜
     refreshed=true;
   }
   if(refreshed) syncCafeGuests();
+  syncEmptyPlates();
 }
 const _leaveOrigGoScene=goScene;
 goScene=function(name){ _leaveOrigGoScene(name); if(name==='cafe') refreshGoneGuests(); };
 /* ===== 隨機客人離席 結束 ===== */
 /* ---- 🍽️ 空盤：客人走了留下盤子，按互動鍵收回 ---- */
+function cgPlateSlot(g){
+  const T=FOOD_TABLES[g.table];
+  return (T && T.slots[0]) || {x:g.x+(g.plateDx||0), y:g.y+(g.plateDy||0.4)};  // 沒設 table→退回舊算法
+}
 function syncEmptyPlates(){
   SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='emptyplate');
   if(!S.cguests || !S.cguests.plates) return;
   for(const g of CAFE_GUESTS){
     if(!S.cguests.plates[g.id]) continue;
+    const s=cgPlateSlot(g);
     SCENES.cafe.objects.push({ id:'plate_'+g.id, pid:g.id,
-      x:Math.round(g.x+(g.plateDx||0)), y:Math.round(g.y+(g.plateDy||0)),
-      e:'🍽️', nm:'空盤', kind:'emptyplate', hide:true, sense:1.6 });
+      x:Math.round(s.x), y:Math.round(s.y),
+      e:'🍽️', nm:'空盤', kind:'emptyplate', hide:true, sense:PLATE_SENSE });
   }
+}
+function nearEmptyPlate(){
+  if(curScene!=='cafe') return null;
+  const bx=Math.round(player.x), by=Math.round(player.y);
+  for(const o of SCENES.cafe.objects){
+    if(o.kind!=='emptyplate') continue;
+    if(Math.max(Math.abs(o.x-bx), Math.abs(o.y-by)) <= (o.sense||PLATE_SENSE)) return o;
+  }
+  return null;
 }
 function takeEmptyPlate(pid){
   if(!S.cguests || !S.cguests.plates || !S.cguests.plates[pid]) return;
@@ -4489,24 +4511,25 @@ function drawEmptyPlates(ox,oy){
   const img=npcImg('plate_empty.png');
   for(const g of CAFE_GUESTS){
     if(!S.cguests.plates[g.id]) continue;
-    const px=(g.x+0.5+(g.plateDx||0))*TS-ox, py=(g.y+(g.plateDy||0.4))*TS-oy;
+    const s=cgPlateSlot(g);
+    const cx=(s.x+0.5)*TS-ox, by=(s.y+1)*TS-oy-FOOD_LIFT;   // 與擺盤食物同一套座標公式
     if(img && img.complete && img.naturalWidth){
       ctx.globalAlpha=1;
-      ctx.drawImage(img, 0,0, img.naturalWidth, img.naturalHeight, px-16, py-16, 32,32);
+      ctx.drawImage(img, 0,0, img.naturalWidth, img.naturalHeight, cx-16, by-32, 32,32);
     }else{
       ctx.font='14px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillStyle='#000'; ctx.fillText('🍽️', px, py);
+      ctx.fillStyle='#000'; ctx.fillText('🍽️', cx, by-8);
     }
   }
 }
 /* 畫空盤：掛在 drawCafeFood 後面 */
 const _plateOrigDrawCafeFood=drawCafeFood;
 drawCafeFood=function(ox,oy){ _plateOrigDrawCafeFood(ox,oy); drawEmptyPlates(ox,oy); };
-/* 互動鍵：面對空盤→收走 */
+/* 互動鍵：附近有空盤→優先收走 */
 const _plateOrigInteract=interact;
 interact=function(ev){
-  if(!sitting){ const o=facingObject();
-    if(o && o.kind==='emptyplate'){ if(ev&&ev.preventDefault)ev.preventDefault(); takeEmptyPlate(o.pid); return; } }
+  if(!sitting){ const p=nearEmptyPlate();
+    if(p){ if(ev&&ev.preventDefault)ev.preventDefault(); takeEmptyPlate(p.pid); return; } }
   return _plateOrigInteract(ev);
 };
 /* 提示文字 */
@@ -4514,32 +4537,27 @@ const _plateOrigUpdate=update;
 update=function(){
   _plateOrigUpdate();
   if(!S||sitting||curScene!=='cafe') return;
-  const o=facingObject();
-  if(o && o.kind==='emptyplate'){ const h=document.getElementById('hint');
+  const p=nearEmptyPlate();
+  if(p){ const h=document.getElementById('hint');
     if(h){ h.textContent='🍽️ 收走空盤（互動鍵）'; h.classList.add('show'); } }
 };
-/* 牲畜圖示：改用你畫的成年/幼獸走路圖，只取第 1 楨當 icon */
-const LIVESTOCK_SPRITE={
-  chick:'chick.png', hen:'Hen.png', turkey:'turkey.png',
-  piglet:'piglet.png', pig:'pig.png', calf:'calf.png', cow:'cow.png',
-};
-function _spriteIcon(key,px){
-  const img=LIVESTOCK_SPRITE[key]; if(!img) return null; px=px||32;
-  return `<span style="display:inline-block;width:${px}px;height:${px}px;overflow:hidden;`+
-    `vertical-align:middle;background:url('${img}') 0 0 no-repeat;`+
-    `background-size:auto ${px}px;image-rendering:pixelated"></span>`;
+/* ---- 空盤還在→這桌不能擺菜/上菜 ---- */
+function tableHasPlate(tbl){
+  if(!S.cguests || !S.cguests.plates) return false;
+  return CAFE_GUESTS.some(g=>g.table===tbl && S.cguests.plates[g.id]);
 }
-/* 覆寫 animalIcon：先算 key（沿用原本判斷），有走路圖就用，沒有就退回原本 */
-const _origAnimalIcon=animalIcon;
-animalIcon=function(type,a,px){
-  let key=null;
-  if(typeof a==='string') key=a;
-  else if(type==='chicken'){ const turkey=a&&a.species==='turkey', adult=a?isHen(a):true; key=turkey?'turkey':(adult?'hen':'chick'); }
-  else if(type==='pig'){ key=(a?isGrownPig(a):true)?'pig':'piglet'; }
-  else if(type==='cow'){ key=(a?isGrownCow(a):true)?'cow':'calf'; }
-  return (key&&_spriteIcon(key,px)) || _origAnimalIcon(type,a,px);
+const _plateOrigPlaceFood=placeFood;
+placeFood=function(tbl,k){
+  if(tableHasPlate(tbl)){ toast('🍽️ 桌上還有空盤，先收走再擺菜'); return; }
+  return _plateOrigPlaceFood(tbl,k);
 };
-
+const _plateOrigServeCafe2=serveCafeGuest;
+serveCafeGuest=function(g){
+  if(S.cguests && S.cguests.plates && S.cguests.plates[g.id]){
+    toast('🍽️ 先收走桌上的空盤'); return;
+  }
+  return _plateOrigServeCafe2(g);
+};
 /* ===================== 🛢️ 儲物桶系統 ===================== */
 /* 加桶子＝在這張表加一筆：id 不能重複、scene 場景、x,y 格座標、nm 顯示名。
    之後想在別的場景放桶子，照樣加一行就好。 */
