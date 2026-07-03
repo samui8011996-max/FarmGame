@@ -1792,6 +1792,7 @@ office:{title:'辦公室', big:false, spawn:{x:12,y:10}, objects:[
     {id:'table7',x:35,y:9,e:'🍱',nm:'擺盤桌',kind:'foodtable',tbl:'table7',hide:true},
     
   ]},
+  
   kitchen:{title:'廚房', big:true, spawn:{x:3,y:8}, objects:[
     {id:'board',x:13,y:9,e:'🔪',nm:'備料台（放食材）',kind:'cut',hide:true},
     {id:'table',x:18,y:7,e:'🫓',nm:'桌子（揉/拌）',kind:'knead',hide:true},
@@ -4326,8 +4327,8 @@ showDlg=function(o){
     let line;
     if(S.cguests.served[g.id]){ line=_cgPick(g.doneLines); }
     else{
-      const have=(S.cafe.goods[cgDish(g)]||0)>0;
-      line=g.orderLine.replace('{dish}', r.nm) + (have?'（按互動鍵上菜）':`（先去廚房做${r.nm}）`);
+      const onTable = tablePlaced(g.table).indexOf(cgDish(g))>=0;
+      line=g.orderLine.replace('{dish}', r.nm) + (onTable?'（按互動鍵請他享用）':`（把${r.nm}擺到這桌）`);
     }
     document.getElementById('dlgText').innerHTML=`<span class="name">${g.nm}</span>${line}`;
     return;
@@ -4335,18 +4336,20 @@ showDlg=function(o){
   return _cgOrigShowDlg(o);
 };
 
-/* 擺放上菜：從 S.cafe.goods 扣一份成品，結帳 +$，客人轉為已上菜 */
+/* 上菜＝請他吃「桌上擺的那份」：先用擺盤桌擺菜，再對客人按互動 */
 function serveCafeGuest(g){
   ensureCafeGuests();
   if(S.cguests.served[g.id]){ toast('這桌已經上過菜囉'); return; }
   const k=cgDish(g), r=RECIPES[k]; if(!r) return;
-  if((S.cafe.goods[k]||0)<=0){ toast(`還沒有${r.nm}，先去廚房做`); return; }
-  S.cafe.goods[k]--;                            // 端一份上桌
+  const pl=tablePlaced(g.table);
+  const i=pl.indexOf(k);
+  if(i<0){ toast(`先把${r.nm}擺到他那桌（擺盤桌）`); return; }
+  pl[i]=null;                                   // 吃掉桌上那份（食物圖同時消失）
   earn(r.price, '上菜・'+r.nm);
   S.cguests.served[g.id]=true;
   addLog(`🍽️ ${g.nm}吃到了${r.nm}，+$${r.price}`);
-  toast(`🍽️ 上菜成功！+$${r.price}`);
-  dlgNpc=null;                                   // 讓下一幀重新跑走過去對話→秀滿足台詞
+  toast(`🍽️ ${g.nm}開動了！+$${r.price}`);
+  dlgNpc=null;                                   // 下一幀走過去→秀滿足台詞→排程離席
   refreshTop(); save();
 }
 
@@ -4835,6 +4838,8 @@ if(typeof openPartner==='function'){
     sheet.appendChild(btn);
   };
 }
+/* 擺盤桌感應範圍統一調整 */
+SCENES.cafe.objects.forEach(o=>{ if(o.kind==='foodtable') o.sense=3; });
 </script>
 </body>
 </html>
