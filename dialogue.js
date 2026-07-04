@@ -449,7 +449,7 @@ const FELI_CONVOS = {
 
 /* 三位角色的臉（給對話系統的 charFace 用）。有立繪就放檔名，沒有就用 emoji。 */
 const FELI_FACES = {
-  feli:   { nm:'菲利奇亞諾', neutral:'🇮🇹', happy:'😄', love:'🥰', shy:'😊', sad:'😢', think:'🤔' },
+  feli:   { nm:'菲利奇亞諾', neutral:'😄', happy:'😄', love:'🥰', shy:'😊', sad:'😢', think:'🤔' },
   lovino: { nm:'羅維諾',     neutral:'😒', happy:'😏', love:'😳', shy:'😤', sad:'😞', think:'🤨' },
   ludwig: { nm:'路德維希',   neutral:'😐', happy:'🙂', love:'😌', shy:'😳', sad:'😔', think:'🧐' },
 };
