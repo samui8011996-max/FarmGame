@@ -271,6 +271,8 @@ const FOOD_IMG_SRC={
   pasta:'food_pasta.png',
   stargazy_pie:'food_stargazy_pie.png',
   scone:'food_scone.png',
+  grilled_fish:'food_grilled_fish.png',
+  pork_knuckle:'food_pork_knuckle.png',
   pancake:'food_pancake.png',
   corn      :'food_corn.png',
   egg       :'food_egg.png',
@@ -352,10 +354,10 @@ const DOORS=[
   { from:'port',    area:{x1:1, y1:21, x2:4, y2:21}, to:'shop',                    label:'🚪 去商店' },
   { from:'shop',    area:{x1:8, y1:13, x2:11, y2:17},to:'port',    at:{x:2,y:21}, era:18, label:'🚪 去港口', fallback:'farm' },  // 17世紀港口沒開→去農牧地
   // 港口 ⇄ 辦公室
-  { from:'port',    area:{x1:58, y1:7, x2:59, y2:10},to:'office',                  label:'🚪 回辦公室' },
+  { from:'port',    area:{x1:58, y1:7, x2:59, y2:10},to:'office',  at:{x:14,y:16}, era:18,label:'🚪 回辦公室' },
   { from:'office',  area:{x1:13, y1:15, x2:16, y2:16},to:'port',   at:{x:58,y:8}, era:18, label:'🚪 去港口' },
   // 港口 ⇄ 餐廳
-  { from:'port',    area:{x1:54, y1:21, x2:57, y2:21},to:'cafe',   at:{x:9,y:12}, label:'🚪 去餐廳' },
+  { from:'port',    area:{x1:54, y1:21, x2:57, y2:21},to:'cafe',  at:{x:9,y:12}, label:'🚪 去餐廳' },
   { from:'cafe',    area:{x1:6, y1:15, x2:13, y2:16},to:'port',   at:{x:55,y:21},era:18, label:'🚪 去港口' },
 ];
 // 找出玩家「目前正站在哪道門上」（且世紀達標），沒有就回 null
@@ -447,54 +449,7 @@ function collectDairy(){
 const _dairyOrigTick=tick;
 tick=function(){ _dairyOrigTick.apply(this,arguments); tickDairy(Date.now()); };
 /* =================== 🧀 乳品加工處 結束 =================== */
-/* ===================== 🎨 統一圖示系統（取代 emoji） ===================== */
-/* 作物：用生長圖「第六格(index 5)」當圖示，重用 FARM_CROPS[k].img，不必另存檔。
-   → 你的生長圖要從 5 格(160×32) 擴成 6 格(192×32)，第六格畫成品圖示。
-   其他物品：用各自 PNG；載不到圖時自動退回 emoji，不會壞。 */
-const ITEM_IMG_SRC={
-  apple:'food_apple.png',
-  herring:'fish_herring.png', mackerel:'fish_mackerel.png',
-  cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
-  cheese:'food_cheese.png', butter:'food_butter.png',
-  flour:'item_flour.png', sugar:'item_sugar.png',
-  olive_oil:'item_olive_oil.png', 
-};
-// egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
-const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };
-const ANIMAL_ICON_SRC={
-  chick:'icon_chick.png', hen:'icon_hen.png', turkey:'icon_turkey.png',
-  piglet:'icon_piglet.png', pig:'icon_pig.png',
-  calf:'icon_calf.png', cow:'icon_cow.png',
-};
 
-function _imgTag(src,e,px){ px=px||32;
-  return `<img src="${src}" style="width:${px}px;height:${px}px;object-fit:contain;image-rendering:pixelated;vertical-align:middle" onerror="this.outerHTML='${e}'">`;
-}
-/* 作物圖示＝生長圖第六格，用 CSS 裁切（背景縮到高度=px，每格剛好 px 寬，往左推 5 格） */
-function cropIcon(k,px){ px=px||32; const d=FARM_CROPS[k]; if(!d) return '';
-  return `<div style="display:inline-block;width:${px}px;height:${px}px;background:url('${d.img}') ${-5*px}px 0 no-repeat;background-size:auto ${px}px;image-rendering:pixelated;vertical-align:middle"></div>`;
-}
-/* 通用物品（作物/產品/魚/咖啡材料 都走這個） */
-function prodIcon(k,px){
-  if(FARM_CROPS[k]) return cropIcon(k,px);                       // 作物→第六格
-  const src=ITEM_IMG_SRC[k]||FOOD_IMG_SRC[k];
-  const e=(PRODUCTS[k]&&PRODUCTS[k].e)||(EXTRAS[k]&&EXTRAS[k].e)||'📦';
-  return src ? _imgTag(src,e,px) : e;
-}
-function miscIcon(key,e,px){ const src=MISC_IMG_SRC[key]; return src?_imgTag(src,e,px):e; }
-/* 動物：傳 (type,a) 自動判斷幼/成；或直接傳字串 key 指定（如 'turkey'） */
-function animalIcon(type,a,px){
-  if(typeof a==='string'){ const e={chick:'🐤',hen:'🐔',turkey:'🦃',piglet:'🐷',pig:'🐖',calf:'🐮',cow:'🐄'}[a]||'🐾';
-    return ANIMAL_ICON_SRC[a]?_imgTag(ANIMAL_ICON_SRC[a],e,px):e; }
-  let key,e;
-  if(type==='chicken'){ const turkey=a&&a.species==='turkey', adult=a?isHen(a):true;
-    key=turkey?'turkey':(adult?'hen':'chick'); e=turkey?'🦃':(adult?'🐔':'🐤'); }
-  else if(type==='pig'){ const g=a?isGrownPig(a):true; key=g?'pig':'piglet'; e=g?'🐖':'🐷'; }
-  else if(type==='cow'){ const g=a?isGrownCow(a):true; key=g?'cow':'calf'; e=g?'🐄':'🐮'; }
-  else { key=type; e=(ANIMALS[type]&&ANIMALS[type].e)||'🐾'; }
-  return ANIMAL_ICON_SRC[key]?_imgTag(ANIMAL_ICON_SRC[key],e,px):e;
-}
-/* =================== 🎨 圖示系統 結束 =================== */
 /* ===================== 🍽️ 通用客人系統 ===================== */
 /* 玩法固定：客人點菜 → 廚房做 → 擺上他那桌 → 對話請他吃
    加新客人 = 在 GUESTS 加一筆 ＋ 準備他的對話包(convos)，其他都不用改 */
@@ -638,10 +593,10 @@ const CAFE_GUESTS=[
 for(const g of CAFE_GUESTS){ CHARS[g.id]={ nm:g.nm, face:{neutral:g.face} }; }
 function _cgPick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
-/* 可被抽到的菜＝當前時代已解鎖的食譜 */
+/* 可被抽到的菜＝目前有上架的菜單；沒上架任何東西→只點斯康餅 */
 function cgDishPool(){
-  const p=[]; for(const k in RECIPES){ if(recipeEra(k)<=S.era) p.push(k); }
-  return p.length?p:Object.keys(RECIPES);
+  const p=(S.cafe.menu||[]).filter(k=>RECIPES[k] && recipeEra(k)<=S.era);
+  return p.length?p:['scone'];
 }
 /* 這位客人今天點的菜（同一天固定，隔天重抽） */
 function cgDish(g){ return (S.cguests && S.cguests.dish && S.cguests.dish[g.id]) || g.dish; }
@@ -653,7 +608,15 @@ function ensureCafeGuests(){
     S.cguests={ day:S.day, served:{}, gone:{}, dish:dish };
   }
 }
-
+/* 菜單變動時重抽：只改「還沒被服務」的客人，已上菜/已離開的不動 */
+function cgRerollDishes(){
+  if(!S.cguests || !S.cguests.dish) return;
+  const pool=cgDishPool();
+  for(const g of CAFE_GUESTS){
+    if(S.cguests.served[g.id] || S.cguests.gone[g.id]) continue;   // 已服務或已走→跳過
+    S.cguests.dish[g.id]=_cgPick(pool);
+  }
+}
 /* 擺互動點：npc:true → 走到面前自動講話；kind:'cguest' → 互動鍵交給下面自訂（上菜） */
 function syncCafeGuests(){
   SCENES.cafe.objects=SCENES.cafe.objects.filter(o=>o.kind!=='cguest');
@@ -731,12 +694,7 @@ drawCafeFood=function(ox,oy){
       ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.font='13px serif';
       ctx.fillText(g.face, cx, by-8);
     }
-    if(S.cguests.served[g.id]){                  // 上菜後桌上出現那道菜
-      const r=RECIPES[cgDish(g)];
-      const px=(g.x+0.5+(g.plateDx||0))*TS-ox, py=(g.y+(g.plateDy||0.4))*TS-oy;
-      ctx.globalAlpha=1; ctx.fillStyle='#000'; ctx.font='14px serif';
-      ctx.fillText(r.e, px, py);
-    }
+    
   }
   ctx.restore();
 };
@@ -1015,7 +973,6 @@ function drawStorageBarrels(ox,oy){
 /* ===================== ⭐ 餐廳商譽系統 ===================== */
 const REP_CFG={
   max:100,          // 商譽上限
-  tipRate:0.25,     // 小費 = 售價 × 比例（至少 $1）
   gainStory:5,      // 招待故事客人（菲利等）+商譽
   gainRand:2,       // 招待隨機客人 +商譽
   revPerRep:0.005,  // 每點商譽 → 每日營收 +0.5%（100點=+50%）
@@ -1027,8 +984,13 @@ function gainRep(n){
   const got=S.rep-before;
   if(got>0) toast(`⭐ 商譽 +${got}（${S.rep}/${REP_CFG.max}）`);
 }
+const TIP_MIN=10, TIP_MAX=200;   // 小費範圍，想調就改這兩個數字
+function rollTip(){
+  // Math.pow(random,2) 讓低額小費常見、$200 級的大方客人稀有
+  return Math.round(TIP_MIN + (TIP_MAX-TIP_MIN)*Math.pow(Math.random(),2));
+}
 function giveTip(price,who){
-  const tip=Math.max(1, Math.round(price*REP_CFG.tipRate));
+  const tip=rollTip();
   earn(tip, `小費・${who}`);
   toast(`💰 收到小費 +$${tip}`);
 }
@@ -1187,3 +1149,18 @@ if(typeof openPartner==='function'){
 }
 /* 擺盤桌感應範圍統一調整 */
 SCENES.cafe.objects.forEach(o=>{ if(o.kind==='foodtable') o.sense=3; });
+
+
+/* 成年動物 icon：取走路圖第 1 格。fh=單格高度；zoom/dx/dy 可微調 */
+const ADULT_ICON={
+  chicken:{img:'Hen.png',    fh:32},
+  cow:    {img:'cow.png',    fh:64, zoom:1.3, dx:-4, dy:-4},
+  pig:    {img:'pig.png',    fh:64, zoom:1.3, dx:-4, dy:-4},
+  turkey: {img:'turkey.png', fh:32},
+};
+function adultIcon(k){
+  const d=ADULT_ICON[k]; if(!d) return (ANIMALS[k]&&ANIMALS[k].e)||'🐾';
+  const h=Math.round(28*(d.zoom||1));
+  return `<span class="adult-ico" style="background-image:url('${d.img}');`+
+         `background-size:auto ${h}px;background-position:${d.dx||0}px ${d.dy||0}px"></span>`;
+}

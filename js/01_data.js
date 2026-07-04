@@ -41,8 +41,6 @@ const EXTRAS={
   sugar:{nm:'糖',e:'🧂',price:1},
   w:{nm:'糖',e:'🧂',price:1},
   olive_oil:{nm:'橄欖油',e:'🫒',price:8}};
-  
-
 const RECIPES={
   // 旗標：known=一開始就會（免猜免買）；shop=商店可買（learnCost當售價）。都不寫＝只能瞎猜解鎖
   scone:{nm:'斯康餅',e:'🥯',price:16,batch:30,knead:2,bakeMs:5000,known:true,
@@ -197,3 +195,51 @@ function eraCutscene(from,to,extra){
   requestAnimationFrame(()=>ov.style.opacity=1);
   setTimeout(()=>{ ov.style.opacity=0; setTimeout(()=>ov.remove(),700); refreshTop(); toast(`🎉 歡迎來到 ${to} 世紀`); }, 2400);
 }
+/* ===================== 🎨 統一圖示系統（取代 emoji） ===================== */
+/* 作物：用生長圖「第六格(index 5)」當圖示，重用 FARM_CROPS[k].img，不必另存檔。
+   → 你的生長圖要從 5 格(160×32) 擴成 6 格(192×32)，第六格畫成品圖示。
+   其他物品：用各自 PNG；載不到圖時自動退回 emoji，不會壞。 */
+const ITEM_IMG_SRC={
+  apple:'food_apple.png',
+  herring:'fish_herring.png', mackerel:'fish_mackerel.png',
+  cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
+  cheese:'food_cheese.png', butter:'food_butter.png',
+  flour:'item_flour.png', sugar:'item_sugar.png',
+  olive_oil:'item_olive_oil.png', 
+};
+// egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
+const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };
+const ANIMAL_ICON_SRC={
+  chick:'icon_chick.png', hen:'icon_hen.png', turkey:'icon_turkey.png',
+  piglet:'icon_piglet.png', pig:'icon_pig.png',
+  calf:'icon_calf.png', cow:'icon_cow.png',
+};
+
+function _imgTag(src,e,px){ px=px||32;
+  return `<img src="${src}" style="width:${px}px;height:${px}px;object-fit:contain;image-rendering:pixelated;vertical-align:middle" onerror="this.outerHTML='${e}'">`;
+}
+/* 作物圖示＝生長圖第六格，用 CSS 裁切（背景縮到高度=px，每格剛好 px 寬，往左推 5 格） */
+function cropIcon(k,px){ px=px||32; const d=FARM_CROPS[k]; if(!d) return '';
+  return `<div style="display:inline-block;width:${px}px;height:${px}px;background:url('${d.img}') ${-5*px}px 0 no-repeat;background-size:auto ${px}px;image-rendering:pixelated;vertical-align:middle"></div>`;
+}
+/* 通用物品（作物/產品/魚/咖啡材料 都走這個） */
+function prodIcon(k,px){
+  if(FARM_CROPS[k]) return cropIcon(k,px);                       // 作物→第六格
+  const src=ITEM_IMG_SRC[k]||FOOD_IMG_SRC[k];
+  const e=(PRODUCTS[k]&&PRODUCTS[k].e)||(EXTRAS[k]&&EXTRAS[k].e)||'📦';
+  return src ? _imgTag(src,e,px) : e;
+}
+function miscIcon(key,e,px){ const src=MISC_IMG_SRC[key]; return src?_imgTag(src,e,px):e; }
+/* 動物：傳 (type,a) 自動判斷幼/成；或直接傳字串 key 指定（如 'turkey'） */
+function animalIcon(type,a,px){
+  if(typeof a==='string'){ const e={chick:'🐤',hen:'🐔',turkey:'🦃',piglet:'🐷',pig:'🐖',calf:'🐮',cow:'🐄'}[a]||'🐾';
+    return ANIMAL_ICON_SRC[a]?_imgTag(ANIMAL_ICON_SRC[a],e,px):e; }
+  let key,e;
+  if(type==='chicken'){ const turkey=a&&a.species==='turkey', adult=a?isHen(a):true;
+    key=turkey?'turkey':(adult?'hen':'chick'); e=turkey?'🦃':(adult?'🐔':'🐤'); }
+  else if(type==='pig'){ const g=a?isGrownPig(a):true; key=g?'pig':'piglet'; e=g?'🐖':'🐷'; }
+  else if(type==='cow'){ const g=a?isGrownCow(a):true; key=g?'cow':'calf'; e=g?'🐄':'🐮'; }
+  else { key=type; e=(ANIMALS[type]&&ANIMALS[type].e)||'🐾'; }
+  return ANIMAL_ICON_SRC[key]?_imgTag(ANIMAL_ICON_SRC[key],e,px):e;
+}
+/* =================== 🎨 圖示系統 結束 =================== */

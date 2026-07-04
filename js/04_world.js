@@ -788,7 +788,9 @@ function openMenu(){
     <button class="btn" style="width:100%;margin-top:6px" onclick="toggleCafeStaff()">${S.cafe.staff?'解雇店員':'雇用店員 $20/日'}</button>`);
 }
 function toggleMenu(k){const i=S.cafe.menu.indexOf(k);if(i>=0)S.cafe.menu.splice(i,1);
-  else{if((S.cafe.goods[k]||0)<=0){toast('沒有成品可上架，先去廚房做');return;}S.cafe.menu.push(k);}openMenu();save();}
+  else{if((S.cafe.goods[k]||0)<=0){toast('沒有成品可上架，先去廚房做');return;}S.cafe.menu.push(k);}
+  cgRerollDishes();   // 菜單變動→還沒點餐的客人立刻改點新菜單
+  openMenu();save();}
 function toggleCafeStaff(){S.cafe.staff=!S.cafe.staff;openMenu();save();}
 function collectTill(){if(S.cafe.till<=0){toast('收銀台沒有錢');return;}const t=Math.round(S.cafe.till);earn(t,'餐廳營收');S.cafe.till=0;toast(`🍽️ 收了 $${fmt(t)}`);save();}
 
@@ -970,10 +972,10 @@ function openShopBuy(){
       <div class="price">$${d.seed}</div><button class="btn sm" onclick="buyCropSeed('${k}')">買</button></div>`;}
   let animals='';
   for(const k in ANIMALS){const d=ANIMALS[k];const cnt=S.animals[k].length;
-    animals+=`<div class="row"><div class="e">${animalIcon(k,null,28)}</div><div class="info"><div class="n">${d.nm} <span class="small">${cnt}/10</span></div></div>
+   animals+=`<div class="row"><div class="e">${adultIcon(k)}</div><div class="info"><div class="n">${d.nm} <span class="small">${cnt}/10</span></div></div>
       <div class="price">$${d.cub}</div><button class="btn sm ${cnt>=10?'dis':''}" onclick="buyAnimal('${k}')">買</button></div>`;}
   {const cnt=S.animals.chicken.length;
-    animals+=`<div class="row"><div class="e">${animalIcon(null,'turkey',28)}</div><div class="info"><div class="n">火雞 <span class="small">養雞舍・${cnt}/10</span></div></div>
+    animals+=`<div class="row"><div class="e">${adultIcon('turkey')}</div><div class="info"><div class="n">火雞 <span class="small">養雞舍・${cnt}/10</span></div></div>
       <div class="price">$8</div><button class="btn sm ${cnt>=10?'dis':''}" onclick="buyTurkey()">買</button></div>`;}
   let extras='';
   for(const k in EXTRAS){const x=EXTRAS[k];
@@ -1039,7 +1041,7 @@ function qtyOpts(id, have){
       style="width:44px;text-align:center;padding:2px;border:1px solid var(--line2);border-radius:6px;background:var(--card)${dis?';opacity:.5':''}"
       onchange="qtyClamp('${id}',${have})">
     <button class="btn sm ghost" style="${btnStyle}" onclick="qtyAdj('${id}',1,${have})">＋</button>
-    <button class="btn sm ghost" style="padding:2px 6px;font-size:11px${dis?';opacity:.35;pointer-events:none':''}" onclick="qtyMax('${id}',${have})">全賣</button>
+    <button class="btn sm ghost" style="padding:2px 6px;font-size:11px${dis?';opacity:.35;pointer-events:none':''}" onclick="qtyMax('${id}',${have})">全部</button>
   </span>`;
 }
 function qtyAdj(id,d,max){ const el=document.getElementById(id); if(!el||el.disabled)return;
@@ -1050,9 +1052,9 @@ function qtyMax(id,max){ const el=document.getElementById(id); if(el)el.value=ma
 function openShopSell(){
   let raw='';let any=false;
   for(const k in PRODUCTS){const have=S.store[k]||0;const price=priceOf(k);const dir=priceDir(k);
-    const arrow=dir>0?'<span class="up">▲</span>':dir<0?'<span class="down">▼</span>':'<span style="opacity:0">▲</span>';
+    const arrow=dir>0?'<span class="up">▲</span>':dir<0?'<span class="down">▼</span>':'';
     raw+=`<div class="row"><div class="e">${prodIcon(k,28)}</div><div class="info"><div class="n">${PRODUCTS[k].nm} <span class="small">基準$${PRODUCTS[k].base}</span></div>
-      <div class="d">庫存 ${have}</div></div><div class="price" style="min-width:64px;text-align:right;flex:none">$${price} ${arrow}</div>
+      <div class="d">庫存 ${have}</div></div><div class="price">$${price} ${arrow}</div>
       ${qtyOpts('sq_'+k,have)}<button class="btn sm ${have<=0?'dis':'green'}" onclick="sellProduct('${k}')">賣</button></div>`;
     if(have>0)any=true;}
   let goods='';

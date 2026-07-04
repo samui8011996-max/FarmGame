@@ -78,7 +78,8 @@
   .actbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #00000020}
   .actbtn.dim{background:var(--line2)}
   .actbtn.throw{background:var(--accent2)}
-
+.adult-ico{display:inline-block;width:28px;height:28px;overflow:hidden;
+  background-repeat:no-repeat;image-rendering:pixelated;vertical-align:middle;}
   /* 電腦版鍵盤提示：手機隱藏，電腦（滑鼠鍵盤）才顯示 */
   .kbhint{display:none;align-items:center;gap:8px;font-size:12px;
     color:var(--ink2);font-weight:700}
@@ -246,6 +247,7 @@
       <span class="keys">SPACE</span>互動
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+    <button id="barkBtn" ontouchstart="herdBark(event)" onmousedown="herdBark(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🔊<span style="font-size:10px;color:var(--ink2)">吠叫</span></button>
     <button id="fishWeaponBtn" ontouchstart="weaponBtn(event)" onmousedown="weaponBtn(event)" style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">⚔️<span style="font-size:10px;color:var(--ink2)">攻擊</span></button>
      <button id="equipBtn" ontouchstart="throwToxin(event)" onmousedown="throwToxin(event)"  style="display:none;width:44px;height:44px;border-radius:11px;background:var(--card);border:2px solid var(--line2);font-size:17px;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--shadow)">🧪<span id="equipCount" style="font-size:10px;color:var(--ink2)">0</span></button>
     <button class="actbtn dim" id="actBtn" ontouchstart="actDown(event)" ontouchend="actUp()" onmousedown="actDown(event)" onmouseup="actUp()" onmouseleave="actUp()">
@@ -276,5 +278,6 @@
 <script src="js/05_fishing.js"></script>
 <script src="js/06_boot.js"></script>
 <script src="js/07_addons.js"></script>
+<script src="js/08_london.js"></script>
 </body>
 </html>
