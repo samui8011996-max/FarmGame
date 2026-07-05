@@ -1,101 +1,135 @@
 /* ===================== 🚢 19世紀：倫敦・斯克特辦公室・愛丁堡牧羊 ===================== */
 /* --- 地圖：倫敦40×18、斯克特辦公室26×16、愛丁堡44×26 --- */
 MAPS.london=[
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FF........................FFFFFFFFFFFFFF",
- "FFFFFFFFFFFF..FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "........................................",
- "........................................",
- "........................................",
- "........................................",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-];
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F...........................F",
+   "F...........................F",
+   "F...........................F",
+   "F...........................F",
+   "F...........................F",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
+   "F...........................F",
+   "F..FFFFFFF..........FFFFFFFFF",
+   "F..FFFFFFFFF......FFFFFFFFFFF",
+   "F..FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F....FFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFF..F...FFFFFFFFFFFF.......F",
+   "FFF..F....FFFFFFFFFF........F",
+   "FFF..F......................F",
+   "FFF..F......................F",
+   "FFF..F......................F",
+   "F...........................F",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   "FFFFFFFFFFF.......FFFFFFFFFFF",
+   "FFFFFFFFFFF.......FFFFFFFFFFF",
+   "FFFFFFFFFFF.......FFFFFFFFFFF",
+   "FFFFFFFFFFF.......FFFFFFFFFFF",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+   ".............................",
+  ],
 MAPS.scott_office=[
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FF......................FF",
- "FF......................FF",
- "FF......................FF",
- "FF......................FF",
- "FF........................",
- "FF........................",
- "FF......................FF",
- "FF......................FF",
- "FF......................FF",
- "FFFFFFFFFFF..FFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
- "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F........................F",
+   "F..................FFFFFFF",
+   "F..................FFFFFFF",
+   "F..................FFFFFFF",
+   "F........................F",
+   "F........................F",
+   "F........................F",
+   "FFFFFFFFFFFFFFFFF....FFFFF",
+   "FFFFFFFFFFFFFFFFF....FFFFF",
+   "FFFFFFFFFFFFFFFFF....FFFFF",
+   "F........................F",
+   "F........................F",
+   "F........................F",
 ];
 MAPS.edinburgh=[
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F...............................FFFFFFFFFF.F",
- "F...............................F........F.F",
- "F...............................F........F.F",
- "F........................................F.F",
- "F........................................F.F",
- "F...............................F........F.F",
- "F...............................F........F.F",
- "F...............................FFFFFFFFFF.F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "F..........................................F",
- "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-];
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F..........................................F",
+   "F..........................................F",
+   "F..........................................F",
+   "F..............................FFFFFFFFFFFFF",
+   "F..............................FFFFFFFFFFFFF",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..........................................F",
+   "F..........................................F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................F...........F",
+   "F..............................FFFFFFFFFFFFF",
+   "F..............................FFFFFFFFFFFFF",
+   "F..........................................F",
+   "F..........................................F",
+   "F..........................................F",
+   "F..........................................F",
+   "F..........................................F",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+  ],
 GRID.london=MAPS.london.map(r=>r.padEnd(MAPS.london[0].length,r[0]).split(''));
 GRID.scott_office=MAPS.scott_office.map(r=>r.padEnd(MAPS.scott_office[0].length,r[0]).split(''));
 GRID.edinburgh=MAPS.edinburgh.map(r=>r.padEnd(MAPS.edinburgh[0].length,r[0]).split(''));
 
 /* --- 場景 --- */
-SCENES.london={title:'倫敦的家', big:true, spawn:{x:13,y:9}, objects:[]};
+SCENES.london={title:'倫敦的家', big:true, spawn:{x:13,y:3}, objects:[]};
 SCENES.scott_office={title:'斯克特的辦公室', big:true, spawn:{x:12,y:11}, objects:[
-  {id:'scott',   x:12,y:5, e:'🧔', nm:'斯克特', kind:'scott', sense:2, hide:true},
+  {id:'scott',   x:18,y:8, e:'🧔', nm:'斯克特', kind:'scott', sense:2, hide:true},
   {id:'sherlock',x:7, y:8, e:'🐕', nm:'夏洛克', kind:'dog', did:'sherlock', hide:true},
   {id:'watson',  x:17,y:9, e:'🐶', nm:'華生',   kind:'dog', did:'watson',   hide:true},
 ]};
 SCENES.edinburgh={title:'愛丁堡莊園・牧羊區', big:true, spawn:{x:4,y:9}, objects:[]};
 SCENE_NM.london='倫敦'; SCENE_NM.scott_office='斯克特的辦公室'; SCENE_NM.edinburgh='牧羊區';
 loadBg('london','london.png');             loadFg('london','london_fg.png');
-loadBg('scott_office','scott_office.png');
+loadBg('scott_office','scott_office.png'); loadFg('scott_office','scott_office_fg.png');
 loadBg('edinburgh','edinburgh.png');       loadFg('edinburgh','edinburgh_fg.png');
 
 /* --- 門表 --- */
 DOORS.push(
   { from:'london',       area:{x1:1, y1:14, x2:4, y2:16},  to:'port',         at:{x:9,y:14},  label:'⛵ 搭船回港口' },
-  { from:'london',       area:{x1:30,y1:14, x2:34,y2:16},  to:'scott_office', at:{x:12,y:12}, era:19, label:'🐴 搭馬車去愛丁堡莊園' },
-  { from:'scott_office', area:{x1:11,y1:13, x2:12,y2:13},  to:'london',       at:{x:31,y:15}, label:'🐴 搭馬車回倫敦' },
-  { from:'scott_office', area:{x1:24,y1:8,  x2:25,y2:9},   to:'edinburgh',    at:{x:4,y:9},   label:'🚪 去牧羊區' },
-  { from:'edinburgh',    area:{x1:1, y1:7,  x2:2, y2:11},  to:'scott_office', at:{x:23,y:8},  label:'🚪 回斯克特的辦公室' },
+  { from:'london',       area:{x1:20,y1:41, x2:28,y2:47},  to:'scott_office', at:{x:4,y:18}, era:19, label:'🐴 搭馬車去愛丁堡莊園' },
+  { from:'scott_office', area:{x1:0, y1:16, x2:5, y2:19},  to:'london',       at:{x:22,y:44}, label:'🐴 搭馬車回倫敦' },
+  { from:'scott_office', area:{x1:23,y1:16, x2:25,y2:19},   to:'edinburgh',    at:{x:4,y:9},   label:'🚪 去牧羊區' },
+  { from:'edinburgh',    area:{x1:1, y1:7,  x2:2, y2:11},  to:'scott_office', at:{x:24,y:18},  label:'🚪 回斯克特的辦公室' },
 );
 
 /* --- 19世紀上船選單：捕魚 or 回倫敦 --- */
 const _sailOrig=askSail;
 function goFishTrip(){ _sailOrig(); }
-function sailToLondon(){ closeSheet(); goScene('london'); player.x=3; player.y=15; player.facing='right'; toast('🚢 抵達倫敦'); }
+function sailToLondon(){ closeSheet(); goScene('london'); player.x=14; player.y=35; player.facing='right'; toast('🚢 抵達倫敦'); }
 askSail=function(){
   if(!S || S.era<19){ _sailOrig(); return; }
   openSheet(`<div class="sheethead"><h3>⚓ 要開船去哪裡？</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -175,20 +209,31 @@ function updateScottNpcs(){
 }
 function drawScottNpcs(){
   const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS);
-  // 斯克特（單張立繪）
-  { const o=SCENES.scott_office.objects.find(x=>x.id==='scott');
-    const px=o.x*TS+TS/2-ox, py=o.y*TS+TS/2-oy;
-    if(SCOTT_IMG&&SCOTT_IMG.complete&&SCOTT_IMG.naturalWidth) ctx.drawImage(SCOTT_IMG,px-32,py-64+14,64,64);
-    else{ ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🧔',px,py); } }
-  for(const id in scottNpcs) drawHerdSprite(npcImg(HERD_DOGS[id].img), scottNpcs[id], ox, oy, HERD_DOGS[id].e);
+  const scott=SCENES.scott_office.objects.find(x=>x.id==='scott');
+  const all=[{o:scott, isScott:true}, {o:player, isPlayer:true}];
+  for(const id in scottNpcs) all.push({o:scottNpcs[id], img:npcImg(HERD_DOGS[id].img), fb:HERD_DOGS[id].e});
+  all.sort((a,b)=>a.o.y-b.o.y);                        // Y 軸排序：站得低的蓋住站得高的
+  for(const it of all){
+    if(it.isPlayer){ drawPlayerCopy(ox,oy); continue; }
+    if(it.isScott){
+      const px=it.o.x*TS+TS/2-ox, py=it.o.y*TS+TS/2-oy;
+      if(SCOTT_IMG&&SCOTT_IMG.complete&&SCOTT_IMG.naturalWidth) ctx.drawImage(SCOTT_IMG,px-32,py-64+14,64,64);
+      else{ ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🧔',px,py); }
+      continue;
+    }
+    drawHerdSprite(it.img, it.o, ox, oy, it.fb);
+  }
+  const fg=SCENE_FG['scott_office'];                   // 前景補畫回最上層
+  if(fg&&fg.complete&&fg.naturalWidth) ctx.drawImage(fg,-ox,-oy,mapCols()*TS,mapRows()*TS);
 }
 
 /* ===================== 🐑 牧羊小遊戲（操縱狗版） ===================== */
-const HERD={ N:5, WANDER_SPD:0.03, FLEE_SPD:0.075, REWARD:500,
+const HERD={ N:5, WANDER_SPD:0.03, FLEE_SPD:0.075, REWARD:500, RESET_MS:180000,
   FIELD:{x1:2,y1:2,x2:30,y2:23},
-  PEN:{x1:33,y1:7,x2:40,y2:12},
-  GATE:[{x:32,y:9},{x:32,y:10}],
-  START:{x1:28,y1:7,x2:31,y2:12} };   // 站這裡按互動＝開始牧羊
+  PEN:{x1:32, y1:6, x2:42, y2:18},
+  GATE:[{x:31,y:8},{x:31,y:9},{x:31,y:10},{x:31,y:11}],
+  START:{x1:30, y1:4, x2:32, y2:20},     // 站這裡按互動＝開始牧羊
+  STAND:{x:26, y:5} };                   // 開工後玩家站的觀看位（避開柵欄門）
 const HERD_DIR_ROW={down:0,left:1,right:2,up:3};   // 走路圖方向列順序，不對改這裡
 const BARK={ ms:700,          // 一次吠叫嚇羊的持續時間，越短越難
   spamN:4, spamWin:2500,      // 2.5 秒內吠到第 4 次 → 羊群恐慌
@@ -216,11 +261,16 @@ function sheepTarget(s){ const z=inPen(s.x,s.y)?HERD.PEN:HERD.FIELD;
   for(let i=0;i<20;i++){ const tx=z.x1+Math.random()*(z.x2-z.x1), ty=z.y1+Math.random()*(z.y2-z.y1);
     if(edinWalkable(tx,ty)){ s.tx=tx; s.ty=ty; return; } } }
 function initHerd(){
-  sheepNpcs=[]; herdCtl=null; gateClosed=false;   // 每次進場：門打開、羊全放回草地
-  S.herdJustDone=false;                            // 新的一輪 → 斯克特台詞重置
-  for(let i=0;i<HERD.N+1;i++){                       // 多的那一隻是黑羊
+  sheepNpcs=[]; herdCtl=null; barkLog=[]; panicUntil=0;
+  gateClosed=true; syncGateTiles();                // 門先關著
+  const done = S.herdDoneTs && (Date.now()-S.herdDoneTs < HERD.RESET_MS);   // 3分鐘內回來→羊還關著
+  if(!done) S.herdJustDone=false;                  // 冷卻過了才開新一輪（斯克特台詞跟著換）
+  for(let i=0;i<HERD.N+1;i++){                     // 多的那一隻是黑羊
     const s={x:8,y:8,tx:0,ty:0,facing:'down',frame:0,aT:0,aS:0,idleUntil:0,black:(i===HERD.N)};
-    for(let t=0;t<30;t++){ const x=4+Math.random()*22, y=4+Math.random()*17;
+    if(done){ const p=HERD.PEN;                    // 冷卻中：羊生在欄裡
+      s.x=p.x1+1+Math.random()*(p.x2-p.x1-2);
+      s.y=p.y1+1+Math.random()*(p.y2-p.y1-2); }
+    else for(let t=0;t<30;t++){ const x=4+Math.random()*22, y=4+Math.random()*17;
       if(edinWalkable(x,y)&&!inPen(x,y)){ s.x=x; s.y=y; break; } }
     s.tx=s.x; s.ty=s.y; sheepNpcs.push(s);
   }
@@ -265,17 +315,23 @@ function startHerdCtl(id){
   closeSheet();
   const _f=herdFollowers.find(x=>x.id===id);           // 從狗現在的位置出發
   herdCtl={ id, o:{ x:_f?_f.x:30, y:_f?_f.y:9.5, facing:'left', frame:0, aT:0, aS:0 } };
-  player.facing='left';
+  player.x=HERD.STAND.x; player.y=HERD.STAND.y;        // 玩家退到觀看位，不擋門
+  player.facing='right';
+  gateClosed=false; syncGateTiles();               // 出工：柵欄門自動打開
   showBarkBtn(true);
   toast(`🐕 ${HERD_DOGS[id].nm} 出動！🔊鈕＝吠叫趕羊；互動鍵：靠門＝開關門、回主人旁＝收工`);
 }
 function endHerdCtl(msg){
   if(herdCtl){ const f=herdFollowers.find(x=>x.id===herdCtl.id);
     if(f){ f.x=herdCtl.o.x; f.y=herdCtl.o.y; } }     // 狗從收工地點自己走回你身邊
-  herdCtl=null; showBarkBtn(false);
+  herdCtl=null; showBarkBtn(false); gateClosed=true; syncGateTiles();   // 收工：柵欄門關回去
   toast(msg||'🐕 收工，回到自己身上');
 }
-function toggleGate(){ gateClosed=!gateClosed; toast(gateClosed?'🚧 柵欄門關上了':'🚧 柵欄門打開了'); }
+function syncGateTiles(){                          // 門的狀態寫進地圖：關=F(全員撞牆)、開=.
+  const g=GRID.edinburgh; if(!g) return;
+  for(const t of HERD.GATE){ if(g[t.y]&&g[t.y][t.x]!==undefined) g[t.y][t.x]=gateClosed?'F':'.'; }
+}
+function toggleGate(){ gateClosed=!gateClosed; syncGateTiles(); toast(gateClosed?'🚧 柵欄門關上了':'🚧 柵欄門打開了'); }
 
 /* --- 操縱狗模式：每幀 --- */
 function updateHerdCtl(){
@@ -288,6 +344,7 @@ function updateHerdCtl(){
     if(herdWalkable(o.x,ny)) o.y=ny;
     _herdFace(o,dx,dy); _herdAnim(o,true);
   } else _herdAnim(o,false);
+  _herdFace(player, o.x-player.x, o.y-player.y);       // 玩家的臉追蹤狗的方向
   cam.x=Math.max(0,Math.min(o.x-VIEW_COLS/2+0.5, mapCols()-VIEW_COLS));
   cam.y=Math.max(0,Math.min(o.y-VIEW_ROWS/2+0.5, mapRows()-VIEW_ROWS));
   const penned=updateSheep(isBarking()?[{x:o.x, y:o.y, r:d.scare}]:[]);
@@ -298,11 +355,13 @@ function updateHerdCtl(){
       :'🔊 吠叫鈕（或 B 鍵）趕羊';
     h.classList.add('show'); }
   if(penned===sheepNpcs.length && gateClosed){
-    S.herdJustDone=true;                     // 這一輪完成 → 斯克特換「做得還行」的台詞
-    earn(HERD.REWARD,'幫斯克特牧羊');
-    addLog(`🐑 ${HERD.N} 隻羊全數進欄，斯克特付了 $${HERD.REWARD}`);
-    refreshTop(); save();
-    endHerdCtl(`🎉 全部進欄！斯克特丟來一袋錢 +$${HERD.REWARD}`);
+    if(!S.herdJustDone){
+      S.herdJustDone=true; S.herdDoneTs=Date.now();   // 記下完成時間，3分鐘內不重置
+      earn(HERD.REWARD,'幫斯克特牧羊');
+      addLog(`🐑 ${HERD.N} 隻羊全數進欄，斯克特付了 $${HERD.REWARD}`);
+      refreshTop(); save();
+      endHerdCtl(`🎉 全部進欄！斯克特丟來一袋錢 +$${HERD.REWARD}`);
+    } else endHerdCtl('🐑 羊都關得好好的');
   }
 }
 function updateFollowers(){                          // 狗排成一列跟在你後面
@@ -310,7 +369,7 @@ function updateFollowers(){                          // 狗排成一列跟在你
   for(const f of herdFollowers){
     if(herdCtl && f.id===herdCtl.id){ continue; }    // 被操縱中的狗不跟
     const dx=lead.x-f.x, dy=lead.y-f.y, dist=Math.hypot(dx,dy);
-    if(dist>1.3){
+    if(dist>2.4){
       const sp=HERD_DOGS[f.id].spd*0.9;
       const nx=f.x+(dx/dist)*sp, ny=f.y+(dy/dist)*sp;
       if(edinWalkable(nx,f.y)) f.x=nx;
@@ -398,19 +457,37 @@ function drawHerdSprite(img,o,ox,oy,fb){
   }else{ ctx.fillStyle='#000'; ctx.font='20px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(fb,px,py); }
 }
-function drawGateBar(ox,oy){                       // 關門時的簡易門板，之後可換圖
-  if(!gateClosed) return;
-  ctx.fillStyle='#8a5a2b';
-  ctx.fillRect(HERD.GATE[0].x*TS-ox+3, HERD.GATE[0].y*TS-oy, 5, TS*HERD.GATE.length);
+function drawPlayerCopy(ox,oy){                    // 照抄本體的畫法，用於 Y 軸排序遮擋
+  if(sitting||sleeping) return;
+  const px=player.x*TS+TS/2-ox, py=player.y*TS+TS/2-oy;
+  ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+  ctx.beginPath(); ctx.ellipse(px+1,py+2,9,5,0,0,Math.PI*2); ctx.fill();
+  if(PLAYER_IMG.complete&&PLAYER_IMG.naturalWidth){
+    const dirCols={down:0,left:1,right:2,up:3};
+    ctx.drawImage(PLAYER_IMG,(dirCols[player.facing]||0)*64, animFrame*64, 64,64, px-32, py-64+14, 64,64);
+  }else{ ctx.font='24px serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🧑‍🌾',px,py); }
+}
+const GATE_OPEN_IMG=npcImg('gate_open.png'), GATE_CLOSED_IMG=npcImg('gate_closed.png');
+function drawGateBar(ox,oy){                       // 整張地圖大小的透明門圖，原點對齊
+  const img=gateClosed?GATE_CLOSED_IMG:GATE_OPEN_IMG;
+  if(img&&img.complete&&img.naturalWidth){
+    ctx.globalAlpha=1;
+    ctx.drawImage(img, -ox, -oy, img.naturalWidth, img.naturalHeight);
+  }else if(gateClosed){                            // 圖沒載到退回木板
+    ctx.fillStyle='#8a5a2b';
+    ctx.fillRect(HERD.GATE[0].x*TS-ox+3, HERD.GATE[0].y*TS-oy, 5, TS*HERD.GATE.length);
+  }
 }
 function drawHerd(){
   const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS);
+  drawGateBar(ox,oy);
   const all=sheepNpcs.map(s=>({o:s, img:s.black?SHEEP_BLACK_IMG:SHEEP_IMG, fb:s.black?'⚫':'🐑'}));
   for(const f of herdFollowers){ if(herdCtl && f.id===herdCtl.id) continue;
     all.push({o:f, img:npcImg(HERD_DOGS[f.id].img), fb:HERD_DOGS[f.id].e}); }
   if(herdCtl) all.push({o:herdCtl.o, img:npcImg(HERD_DOGS[herdCtl.id].img), fb:HERD_DOGS[herdCtl.id].e});
+  all.push({o:player, isPlayer:true});             // 玩家也參加排序
   all.sort((a,b)=>a.o.y-b.o.y);
-  for(const it of all) drawHerdSprite(it.img,it.o,ox,oy,it.fb);
+  for(const it of all){ if(it.isPlayer) drawPlayerCopy(ox,oy); else drawHerdSprite(it.img,it.o,ox,oy,it.fb); }
   if(isPanic()){ ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     for(const s of sheepNpcs){ const px=s.x*TS+TS/2-ox, py=s.y*TS-oy-50;
       ctx.fillStyle='#d23b3b'; ctx.strokeStyle='#ffffffcc'; ctx.lineWidth=3;
@@ -419,7 +496,6 @@ function drawHerd(){
     ctx.font='bold 13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#00000088'; ctx.lineWidth=3;
     ctx.strokeText('汪！',px,py); ctx.fillText('汪！',px,py); }
-  drawGateBar(ox,oy);
 }
 
 /* ===================== 掛勾 ===================== */

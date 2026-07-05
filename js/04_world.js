@@ -1422,6 +1422,7 @@ const FLAPS=[
   { scene:'port', img:'port_flap2.png', tx:27, ty:18, near:3.0 },
   { scene:'port', img:'port_flap3.png', tx:36, ty:18, near:3.0 },
   { scene:'port', img:'port_flap4.png', tx:44, ty:18, near:3.0 },
+  { scene:'scott_office', img:'scott_office_flap.png', tx:18, ty:15, near:4.0 },
 ];
 function drawFlaps(ox,oy){
   for(const f of FLAPS){
