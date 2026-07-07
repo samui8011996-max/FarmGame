@@ -12,7 +12,21 @@
    不用 export / import。
    ========================================================= */
 
-
+/* ---------- 港口＋商人 ---------- */
+const MERCHANTS={
+  Francis:{ nm:'弗朗西斯', e:'🧝‍♀️', job:'bake',
+    lines:['這批貨可是遠渡重洋來的。','你的甜點店，我聽說過呢。','下次入港不知是何時了。'],
+    goods:[ {kind:'seed', k:'strawberry', price:6}, {kind:'extra', k:'sugar', price:10, qty:10} ] },
+  Pedro:{ nm:'佩德羅', e:'🧔', job:'farm',
+    lines:['海上的日子，靠的就是好貨。','種子？我這的最耐長。','錢給夠，什麼都好談。'],
+    goods:[ {kind:'seed', k:'corn', price:3} ] },
+  Antonio:{ nm:'安東尼奧', e:'👩‍🦰', job:'farm',
+    lines:['香料是甜點的靈魂喔。','嚐過異國的味道嗎？','我認得出識貨的人。'],
+    goods:[ {kind:'extra', k:'flour', price:20, qty:10}, {kind:'extra', k:'olive_oil', price:10, qty:5} ] },
+  Alfred:{ nm:'阿爾弗雷德', e:'🤵', job:'rich', era:19,
+    lines:['嘿，亞瑟！你最愛的傢伙帶著好貨回來啦！','這些全是我在外面闖出來的成績，快誇我！','見面禮不收可不行，這是英雄的心意！'],
+    goods:[ {kind:'extra', k:'sugar', price:4, qty:30} ] },
+};
 
 /* 阿爾弗雷德對話：只依成長階段，主角和他一來一往，選項加好感。（給 talkChild 用） */
 const CHILD_TOPICS={
