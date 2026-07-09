@@ -47,18 +47,28 @@ chatMerchant = function(id){
 };
 
 /* ---------- 情人告白 ---------- */
+/* ---------- 情人告白 ---------- */
 function loverProposal(id){
-  freezeNpcById('mc_'+id);
+  freezeNpcById('mc_'+id); _convoCid=id;
   const nm=MERCHANTS[id].nm;
   const lines=(typeof LOVER_PROPOSAL!=='undefined' && (LOVER_PROPOSAL[id]||LOVER_PROPOSAL._default))
             || [{who:'partner',mood:'love',t:'亞瑟，跟我在一起吧。'}];
+  const rep=(typeof LOVER_PROPOSAL_REPLY!=='undefined'
+          && (LOVER_PROPOSAL_REPLY[id]||LOVER_PROPOSAL_REPLY._default)) || {};
+  const endWith=(line, fallbackMood)=>{
+    if(line){
+      showDialogue(id, line.mood||fallbackMood, line.t,
+        [{t:'結束對話', run:()=>{ openMerchant(id); save(); }}]);
+    }else{ openMerchant(id); save(); }
+  };
   runScript(lines, [
     {t:'……好。（成為情人）', cls:'gold', run:()=>{
       S.lovers[id]=true;
       const rel=S.port.relations[id]; rel.proposeCd=false;
       addLog(`💔 和 ${nm} 開始了情人關係（伴侶不知情）`);
       toast(`💔 ${nm} 成了你的情人`);
-      openMerchant(id); save();
+      save();
+      endWith(rep.yes, 'love');
     }},
     {t:'不能……我有伴侶了', run:()=>{
       const rel=S.port.relations[id];
@@ -66,58 +76,10 @@ function loverProposal(id){
       rel.proposeCd = true;
       addLog(`💧 婉拒了 ${nm} 的告白`);
       toast(`💧 婉拒了 ${nm}`);
-      openMerchant(id); save();
+      save();
+      endWith(rep.no, 'sad');
     }},
   ]);
-}
-
-/* ---------- 情人聊天 ---------- */
-function chatLover(id){
-  const rel=S.port.relations[id], now=Date.now();
-  if(now-(rel.lastChat||0)<8000){ toast('剛聊過了，等一下'); return; }
-  const pool=(typeof LOVER_TOPICS!=='undefined' && (LOVER_TOPICS[id]||LOVER_TOPICS._default))||[];
-  if(pool.length===0){ toast('（沒有情人對話）'); return; }
-  const topic=pool[Math.floor(Math.random()*pool.length)];
-
-  showDialogue(id,'neutral',topic.q, topic.a.map(opt=>({
-    t:opt.t,
-    run:()=>{
-      rel.lastChat=Date.now();
-      rel.aff += (opt.aff||0);
-
-      // 伴侶親密度大跌 + 懷疑值累積
-      let partnerNote='';
-      if(S.partner){
-        S.partner.intimacy=(S.partner.intimacy||0)+LOVER_CHAT_PARTNER_PENALTY;
-        S._suspicion=(S._suspicion||0)+1;
-        partnerNote=`｜💞${LOVER_CHAT_PARTNER_PENALTY}`;
-      }
-
-      // 情人心灰意冷主動離開？
-      let leftNote='';
-      if(rel.aff<=LOVER_AFF_LEAVE){
-        delete S.lovers[id];
-        const nm=MERCHANTS[id].nm;
-        addLog(`💔 ${nm} 對這段關係心灰意冷，結束了情人關係`);
-        leftNote=`\n\n（${nm} 收起眼底的光，把攤子推遠了一些。這段情人關係結束了。）`;
-      }
-
-      const aff=opt.aff||0;
-      const tag=` （♡ ${aff>=0?'+':''}${aff}${partnerNote}）`;
-      const react=opt.r||'……嗯。';
-
-      showDialogue(id, opt.mood||'neutral', react+tag+leftNote, [
-        {t:'結束對話', run:()=>{
-          openMerchant(id); save();
-          // 伴侶親密度觸底 → 走一般分手（沒被抓到但走心了）
-          if(S.partner && S.partner.intimacy<=BREAKUP_INTIMACY){
-            breakupPartner();
-          }
-        }}
-      ]);
-      save();
-    }
-  })));
 }
 
 /* ---------- 覆寫 chatPartner：懷疑值到門檻 → 走懷疑對話 ---------- */
