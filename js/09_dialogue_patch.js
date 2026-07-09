@@ -7,8 +7,14 @@
 chatPartner=function(){
   const p=S.partner; if(!p) return;
   freezeNpcById('partner'); _convoCid=p.id;
-  const pool=Array.isArray(PARTNER_CONVOS) ? PARTNER_CONVOS
-            : (PARTNER_CONVOS[p.id] || PARTNER_CONVOS._default);
+  const base=Array.isArray(PARTNER_CONVOS) ? PARTNER_CONVOS
+            : (PARTNER_CONVOS[p.id] || PARTNER_CONVOS._default) || [];
+  // 依親密度解鎖的進階（好感度）對話
+  let tierPool=[];
+  const tiers=(typeof PARTNER_CONVOS_TIER!=='undefined') && PARTNER_CONVOS_TIER[p.id];
+  if(tiers){ const aff=p.intimacy||0; tiers.forEach(t=>{ if(aff>=t.min) tierPool.push(t); }); }
+  // 好感度對話優先：有解鎖就只從進階池抽，沒解鎖(親密度<30)才回原本對話
+  const pool = tierPool.length ? tierPool : base;
   const convo=pool[Math.floor(Math.random()*pool.length)];
   runScript(convo.lines, convo.choices.map(opt=>({ t:opt.t, run:()=>partnerPick(opt) })));
 };

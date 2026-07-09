@@ -828,10 +828,14 @@ const MERCHANTS={
     goods:[ {kind:'extra', k:'sugar', price:4, qty:30} ] },
 };
 
-/* 依親密度解鎖的進階對話：min=門檻，達到就加進聊天隨機池（原對話保留） */
+/* 依親密度解鎖的進階對話：min=門檻，達到就進聊天池（搭配 09 補丁「好感度對話優先」）
+   四位伴侶各 8 段：30 / 40 / 50 / 60 / 70 / 80 / 90 / 100
+   mood 只用有立繪的：partner→happy/love/shy/sad/neutral；me→neutral/think/soft/laugh/sad */
 const PARTNER_CONVOS_TIER={
+
+  /* ===== 弗朗西斯：調情起手，越熟越藏不住真心 ===== */
   Francis:[
-    { min:40, lines:[
+    { min:30, lines:[
       {who:'partner',mood:'happy',t:'今天你算完帳，居然主動幫我理了圍裙的結。……我可是記到心裡去了喔。'},
       {who:'me',mood:'neutral',t:'「線頭翹起來看了礙眼而已，別想太多。」'},
       {who:'partner',mood:'love',t:'好、好，是礙眼。那我以後天天把結打歪，讓你天天「礙眼」一下，如何？'},
@@ -841,7 +845,7 @@ const PARTNER_CONVOS_TIER={
         {t:'哼一聲走開',g:1,r:{who:'partner',mood:'happy',t:'走那麼慢，是捨不得吧？我都看見囉。'}},
         {t:'「煩死了。」',g:-3,r:{who:'partner',mood:'sad',t:'……抱歉，是我黏得太緊了嗎。'}} ] },
 
-    { min:50, lines:[
+    { min:40, lines:[
       {who:'partner',mood:'happy',t:'早啊，親愛的。咖啡幫你溫在爐上了，兩塊糖，對吧？'},
       {who:'me',mood:'neutral',t:'「……你連這個都記得。」'},
       {who:'partner',mood:'love',t:'你身上的事，我可是比帳本記得還牢。畢竟——你比錢重要多了。'},
@@ -851,7 +855,7 @@ const PARTNER_CONVOS_TIER={
         {t:'順手幫他也倒一杯',g:2,r:{who:'partner',mood:'happy',t:'哎呀，太陽打西邊出來了？我要把今天記進日記。'}},
         {t:'嫌太甜，倒掉',g:-3,r:{who:'partner',mood:'sad',t:'……下次我少放一塊。別倒掉嘛。'}} ] },
 
-    { min:60, lines:[
+    { min:50, lines:[
       {who:'partner',mood:'happy',t:'你知道嗎，我以前總覺得，甜言蜜語說多了，人就不會離開。'},
       {who:'me',mood:'neutral',t:'「所以你才這麼會講。」'},
       {who:'partner',mood:'shy',t:'……可遇到你以後我才發現，我最想說的那句，反而卡在喉嚨裡，最難說出口。'},
@@ -862,7 +866,7 @@ const PARTNER_CONVOS_TIER={
         {t:'紅著臉轉身',g:1,r:{who:'partner',mood:'happy',t:'那截泛紅的脖子，已經幫你回答了。'}},
         {t:'「別自作多情。」',g:-3,r:{who:'partner',mood:'sad',t:'……是啊，是我自作多情。當我沒說。'}} ] },
 
-    { min:70, lines:[
+    { min:60, lines:[
       {who:'partner',mood:'happy',t:'如果哪天這間店開得夠大，我想在二樓留一間房，朝東的，早上有光。'},
       {who:'me',mood:'neutral',t:'「留來做什麼？」'},
       {who:'partner',mood:'love',t:'給我們老了以後啊。你戴著老花眼鏡算帳，我在旁邊煩你——想想就美好。'},
@@ -872,7 +876,7 @@ const PARTNER_CONVOS_TIER={
         {t:'「先把店顧好再說。」',g:1,r:{who:'partner',mood:'happy',t:'遵命。為了那間朝東的房，我今天格外賣力。'}},
         {t:'「說得太遠了。」',g:-2,r:{who:'partner',mood:'sad',t:'……會嗎。我倒希望，能跟你走到那麼遠。'}} ] },
 
-    { min:80, lines:[
+    { min:70, lines:[
       {who:'partner',mood:'neutral',t:'（難得沒鬧你，只是安靜地坐在你身邊）'},
       {who:'me',mood:'neutral',t:'「今天怎麼這麼安分。」'},
       {who:'partner',mood:'love',t:'有些時候，不必說話也很好。就這樣，聽你翻帳本的聲音，我就很滿足了。'},
@@ -882,7 +886,7 @@ const PARTNER_CONVOS_TIER={
         {t:'繼續算帳，由他靠著',g:2,r:{who:'partner',mood:'happy',t:'嗯，就這樣。哪也不去。'}},
         {t:'「別煩，去做事。」',g:-2,r:{who:'partner',mood:'sad',t:'……好。是我打擾你了。'}} ] },
 
-    { min:90, lines:[
+    { min:80, lines:[
       {who:'partner',mood:'love',t:'亞瑟。今天不逗你了，我想正經說一句。'},
       {who:'me',mood:'neutral',t:'「……你正經起來反而嚇人。」'},
       {who:'partner',mood:'love',t:'這輩子油腔滑調哄過不少人，可只有在你面前，我說的每個字都是真的。'},
@@ -892,8 +896,547 @@ const PARTNER_CONVOS_TIER={
         {t:'「留下來。別走。」',g:3,r:{who:'partner',mood:'love',t:'（握緊你的手）走？我這輩子，哪都不去了。'}},
         {t:'難得沒頂嘴，只是點頭',g:3,r:{who:'partner',mood:'love',t:'這個點頭，我收下了。一輩子的份，都收下了。'}},
         {t:'「……肉麻。」（別開臉，耳朵通紅）',g:1,r:{who:'partner',mood:'happy',t:'是是是，肉麻。可你紅透的耳朵，比我還誠實呢。'}} ] },
+
+    { min:90, lines:[
+      {who:'partner',mood:'happy',t:'你有沒有想過，我為什麼這麼會說甜言蜜語？'},
+      {who:'me',mood:'neutral',t:'「因為你臉皮厚？」'},
+      {who:'partner',mood:'neutral',t:'哈，也算。……其實是因為，我從小就沒人肯多聽我說一句真心話。話說得漂亮，別人才願意留下來。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'love',t:'可你不一樣。你嫌我肉麻、嫌我吵，卻從來沒想過離開。這比任何讚美，都讓我安心。'} ],
+      choices:[
+        {t:'「……我不會走。」（別開臉）',g:3,r:{who:'partner',mood:'love',t:'（怔住）……這句話，我要用一輩子來記。'}},
+        {t:'伸手揉了揉他的頭',g:3,r:{who:'partner',mood:'love',t:'（閉上眼）……原來被人珍惜，是這種感覺。'}},
+        {t:'「少賣慘。」',g:-3,r:{who:'partner',mood:'sad',t:'……說得也是。是我不該掃你的興。'}} ] },
+
+    { min:100, lines:[
+      {who:'partner',mood:'love',t:'亞瑟，我決定把那支酒開了。'},
+      {who:'me',mood:'neutral',t:'「哪支？」'},
+      {who:'partner',mood:'love',t:'就是我說過、要等某人親口說喜歡我那天才開的那支。'},
+      {who:'me',mood:'think',t:'「……你不是說要等我先說嗎。」'},
+      {who:'partner',mood:'happy',t:'等這麼多年，我等膩了。換我先說——我愛你，亞瑟。這輩子，下輩子，都是。'} ],
+      choices:[
+        {t:'「……那支酒，我陪你喝完。」',g:3,r:{who:'partner',mood:'love',t:'（眼眶微紅，笑了）好。一杯敬過去，一杯敬往後的每一天。'}},
+        {t:'踮腳，吻了他',g:3,r:{who:'partner',mood:'love',t:'（愣了半秒，緊緊回抱）……這個答覆，比任何一句情話都完美。'}},
+        {t:'「太肉麻，喝你自己的。」',g:1,r:{who:'partner',mood:'happy',t:'是是是。可你剛剛耳朵紅的樣子，已經替你把話講完了。'}} ] },
   ],
-  /* 其他伴侶照上面格式往下加，例如：
-  Pedro:[ { min:40, lines:[...], choices:[...] }, ... ],
-  */
+
+  /* ===== 佩德羅：青梅竹馬，笨手笨腳唯獨會煮飯、會對你好 ===== */
+  Pedro:[
+    { min:30, lines:[
+      {who:'partner',mood:'happy',t:'（從廚房探頭）亞瑟，燉肉再二十分鐘。你坐著就好，別插手——上次你一插手鹽就翻倍。'},
+      {who:'me',mood:'neutral',t:'「……那次是你把糖罐鹽罐擺反。」'},
+      {who:'partner',mood:'laugh',t:'哈，細節細節。反正結論就是——廚房歸我，你負責等著吃。'},
+      {who:'me',mood:'soft',t:'「……（拉了張椅子坐下）那我就不客氣了。」'} ],
+      choices:[
+        {t:'「你煮的，我都吃。」',g:2,r:{who:'partner',mood:'love',t:'（背對著你，耳朵紅了）喂，這種話別突然講，我鏟子差點掉了。'}},
+        {t:'順手幫他遞調味料',g:2,r:{who:'partner',mood:'happy',t:'有默契喔。幾十年了，你還是知道我下一步要什麼。'}},
+        {t:'嫌他動作慢',g:-2,r:{who:'partner',mood:'sad',t:'……好啦好啦我加快。別催嘛，催了更容易出錯。'}} ] },
+
+    { min:40, lines:[
+      {who:'partner',mood:'neutral',t:'整理倉庫翻到這個——記得嗎？小時候我們一起刻的那艘木船。'},
+      {who:'me',mood:'think',t:'「……你還留著？都缺一角了。」'},
+      {who:'partner',mood:'happy',t:'缺角才有紀念價值。那天你硬要當船長，結果船一下水就翻，你哭得唏哩嘩啦。'},
+      {who:'me',mood:'neutral',t:'「我才沒哭！是海水濺到眼睛！」'},
+      {who:'partner',mood:'shy',t:'好好好，海水。……不過那天我就想，這傢伙我大概要照顧一輩子了。'} ],
+      choices:[
+        {t:'「照顧到現在，不累嗎。」',g:2,r:{who:'partner',mood:'love',t:'不累。累的是你嘴硬，不是照顧你這件事。'}},
+        {t:'把木船收進口袋',g:2,r:{who:'partner',mood:'happy',t:'欸，你要收著？……哈，那我可高興了。'}},
+        {t:'「幼稚。」',g:-1,r:{who:'partner',mood:'neutral',t:'幼稚也是一起幼稚的。別嫌嘛。'}} ] },
+
+    { min:50, lines:[
+      {who:'partner',mood:'neutral',t:'昨天有人問我，跟你在一起會不會怪。畢竟從小玩到大。'},
+      {who:'me',mood:'think',t:'「……你怎麼說。」'},
+      {who:'partner',mood:'happy',t:'我說一點都不怪。反而覺得，繞了幾十年，總算走到對的地方。'},
+      {who:'me',mood:'soft',t:'「……說得像我們以前走錯了一樣。」'},
+      {who:'partner',mood:'shy',t:'沒走錯。只是花了點時間，才敢把「朋友」後面那兩個字說出口。'} ],
+      choices:[
+        {t:'「那兩個字，我也想說。」',g:3,r:{who:'partner',mood:'love',t:'（整個人愣住）你、你這樣直球，我招架不住啊。'}},
+        {t:'「慢慢來，不急。」',g:2,r:{who:'partner',mood:'happy',t:'嗯。反正剩下的日子還很長，慢慢走。'}},
+        {t:'「別想太多。」',g:-2,r:{who:'partner',mood:'sad',t:'……又來了。你每次都用這句，把我擋在門外。'}} ] },
+
+    { min:60, lines:[
+      {who:'partner',mood:'neutral',t:'（釘架子，釘歪了）……啊，又歪了。'},
+      {who:'me',mood:'neutral',t:'「你到底哪來的臉自稱能幹。」'},
+      {who:'partner',mood:'laugh',t:'掌舵、煮飯、還有對你好——這三樣我拿手就夠了。剩下的，交給你這種細心的人嘛。'},
+      {who:'me',mood:'think',t:'「……分工分得倒是理直氣壯。」'},
+      {who:'partner',mood:'shy',t:'因為我知道，就算我什麼都做不好，你也不會嫌棄我。這種安心，只有你給得起。'} ],
+      choices:[
+        {t:'默默把釘子接過來自己釘',g:2,r:{who:'partner',mood:'love',t:'（看你的側臉）……有你在，連釘歪的架子都變得順眼了。'}},
+        {t:'「下次別逞強。」',g:2,r:{who:'partner',mood:'happy',t:'遵命。不逞強，只逞「對你好」這一項。'}},
+        {t:'「沒用的傢伙。」',g:-2,r:{who:'partner',mood:'sad',t:'……嗯，我知道我沒用。但我對你的真心，可不是沒用的。'}} ] },
+
+    { min:70, lines:[
+      {who:'partner',mood:'happy',t:'欸，你發現沒？我們現在連吵架都懶得吵了。'},
+      {who:'me',mood:'neutral',t:'「因為你每次都先認輸。」'},
+      {who:'partner',mood:'laugh',t:'那是因為，跟你賭氣的時間，我寧願拿來多看你兩眼。'},
+      {who:'me',mood:'soft',t:'「……油嘴。這不像你會講的話。」'},
+      {who:'partner',mood:'shy',t:'偶爾學一下弗朗西斯嘛。……不過講完好害臊，我還是適合默默對你好。'} ],
+      choices:[
+        {t:'「默默的就很好。」',g:3,r:{who:'partner',mood:'love',t:'（鬆了口氣笑了）對吧。我們這種，不用說太多。'}},
+        {t:'「偶爾講一下也行。」',g:2,r:{who:'partner',mood:'happy',t:'哈，那我偷偷練。等哪天冷不防說一句，嚇你一跳。'}},
+        {t:'「肉麻，走開。」',g:-2,r:{who:'partner',mood:'sad',t:'……好，我走開。是我學不來這套。'}} ] },
+
+    { min:80, lines:[
+      {who:'partner',mood:'neutral',t:'亞瑟，我跟你說一件藏很久的事。'},
+      {who:'me',mood:'neutral',t:'「……嗯。」'},
+      {who:'partner',mood:'sad',t:'剛在一起那陣子，我常半夜睡不著。怕萬一處不好，連從小到大的交情，都一起賠進去。'},
+      {who:'me',mood:'think',t:'「……原來你也會怕。」'},
+      {who:'partner',mood:'shy',t:'會啊。你是我這輩子最重要的人，兩種身分我都不想失去。……還好，我們走過來了。'} ],
+      choices:[
+        {t:'「不會沒的。朋友、還有現在，都在。」',g:3,r:{who:'partner',mood:'love',t:'（用力點頭，眼眶紅了）……嗯。有你這句，我什麼都不怕了。'}},
+        {t:'握住他的手',g:3,r:{who:'partner',mood:'love',t:'（反握回去）幾十年的手，牽起來果然最踏實。'}},
+        {t:'「想太多，累不累。」',g:-2,r:{who:'partner',mood:'sad',t:'……是我杞人憂天。你別放在心上。'}} ] },
+
+    { min:90, lines:[
+      {who:'partner',mood:'happy',t:'我決定了，明天去把香料攤頂讓出去。'},
+      {who:'me',mood:'neutral',t:'「……你那攤子？為什麼。」'},
+      {who:'partner',mood:'love',t:'跑船跑膩了。我想留在岸上、留在你身邊，每天煮飯給你吃。這樣的日子，我盼很久了。'},
+      {who:'me',mood:'think',t:'「……說得像我一定會留你一樣。」'},
+      {who:'partner',mood:'shy',t:'難道不會嗎？（湊近）你眼睛都亮了喔，亞瑟。'} ],
+      choices:[
+        {t:'「……鍋，我幫你顧著。」',g:3,r:{who:'partner',mood:'love',t:'（笑得合不攏嘴）成交！這下我賴定你了，跑不掉囉。'}},
+        {t:'「隨你，家裡多雙筷子而已。」',g:3,r:{who:'partner',mood:'love',t:'「多雙筷子」……你這彆扭的答應方式，我聽懂了。謝謝你，亞瑟。'}},
+        {t:'「攤子別衝動頂掉。」',g:-2,r:{who:'partner',mood:'sad',t:'……我不是衝動。是認真想跟你過日子。你怎麼還是不信。'}} ] },
+
+    { min:100, lines:[
+      {who:'partner',mood:'happy',t:'喂，亞瑟。'},
+      {who:'me',mood:'neutral',t:'「……幹嘛，叫這麼順口。」'},
+      {who:'partner',mood:'love',t:'沒什麼。就是突然想到——這聲「喂，亞瑟」，我從六歲叫到現在，以後還要叫一輩子。'},
+      {who:'me',mood:'soft',t:'「……叫了幾十年，還沒叫膩？」'},
+      {who:'partner',mood:'love',t:'膩什麼。這是我這輩子講過最多、也最喜歡的一句話。往後每一天，我都要接著叫下去。'} ],
+      choices:[
+        {t:'「……那你就叫吧。一輩子。」',g:3,r:{who:'partner',mood:'love',t:'（怔住，然後笑開）好。一輩子。這個約定，比什麼婚書都算數。'}},
+        {t:'「喂，佩德羅。」（回叫他）',g:3,r:{who:'partner',mood:'love',t:'（眼眶一熱）……幾十年了，第一次覺得自己的名字這麼好聽。'}},
+        {t:'「幼稚。」（別開臉）',g:1,r:{who:'partner',mood:'happy',t:'是是是，幼稚。可你嘴角翹起來了喔，我看得一清二楚。'}} ] },
+  ],
+
+  /* ===== 安東尼奧：直腸子水果商，一路確認「我們是什麼」 ===== */
+  Antonio:[
+    { min:30, lines:[
+      {who:'partner',mood:'happy',t:'亞瑟，我今天又被問「你跟店主到底什麼關係」了。'},
+      {who:'me',mood:'neutral',t:'「……你又打哈哈混過去了？」'},
+      {who:'partner',mood:'neutral',t:'這次沒有。我說「我也還在等他親口告訴我」。'},
+      {who:'me',mood:'think',t:'「你、你怎麼這樣講。」'},
+      {who:'partner',mood:'happy',t:'因為是實話嘛。我這人不會拐彎，喜歡就是喜歡，只是還不知道你把我放哪。'} ],
+      choices:[
+        {t:'「……放在很重要的地方。」（小聲）',g:3,r:{who:'partner',mood:'love',t:'（眼睛一下亮起來）真的！？那、那我今晚一定睡得超好！'}},
+        {t:'塞顆橘子給他堵嘴',g:2,r:{who:'partner',mood:'happy',t:'（咬著橘子）唔…你這招我知道，是害羞了對不對。'}},
+        {t:'「別亂問這種事。」',g:-3,r:{who:'partner',mood:'sad',t:'……喔。（低頭）我又問錯了嗎，我這人真的很笨。'}} ] },
+
+    { min:40, lines:[
+      {who:'partner',mood:'neutral',t:'吶亞瑟，我最近在想一件事。'},
+      {who:'me',mood:'neutral',t:'「你想事情，難得。」'},
+      {who:'partner',mood:'shy',t:'我發現……比起晚上那些，我更喜歡白天。喜歡看你算帳、看你凶我、看你偷偷多留一份飯給我。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'happy',t:'那些普通的時刻，才讓我覺得——我是真的走進你的生活了，不只是……你懂的。'} ],
+      choices:[
+        {t:'「白天……我也喜歡有你在。」',g:3,r:{who:'partner',mood:'love',t:'（用力點頭）我就知道！那我以後白天也黏著你，可以吧可以吧？'}},
+        {t:'「想這麼多，不像你。」',g:2,r:{who:'partner',mood:'happy',t:'因為是你嘛，我才會想這麼多。換別人我早睡著了。'}},
+        {t:'「別分那麼細。」',g:-2,r:{who:'partner',mood:'sad',t:'……可是分清楚，我才安心啊。這對我很重要的。'}} ] },
+
+    { min:50, lines:[
+      {who:'partner',mood:'happy',t:'我阿嬤寄信來，問我「那個人對你好不好」。'},
+      {who:'me',mood:'think',t:'「……你怎麼回。」'},
+      {who:'partner',mood:'love',t:'我寫：他嘴巴很凶，可是我發燒那次，他守了我一整夜。這樣的人，怎麼可能不好。'},
+      {who:'me',mood:'neutral',t:'「……那只是剛好沒人顧你。」'},
+      {who:'partner',mood:'happy',t:'嘿嘿，隨便你怎麼解釋。反正我阿嬤看完信就說——這個可以，帶回來給她看看。'} ],
+      choices:[
+        {t:'「……哪天，帶你去見她。」',g:3,r:{who:'partner',mood:'love',t:'（激動地站起來）真的嗎！？我、我要準備最甜的水果當見面禮！'}},
+        {t:'「你阿嬤太快下結論了。」',g:2,r:{who:'partner',mood:'happy',t:'我阿嬤看人很準的！她說可以，那就一定可以！'}},
+        {t:'「別把我寫進信裡。」',g:-2,r:{who:'partner',mood:'sad',t:'……可是我滿腦子都是你，不寫你，我不知道要寫什麼。'}} ] },
+
+    { min:60, lines:[
+      {who:'partner',mood:'neutral',t:'亞瑟，我這人是不是很煩？老是問東問西，確認來確認去。'},
+      {who:'me',mood:'neutral',t:'「……有一點。」'},
+      {who:'partner',mood:'happy',t:'哈，你至少誠實。……可我沒辦法，喜歡一個人，我就想把心攤開來給他看，全部。'},
+      {who:'me',mood:'think',t:'「……攤這麼開，不怕被我笑？」'},
+      {who:'partner',mood:'happy',t:'不怕。就算被笑，我也想讓你知道，我對你，一點保留都沒有。'} ],
+      choices:[
+        {t:'「……我不笑。這樣的你，很好。」',g:3,r:{who:'partner',mood:'love',t:'（愣了好久，笑得像太陽）「很好」！你說我很好！我記一輩子！'}},
+        {t:'摸了摸他的頭',g:2,r:{who:'partner',mood:'happy',t:'（瞇起眼）唔…被你摸頭，比賣光一整車水果還開心。'}},
+        {t:'「太黏了。」',g:-2,r:{who:'partner',mood:'sad',t:'……太黏了嗎。可是我一鬆手，就怕你走掉。'}} ] },
+
+    { min:70, lines:[
+      {who:'partner',mood:'happy',t:'你發現沒？我現在進你家門，都不敲門了。'},
+      {who:'me',mood:'neutral',t:'「……那是因為你老是忘記敲。」'},
+      {who:'partner',mood:'love',t:'才不是。是因為這裡，我已經當成自己家了。踏進來的那一刻，整個人都放鬆下來。'},
+      {who:'me',mood:'soft',t:'「……擅自把這裡當家。」'},
+      {who:'partner',mood:'happy',t:'嘿嘿，有你在的地方，對我來說就是家啊。這道理，簡單得很。'} ],
+      choices:[
+        {t:'「……那就別敲了，直接進來。」',g:3,r:{who:'partner',mood:'love',t:'（眼眶紅紅的）這句話，等於你給了我一把鑰匙耶。我收下了！'}},
+        {t:'幫他把門留著',g:2,r:{who:'partner',mood:'happy',t:'（跑進來）看到門開著等我，我今天一整天都會笑。'}},
+        {t:'「這裡不是你家。」',g:-3,r:{who:'partner',mood:'sad',t:'……喔。（站在門口）那我、我還是敲門好了。'}} ] },
+
+    { min:80, lines:[
+      {who:'partner',mood:'happy',t:'報告！今天村口大嬸又問了，這次我答得超漂亮！'},
+      {who:'me',mood:'neutral',t:'「……你說什麼了。」'},
+      {who:'partner',mood:'love',t:'我說「他是我的人」，一個字都沒吞。大嬸還愣了一下呢，哈哈！'},
+      {who:'me',mood:'think',t:'「你、你就這樣大聲講出去……」'},
+      {who:'partner',mood:'happy',t:'當然！我等這個「抬頭挺胸的答案」等好久了。現在全村都知道，亞瑟是我的。'} ],
+      choices:[
+        {t:'「……嗯。是你的。」（別開臉）',g:3,r:{who:'partner',mood:'love',t:'（呆住，然後歡呼）聽到了嗎全世界！他親口說的！今天是我的節日！'}},
+        {t:'「講就講，反正是事實。」',g:3,r:{who:'partner',mood:'happy',t:'「事實」！你說是事實！這兩個字我要裱起來掛牆上！'}},
+        {t:'「太招搖了。」',g:-2,r:{who:'partner',mood:'sad',t:'……我只是太開心，想讓大家都知道。招搖了嗎，對不起。'}} ] },
+
+    { min:90, lines:[
+      {who:'partner',mood:'neutral',t:'亞瑟，我想通一件事了。'},
+      {who:'me',mood:'neutral',t:'「……你想通？太陽要打西邊出來了。」'},
+      {who:'partner',mood:'love',t:'你這輩子大概都不會親口說「喜歡我」。以前我很在意，現在不了。'},
+      {who:'me',mood:'think',t:'「……為什麼。」'},
+      {who:'partner',mood:'happy',t:'因為你多留的那份飯、幫我留的那盞燈、凶完又偷塞的橘子——你的喜歡，早就寫得到處都是了。我全看見了。'} ],
+      choices:[
+        {t:'「……看見就好。別說破。」',g:3,r:{who:'partner',mood:'love',t:'（用力點頭，眼睛亮晶晶）好！我不說破！這是只有我懂的、亞瑟的喜歡！'}},
+        {t:'「……笨蛋，現在才發現。」',g:3,r:{who:'partner',mood:'happy',t:'對啊我笨嘛！可是為了看懂你，我願意當一輩子的笨蛋！'}},
+        {t:'「別自我感覺良好。」',g:-2,r:{who:'partner',mood:'sad',t:'……可是那些溫柔都是真的呀。你別親手把它們擦掉嘛。'}} ] },
+
+    { min:100, lines:[
+      {who:'partner',mood:'love',t:'亞瑟。今天不問「我們是什麼關係」了。'},
+      {who:'me',mood:'neutral',t:'「……難得。」'},
+      {who:'partner',mood:'love',t:'因為答案我已經有了。你就是我的家、我的人、我要牽著走完一輩子的那個。這個答案，夠我抬頭挺胸一輩子。'},
+      {who:'me',mood:'soft',t:'「……講得這麼滿，不怕反悔？」'},
+      {who:'partner',mood:'happy',t:'不怕。我這人最不會的就是反悔。喜歡你這件事，我打算做到最後一刻。'} ],
+      choices:[
+        {t:'「……那就一起，到最後一刻。」',g:3,r:{who:'partner',mood:'love',t:'（眼淚一下湧上來，笑著）好！一言為定！這是我聽過最棒的一句話！'}},
+        {t:'主動牽起他的手',g:3,r:{who:'partner',mood:'love',t:'（緊緊回握）你、你主動牽我！我要把這隻手記一輩子！'}},
+        {t:'「說得太早了。」',g:1,r:{who:'partner',mood:'happy',t:'不早不早！對你的喜歡，我從第一天就沒早過、也不會晚。'}} ] },
+  ],
+
+  /* ===== 阿爾弗雷德：長大回鄉的大狗狗，黏人、以逗笑你為己任 ===== */
+  Alfred:[
+    { min:30, lines:[
+      {who:'partner',mood:'happy',t:'（從背後掛上來）亞瑟！充電時間到！抱三十秒我才有力氣工作！'},
+      {who:'me',mood:'neutral',t:'「誰、誰准你充電了，下去！」'},
+      {who:'partner',mood:'love',t:'嘿嘿，可是你手沒推開我耶。這就是默許對吧？我就當默許囉！'},
+      {who:'me',mood:'think',t:'「……（掙扎得毫無力道）就三十秒。」'},
+      {who:'partner',mood:'happy',t:'聽到了嗎全世界！亞瑟批准了！倒數——三十、二十九……'} ],
+      choices:[
+        {t:'「……數快一點。」（沒推開）',g:2,r:{who:'partner',mood:'love',t:'（收緊手臂偷笑）好——三十、二十九……欸我故意數慢的，別生氣！'}},
+        {t:'拍拍他的頭',g:2,r:{who:'partner',mood:'happy',t:'（尾巴要搖起來了）被你摸頭，我電量直接充到滿！'}},
+        {t:'用力把他推開',g:-3,r:{who:'partner',mood:'sad',t:'……唔。（鬆手退開）對不起，我又黏過頭了。'}} ] },
+
+    { min:40, lines:[
+      {who:'partner',mood:'happy',t:'今日逗笑任務進度報告——目前三次！'},
+      {who:'me',mood:'neutral',t:'「我哪有笑三次。」'},
+      {who:'partner',mood:'happy',t:'有！你看帳本笑一次、我打翻糖罐笑一次、剛剛我報告的時候你嘴角又動了，那算第三次！'},
+      {who:'me',mood:'laugh',t:'「噗……你這計算方式也太寬鬆。」'},
+      {who:'partner',mood:'love',t:'看！第四次！為了你這個笑，我今天摔幾跤都值得！'} ],
+      choices:[
+        {t:'「……那就繼續，別偷懶。」',g:2,r:{who:'partner',mood:'love',t:'遵命！這是我最喜歡的任務，一輩子都不會偷懶！'}},
+        {t:'故意板起臉不笑',g:2,r:{who:'partner',mood:'happy',t:'欸——？別憋著！你憋笑的樣子更好笑啦，噗！'}},
+        {t:'「無聊透頂。」',g:-2,r:{who:'partner',mood:'sad',t:'……無聊嗎。可是能讓你笑，是我每天最重要的事耶。'}} ] },
+
+    { min:50, lines:[
+      {who:'partner',mood:'neutral',t:'亞瑟，你老實說，你是不是還把我當那個離家出走的小鬼？'},
+      {who:'me',mood:'think',t:'「……你不是本來就很幼稚。」'},
+      {who:'partner',mood:'happy',t:'幼稚是裝的！你吃這套嘛。可我在外面，其實一個人撐起了一整攤生意。'},
+      {who:'me',mood:'neutral',t:'「……哦。挺行的嘛。」'},
+      {who:'partner',mood:'love',t:'所以偶爾，也把我當個能靠的大人看看？我想保護你，不只想被你照顧。'} ],
+      choices:[
+        {t:'「……偶爾，靠你一下也行。」',g:3,r:{who:'partner',mood:'love',t:'（挺起胸膛，眼睛發亮）交給我！你這輩子第一次靠我，我絕不搞砸！'}},
+        {t:'「先把糖罐端穩再說。」',g:2,r:{who:'partner',mood:'happy',t:'哈，好啦！我這就練到端一整盤都不灑，證明給你看！'}},
+        {t:'「靠你不如靠牆。」',g:-2,r:{who:'partner',mood:'sad',t:'……唔，這麼不信任我喔。好，我做給你看，總有一天你會改口。'}} ] },
+
+    { min:60, lines:[
+      {who:'partner',mood:'neutral',t:'吶，你有沒有認真想過，我幹嘛大老遠跑回這座小島？'},
+      {who:'me',mood:'neutral',t:'「……倒賣便宜的糖？」'},
+      {who:'partner',mood:'happy',t:'才不是！好啦有一點。但排第一的理由——（湊近）是你啦，亞瑟。'},
+      {who:'me',mood:'think',t:'「……講、講這種話不害臊。」'},
+      {who:'partner',mood:'love',t:'不害臊！我在外面看再多風景，滿腦子想的都是回來看你一眼。這種心情，藏都藏不住。'} ],
+      choices:[
+        {t:'「……回來就回來，話真多。」（耳朵紅）',g:3,r:{who:'partner',mood:'love',t:'（大笑）你耳朵紅了！這就是答案對吧？我全都懂啦！'}},
+        {t:'「以後別跑那麼遠。」',g:3,r:{who:'partner',mood:'happy',t:'（愣住）……這是要我留下來的意思嗎？好！我哪都不去了！'}},
+        {t:'「誰稀罕你回來。」',g:-3,r:{who:'partner',mood:'sad',t:'……唔。（垂下肩膀）我大老遠回來，就換你這句話喔。'}} ] },
+
+    { min:70, lines:[
+      {who:'partner',mood:'happy',t:'亞瑟，我發現你看我的眼神，最近不太一樣了。'},
+      {who:'me',mood:'neutral',t:'「……哪裡不一樣。」'},
+      {who:'partner',mood:'love',t:'以前是「照顧小孩」的眼神，現在……嘿嘿，是看「對象」的眼神了。我沒看錯吧？'},
+      {who:'me',mood:'think',t:'「……你、你少自作多情。」'},
+      {who:'partner',mood:'happy',t:'有沒有自作多情，你耳朵最誠實了。放心，我早就不是那個要你操心的小鬼了。'} ],
+      choices:[
+        {t:'「……嗯。你長大了。」',g:3,r:{who:'partner',mood:'love',t:'（愣了一下，笑得燦爛）聽到了！那從今天起，牽手的是兩個大人囉！'}},
+        {t:'「長大也一樣愛闖禍。」',g:2,r:{who:'partner',mood:'happy',t:'哈，闖禍歸闖禍！但保護你這件事，我可是超級認真的！'}},
+        {t:'「在我眼裡你還是小鬼。」',g:-2,r:{who:'partner',mood:'sad',t:'……還是小鬼喔。那我努力，努力到你不得不承認為止。'}} ] },
+
+    { min:80, lines:[
+      {who:'partner',mood:'neutral',t:'（難得收起笑，安靜地看著你）亞瑟，我說句正經的。'},
+      {who:'me',mood:'neutral',t:'「……你正經起來我反而怕。」'},
+      {who:'partner',mood:'love',t:'我這麼愛鬧、愛黏你，其實是怕。怕哪天不逗你笑，你就不需要我了。'},
+      {who:'me',mood:'think',t:'「……笨蛋。我需不需要你，跟你逗不逗我笑沒關係。」'},
+      {who:'partner',mood:'happy',t:'（怔住，眼眶一下紅了）……真的？那、那我以後可以偶爾不搞笑，就安安靜靜賴在你身邊嗎？'} ],
+      choices:[
+        {t:'「……可以。安靜賴著也行。」',g:3,r:{who:'partner',mood:'love',t:'（一把抱住你，聲音悶悶的）……謝謝你。這句話我等好久了。'}},
+        {t:'拍拍他的背',g:3,r:{who:'partner',mood:'love',t:'（在你懷裡蹭了蹭）……原來不搞笑，你也不會嫌我。太好了。'}},
+        {t:'「別想太多，去工作。」',g:-2,r:{who:'partner',mood:'sad',t:'……喔。好。（勉強笑了笑）是我想太多了。'}} ] },
+
+    { min:90, lines:[
+      {who:'partner',mood:'happy',t:'亞瑟，我做了個重大決定！這座島，我不走了！'},
+      {who:'me',mood:'neutral',t:'「……你不是最愛往外跑。」'},
+      {who:'partner',mood:'love',t:'外面再大，也沒有你。我想在這裡紮根，天天早上第一個看到的就是你。這是英雄的最終目標！'},
+      {who:'me',mood:'think',t:'「……最終目標訂這麼小。」'},
+      {who:'partner',mood:'happy',t:'小？這可是我闖蕩這麼多年，才想明白的最大願望耶！你就是我的終點站啦！'} ],
+      choices:[
+        {t:'「……那就別走了。留下來。」',g:3,r:{who:'partner',mood:'love',t:'（激動到跳起來）你親口說的！留下來！我這輩子最棒的任務達成！'}},
+        {t:'「家裡……多留一個位子給你。」',g:3,r:{who:'partner',mood:'love',t:'（眼淚在眼眶打轉，笑得超燦爛）一個位子……我要！我這就搬進來！'}},
+        {t:'「衝動的決定容易後悔。」',g:-2,r:{who:'partner',mood:'sad',t:'……我沒衝動。想留在你身邊這件事，我想了好多年了。'}} ] },
+
+    { min:100, lines:[
+      {who:'partner',mood:'love',t:'亞瑟，今天我要立一個英雄的誓言。'},
+      {who:'me',mood:'neutral',t:'「……又要搞什麼名堂。」'},
+      {who:'partner',mood:'love',t:'我，阿爾弗雷德，發誓這輩子逗你笑、陪你老、把最好的都給你——一天都不缺席。'},
+      {who:'me',mood:'soft',t:'「……（別開臉）這種誓言，說出口不害臊喔。」'},
+      {who:'partner',mood:'happy',t:'為了你，什麼都不害臊！而且這個誓言，可是要用一輩子來完成的長期任務喔！'} ],
+      choices:[
+        {t:'「……那我就等你完成。一輩子。」',g:3,r:{who:'partner',mood:'love',t:'（怔住，然後笑得像孩子撲上來）一輩子！收到！這是我接過最幸福的任務！'}},
+        {t:'「誓言收下了。別食言。」',g:3,r:{who:'partner',mood:'love',t:'（用力點頭）英雄絕不食言！你就等著看我天天兌現！'}},
+        {t:'「幼稚死了。」（嘴角卻翹著）',g:1,r:{who:'partner',mood:'happy',t:'幼稚才逗得你笑嘛！而且你嘴角翹起來了喔，我全看見啦！'}} ] },
+  ],
+
+  /* 之後若要幫 _default 或其他 id 補分層，照上面格式往下加即可 */
+};
+/* =========================================================
+   情人／出軌機制對白（配 10_affair.js 使用）
+   四位伴侶都可能是「情人」或「被出軌的伴侶」，兩邊都要台詞。
+   ========================================================= */
+
+/* --- 情人告白（好感達 30 且玩家有伴侶時，對方主動求交往，他不知道你有伴侶） --- */
+const LOVER_PROPOSAL={
+  Francis:[
+    {who:'partner',mood:'love',t:'亞瑟，今天不是隨便撩你。是正式的。'},
+    {who:'partner',mood:'neutral',t:'我這輩子追過的人不少，可只有你——把我這張油嘴閉上了整整半晌。'},
+    {who:'partner',mood:'love',t:'我不想再繞了。做我的人吧。這輩子，我只對你一個人講真話。'},
+  ],
+  Pedro:[
+    {who:'partner',mood:'shy',t:'那個……亞瑟，我，我想跟你說一件事，你別笑。'},
+    {who:'partner',mood:'neutral',t:'我可能……從小時候起就喜歡你了。只是自己一直沒察覺。'},
+    {who:'partner',mood:'love',t:'別急著推我。就……試試看，跟我在一起，好不好？'},
+  ],
+  Antonio:[
+    {who:'partner',mood:'happy',t:'亞瑟！我這幾天沒睡好，就一件事在心裡打轉——我喜歡你！'},
+    {who:'partner',mood:'love',t:'就那種，看到你會笑、聽到你聲音心會跳的那種喜歡！'},
+    {who:'partner',mood:'love',t:'你願不願意，就試試看嘛！跟我在一起，我一定對你超好！'},
+  ],
+  Alfred:[
+    {who:'partner',mood:'happy',t:'亞瑟！英雄有話要說！這次是超正經的正經事！'},
+    {who:'partner',mood:'love',t:'我看過的世界很大，可是只有你，讓我想留下來。'},
+    {who:'partner',mood:'happy',t:'你就當被英雄拐了吧！以後保護你、逗你笑、賴著你——都是我的事！'},
+  ],
+  _default:[
+    {who:'partner',mood:'love',t:'亞瑟，我想清楚了。我喜歡你。'},
+    {who:'partner',mood:'neutral',t:'跟我在一起吧。'},
+  ],
+};
+
+/* --- 情人聊天池（成為情人後取代普通聊天）
+   每題三選項：aff = 情人好感增減；含「露餡」選項會扣情人好感（情人自己起疑）
+   ※ 每次聊天無論選什麼，伴侶親密度都會大幅下降（在 10_affair.js 統一處理）
+*/
+const LOVER_TOPICS={
+  Francis:[
+    { q:'親愛的，這杯酒為你留了整整一週。抬起下巴，讓我看看你今天有沒有更迷人。', a:[
+        {t:'油嘴滑舌，我又不會跑', mood:'love',   aff:2,  r:'呵呵——「不會跑」這句，比任何情話都動聽。'},
+        {t:'先讓我坐下，站得累',   mood:'happy',  aff:1,  r:'遵命。這張椅子，可是專為你留的。'},
+        {t:'回去喝，我晚上有人等我吃飯', mood:'sad', aff:-2, r:'……有人？哦？是哪位有幸能佔用你的晚上呢。'} ]},
+    { q:'亞瑟。跟我走吧。離開這座島，去哪都行——這輩子我只要你陪。', a:[
+        {t:'……讓我想想',           mood:'shy',    aff:2,  r:'「想想」——在你嘴裡，比「好」還讓我心動。我等。'},
+        {t:'船票錢我出一半',         mood:'love',   aff:3,  r:'（笑）就是這樣的你，最讓我著迷。'},
+        {t:'我走不開……家裡的店',   mood:'neutral',aff:-2, r:'「家裡」……嗯。你嘴裡的家，我一直看不清是誰的家。'} ]},
+    { q:'你身上，有一種奇怪的味道。……不是我的味道。', a:[
+        {t:'是海風，你想多了',       mood:'neutral',aff:1,  r:'是嗎……那我下次挑個更霸道的香水，把海風也蓋過去。'},
+        {t:'（湊過去）那把你的味道留深一點', mood:'love', aff:2,  r:'（怔住，笑了）……好啊。就這麼辦。'},
+        {t:'……只是店裡的紅茶味',   mood:'sad',    aff:-3, r:'紅茶……嗯，紅茶。亞瑟，你這種欲蓋彌彰的樣子，最傷人了。'} ]},
+  ],
+  Pedro:[
+    { q:'亞瑟，這鍋燉肉多做了你的份。晚上……過來吃？', a:[
+        {t:'等我忙完就過去',   mood:'shy',    aff:2,  r:'好，好！那我先熱著。你什麼時候到都行。'},
+        {t:'你自己送過來啦',   mood:'happy',  aff:1,  r:'送就送！你這人真是的……好啦好啦，我送去給你。'},
+        {t:'今晚我家裡有事',   mood:'sad',    aff:-2, r:'喔……好。那就我一個人吃了。'} ]},
+    { q:'亞瑟。從朋友變成這樣，你會不會後悔？', a:[
+        {t:'後不後悔，你看我還坐在這就知道', mood:'love', aff:2, r:'（耳朵紅了）……嗯。你這種答法，我最沒轍。'},
+        {t:'以前你就對我很好了',              mood:'shy',  aff:1, r:'那現在的我，是不是又更好一點？'},
+        {t:'有時候會想……',                    mood:'sad',  aff:-2, r:'……想什麼？想以前只是朋友的時候比較輕鬆嗎？'} ]},
+    { q:'昨天有人跟我說，你家最近好像多了個人住著。……是誰？', a:[
+        {t:'你別聽人亂講',            mood:'neutral',aff:1,  r:'……嗯。我當然選擇相信你。可是我心裡總覺得怪怪的。'},
+        {t:'（轉話題）燉肉再煮一鍋', mood:'shy',    aff:2,  r:'嗯……好。這次多加點你愛的胡椒。'},
+        {t:'是我家裡的親戚',          mood:'sad',    aff:-3, r:'親戚啊……亞瑟，你這句話講得，連你自己都不太信吧。'} ]},
+  ],
+  Antonio:[
+    { q:'亞瑟！給你留了今天最甜的芒果。過來，我剝給你吃！', a:[
+        {t:'（彆扭地張嘴）……嗯', mood:'love',   aff:2,  r:'（笑得瞇眼）我最喜歡看你這樣！乖乖被我餵！'},
+        {t:'放著我自己剝',         mood:'happy',  aff:1,  r:'喔，好！那我看著你剝，可以吧？'},
+        {t:'我今晚要早點回去',     mood:'sad',    aff:-2, r:'咦？這麼快就要走喔……才剛見到你耶。'} ]},
+    { q:'吶亞瑟，你什麼時候才願意讓我搬進你家？我不介意跟你阿嬤住！', a:[
+        {t:'……等我準備好',                 mood:'shy',    aff:2,  r:'好！我等！你叫我等多久，我就等多久！'},
+        {t:'先看你會不會惹阿嬤生氣',         mood:'happy',  aff:1,  r:'我一定會超乖！我這人最會討長輩喜歡了！'},
+        {t:'這件事……不能急',                mood:'sad',    aff:-3, r:'為什麼不能急？亞瑟，你是不是……有什麼我不知道的事？'} ]},
+    { q:'前幾天我去你家送水果，門是別人開的。……那個人是誰？', a:[
+        {t:'你別大驚小怪',                mood:'neutral',aff:1,  r:'我不是大驚小怪……我只是想搞清楚。'},
+        {t:'（拉他到別處）別在這聊',      mood:'love',   aff:2,  r:'（被拉走）……好，我聽你的。但你要好好跟我說。'},
+        {t:'他是……我的家人',              mood:'sad',    aff:-3, r:'家人啊……我這人笨，可是連我都聽得出你在騙我。'} ]},
+  ],
+  Alfred:[
+    { q:'亞瑟！英雄回港啦！先給我一個充電擁抱！', a:[
+        {t:'三秒',              mood:'love',   aff:2,  r:'三秒！有！比沒有好一百倍！（撲過去抱）'},
+        {t:'你自己抱柱子吧',    mood:'happy',  aff:1,  r:'沒禮貌！好啦沒關係，你在我面前就是最棒的！'},
+        {t:'我今天不方便',      mood:'sad',    aff:-2, r:'誒？為什麼？亞瑟你不會有其他事在忙吧？'} ]},
+    { q:'亞瑟你聽好！英雄的最終任務是——把你打包帶走，環遊世界！', a:[
+        {t:'打包可以，路上你請客',      mood:'love',   aff:2,  r:'沒問題！我這輩子最捨得為你花錢！'},
+        {t:'講什麼傻話',                 mood:'happy',  aff:1,  r:'傻話才是真心話啦！你不知道嗎？'},
+        {t:'我走不了……家裡走不開',     mood:'sad',    aff:-3, r:'家裡……喔。是喔。……不能連家裡的事都告訴我嗎？'} ]},
+    { q:'亞瑟，你最近怎麼老看時鐘？……是有人在等你嗎？', a:[
+        {t:'是店裡忙',                  mood:'neutral',aff:1,  r:'喔……好。可是你以前不會這樣。'},
+        {t:'（拍拍他的頭）別想太多',    mood:'love',   aff:2,  r:'（尾巴又搖起來）好——聽你的！你叫我別想我就不想！'},
+        {t:'我要走了',                   mood:'sad',    aff:-3, r:'走……你要去哪？亞瑟你等等，先跟我說——'} ]},
+  ],
+  _default:[
+    { q:'今天你也來看我了。', a:[
+        {t:'順路而已',   mood:'happy',   aff:1, r:'順路也算。'},
+        {t:'我想你了',   mood:'love',    aff:2, r:'……這句我要記一輩子。'},
+        {t:'其實我趕時間', mood:'sad',   aff:-2, r:'……喔。也罷。'} ]},
+  ],
+};
+
+/* --- 伴侶懷疑對話：懷疑值到門檻時，下次跟伴侶聊天強制觸發
+   每題三選項：g（親密度變動）／reveal（true 則直接觸發出軌吵架分手）
+*/
+const PARTNER_SUSPICION={
+  Francis:[
+    { lines:[
+      {who:'partner',mood:'neutral',t:'……親愛的，過來。'},
+      {who:'me',mood:'neutral',t:'「怎麼了。」'},
+      {who:'partner',mood:'sad',t:'（撚起你領口的一絲線頭）這味道，不是我的。你身上有別人的氣味。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'neutral',t:'我這人可以裝糊塗，但只有一次。所以，你自己說。'} ],
+      choices:[
+        {t:'「是港口的紅茶味。」',        g:-1, r:{who:'partner',mood:'sad',   t:'……紅茶。好，紅茶。這次我信你。'}},
+        {t:'「你聞錯了。」',               g:-4, r:{who:'partner',mood:'sad',   t:'亞瑟，我這鼻子能分辨百種葡萄酒。「聞錯了」反而讓我更確定了。'}},
+        {t:'「……對不起。是別人。」',     reveal:true} ] },
+    { lines:[
+      {who:'partner',mood:'neutral',t:'你最近，出門的次數比以前多了三倍。'},
+      {who:'me',mood:'neutral',t:'「……店裡的事多。」'},
+      {who:'partner',mood:'sad',t:'店裡的帳我看過。並沒有多。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'love',t:'亞瑟。我不是要質問你。只是希望，如果有什麼事，你告訴我。我承受得住。'} ],
+      choices:[
+        {t:'「是去看老朋友。」',           g:-1, r:{who:'partner',mood:'sad',   t:'老朋友嗎……好。但下次帶我一起去見他。'}},
+        {t:'「你別管這麼多。」',           g:-4, r:{who:'partner',mood:'sad',   t:'「別管」……原來我在你這裡，是連問都不能問的嗎。'}},
+        {t:'「……我對不起你。」',         reveal:true} ] },
+  ],
+  Pedro:[
+    { lines:[
+      {who:'partner',mood:'neutral',t:'亞瑟。坐下，我有話跟你說。'},
+      {who:'me',mood:'neutral',t:'「……嗯？」'},
+      {who:'partner',mood:'sad',t:'今天港口老李跟我說，他看到你跟某個人走在一起。走得……很近。'},
+      {who:'me',mood:'think',t:'「……老李看錯了。」'},
+      {who:'partner',mood:'sad',t:'我認識老李三十年。他不會看錯這種事。所以，你自己說。'} ],
+      choices:[
+        {t:'「是客人，順路而已。」',      g:-1, r:{who:'partner',mood:'sad',   t:'順路啊……好，我信你這一次。'}},
+        {t:'「（轉頭）我不想解釋。」',     g:-4, r:{who:'partner',mood:'sad',   t:'幾十年了，你第一次不肯跟我解釋。這感覺不太好，亞瑟。'}},
+        {t:'「……我有別人了。」',         reveal:true} ] },
+    { lines:[
+      {who:'partner',mood:'neutral',t:'（在爐邊沒抬頭）亞瑟，今晚燉肉你吃了嗎？'},
+      {who:'me',mood:'neutral',t:'「……還沒。」'},
+      {who:'partner',mood:'sad',t:'嗯。我做了三天，每天你都說吃過了。我知道你在外面吃了誰做的飯。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'sad',t:'不用答我。我只想聽你自己承認，我不是最後一個知道的。'} ],
+      choices:[
+        {t:'「是港口的攤子。」',           g:-2, r:{who:'partner',mood:'sad',   t:'攤子嗎……好吧。改天我也去嚐嚐，比我的手藝好在哪。'}},
+        {t:'「你別想這麼多。」',           g:-4, r:{who:'partner',mood:'sad',   t:'從小到大你嫌我笨。可我這次不是笨，是心痛。'}},
+        {t:'「……不是攤子。是別人。」',   reveal:true} ] },
+  ],
+  Antonio:[
+    { lines:[
+      {who:'partner',mood:'sad',t:'亞瑟。你最近，越來越少看我了。'},
+      {who:'me',mood:'neutral',t:'「……哪有。」'},
+      {who:'partner',mood:'sad',t:'有。以前你算帳我在旁邊，你會偷偷瞄我。現在你算帳，眼神都飄別的地方去了。'},
+      {who:'me',mood:'think',t:'「……你也太多心。」'},
+      {who:'partner',mood:'neutral',t:'我阿嬤說我這人笨。可就算笨，眼睛也看得見。'} ],
+      choices:[
+        {t:'「（揉他的頭）最近太忙。」', g:0,  r:{who:'partner',mood:'happy', t:'忙……好。那我不吵你了，等你忙完再看我，可以嗎？'}},
+        {t:'「你別自己想戲。」',           g:-4, r:{who:'partner',mood:'sad',   t:'「自己想戲」……你以前不會用這種話說我的。'}},
+        {t:'「……我心裡有別人了。」',     reveal:true} ] },
+    { lines:[
+      {who:'partner',mood:'neutral',t:'昨天我送水果去店裡，你不在。'},
+      {who:'me',mood:'neutral',t:'「……我去進貨。」'},
+      {who:'partner',mood:'sad',t:'進貨的地方我知道。我後來去了，那裡沒人見過你。亞瑟，你去了哪？'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'sad',t:'不是要抓你。是想知道，我還能不能相信你。就這樣。'} ],
+      choices:[
+        {t:'「順道去了朋友那。」',        g:-2, r:{who:'partner',mood:'sad',   t:'朋友……嗯，我信你。但你可以早點跟我說。'}},
+        {t:'「這不干你的事。」',           g:-4, r:{who:'partner',mood:'sad',   t:'咦？……什麼時候變成，我連問你都不行了。'}},
+        {t:'「……我對不起你。」',         reveal:true} ] },
+  ],
+  Alfred:[
+    { lines:[
+      {who:'partner',mood:'sad',t:'亞瑟，英雄……英雄有點難過。'},
+      {who:'me',mood:'neutral',t:'「……怎麼了。」'},
+      {who:'partner',mood:'sad',t:'今天我在港口，看到你跟一個人有說有笑。那個笑，好久沒對我笑了。'},
+      {who:'me',mood:'think',t:'「……」'},
+      {who:'partner',mood:'neutral',t:'亞瑟，你告訴我。是我最近哪裡沒做好？我可以改。'} ],
+      choices:[
+        {t:'「（揉他的頭）是老朋友。」', g:0,  r:{who:'partner',mood:'happy', t:'老朋友……好！我信你！英雄就不追根究底了！'}},
+        {t:'「你自己愛想東想西。」',      g:-4, r:{who:'partner',mood:'sad',   t:'想東想西……以前你不會這樣打發我的。'}},
+        {t:'「……我心裡有別人。」',      reveal:true} ] },
+    { lines:[
+      {who:'partner',mood:'sad',t:'亞瑟，我做了個夢。'},
+      {who:'me',mood:'neutral',t:'「……什麼夢。」'},
+      {who:'partner',mood:'sad',t:'夢到你回頭跟我說「阿爾我們該分開了」。我從夢裡驚醒，眼淚都是熱的。'},
+      {who:'me',mood:'think',t:'「……作夢而已。」'},
+      {who:'partner',mood:'neutral',t:'那你告訴我，這只是夢——你不會離開我，對吧？'} ],
+      choices:[
+        {t:'「不會。你別作怪夢。」',      g:0,  r:{who:'partner',mood:'love',  t:'好！我不作了！你這句話就夠我電量滿格！'}},
+        {t:'「這種問題別問我。」',        g:-4, r:{who:'partner',mood:'sad',   t:'這種問題你不答……我更不敢睡了。'}},
+        {t:'「……夢有時候是真的。」',    reveal:true} ] },
+  ],
+  _default:[
+    { lines:[
+      {who:'partner',mood:'sad',t:'……你最近變了。'},
+      {who:'me',mood:'neutral',t:'「哪有。」'},
+      {who:'partner',mood:'sad',t:'我看得出來。你自己告訴我，是不是有別人。'} ],
+      choices:[
+        {t:'「你想太多。」',   g:-1, r:{who:'partner',mood:'sad',t:'……好。就當我想太多。'}},
+        {t:'「別問。」',        g:-4, r:{who:'partner',mood:'sad',t:'……連問都不行嗎。'}},
+        {t:'「……對不起。」',  reveal:true} ] },
+  ],
+};
+
+/* --- 出軌被抓吵架分手（比 BREAKUP_CONVOS 更火爆的收場） --- */
+const AFFAIR_BREAKUP={
+  Francis:[
+    {who:'partner',mood:'sad',    t:'……原來如此。'},
+    {who:'partner',mood:'neutral',t:'我這輩子最會做的事，是把甜言蜜語灌進不愛我的人耳朵裡。'},
+    {who:'partner',mood:'sad',    t:'我以為你不一樣。你嫌我肉麻、嫌我吵，可你留下來了——這是我這輩子最珍貴的一次「錯覺」。'},
+    {who:'partner',mood:'neutral',t:'現在我知道錯了。你留下來，並不代表你眼裡只有我。'},
+    {who:'partner',mood:'sad',    t:'我先走了。行李明天派人取。別出來送。'},
+    {who:'partner',mood:'sad',    t:'……那支等你先說喜歡我的酒，我拿走了。這輩子，不打算開了。'},
+  ],
+  Pedro:[
+    {who:'partner',mood:'sad',    t:'……幾十年了。'},
+    {who:'partner',mood:'neutral',t:'我一直覺得，就算全世界都不了解我，你也一定會。因為是你。'},
+    {who:'partner',mood:'sad',    t:'原來我錯了。從朋友走到現在，我以為賺到了一輩子的伴，其實是把最珍貴的東西賠光了。'},
+    {who:'partner',mood:'sad',    t:'我不吵。吵了，會把小時候那兩個爬蘋果樹的小鬼也一起吵沒了。'},
+    {who:'partner',mood:'neutral',t:'我走了。以後在港口再遇見，你就當我是個賣香料的老朋友吧。'},
+    {who:'partner',mood:'sad',    t:'……喂，亞瑟。這是我最後一次這樣叫你。'},
+  ],
+  Antonio:[
+    {who:'partner',mood:'sad',    t:'……嗯。'},
+    {who:'partner',mood:'sad',    t:'我這人簡單，喜歡就是喜歡。我以為你也是。'},
+    {who:'partner',mood:'neutral',t:'原來我等的那個「抬頭挺胸的答案」，是別人的。不是我的。'},
+    {who:'partner',mood:'sad',    t:'我笨，可我不想再繼續笨下去了。等一個永遠不會屬於我的人，太傻。'},
+    {who:'partner',mood:'sad',    t:'水果攤我搬去別的港口。這座島太痛了，我沒辦法每天走過你的店還笑得出來。'},
+    {who:'partner',mood:'sad',    t:'亞瑟……以後別再心軟塞我橘子。我這人記性差，你的溫柔會讓我忘不掉。'},
+  ],
+  Alfred:[
+    {who:'partner',mood:'sad',    t:'……喔。'},
+    {who:'partner',mood:'sad',    t:'英雄的最終任務——保護亞瑟一輩子，逗你笑到老。'},
+    {who:'partner',mood:'sad',    t:'原來這個任務，我從一開始就接錯人了。你想要的英雄，不是我。'},
+    {who:'partner',mood:'neutral',t:'我不會鬧。我這人黏是黏，可是被討厭到這種地步，我還分得清楚該怎麼走。'},
+    {who:'partner',mood:'sad',    t:'我出海去別的島。這次不回來了。我怕留下來，會忍不住又想見你。'},
+    {who:'partner',mood:'sad',    t:'亞瑟……最後一句：以後別再對誰說「英雄」這兩個字。這是我的專利。'},
+  ],
+  _default:[
+    {who:'partner',mood:'sad',    t:'……原來是這樣。'},
+    {who:'partner',mood:'neutral',t:'我不吵，也不鬧。這樣的關係，繼續下去只是折磨兩個人。'},
+    {who:'partner',mood:'sad',    t:'走了。多保重。'},
+  ],
 };

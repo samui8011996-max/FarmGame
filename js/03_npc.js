@@ -559,7 +559,7 @@ const MERCHANT_SEAT={
   Francis:{ img:'guild_Francis.png', x:21, y:8 },
   Pedro:  { img:'guild_Pedro.png',   x:36, y:8 },
   Antonio:{ img:'guild_Antonio.png', x:28, y:8 },
-  Alfred: { img:'guild_Alfred.png',  x:56, y:8 },
+   Alfred: { img:'guild_Alfred.png',  x:54, y:8 },
 };
 const SIT_SWITCH_MIN=12000, SIT_SWITCH_MAX=25000;   // 每隔這麼久考慮換一次「坐/走」
 function hasSeat(id){ return !!MERCHANT_SEAT[id]; }

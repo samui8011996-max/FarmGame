@@ -161,7 +161,7 @@ function childLeaveHome(){
   toast(`🎓 ${nm}離家了，一路順風。`);
 }
 
-const PORT_SLOTS=[{x:4,y:11},{x:9,y:11},{x:14,y:11}];
+const PORT_SLOTS=[{x:1,y:11},{x:4,y:11},{x:9,y:11},{x:14,y:11}];
 const PORT_REFRESH_MS=60000;
 function refreshPort(){
   const ids=Object.keys(MERCHANTS).filter(id=>!(S.partner&&S.partner.id===id) && (MERCHANTS[id].era||18)<=S.era).sort(()=>Math.random()-0.5);
@@ -255,21 +255,24 @@ function buyMerchantGood(id,gi){
 const ROMANCE_AFF=15;
 const BREAKUP_INTIMACY=-10;   // 親密度低於此值 → 分手變回朋友
 function familyReady(){ return (S.child && S.child.stage>=1) || S.childLeftHome; }   // 養過孩子（現有或已離家）
-function isPartnerWorking(){ return !!(S.partner && S.partner.working); }
+function isPartnerWorking(){ return false; }   // 已移除上班系統，改用 PARTNER_PERK 一結交就生效
 function partnerBuff(job){ return (isPartnerWorking() && S.partner.job===job) ? 1 : 0; }
 /* ---------- 同居人被動加成（依對象，住在一起就生效，與上班無關） ---------- */
+/* 伴侶被動特殊功能：一結交（同居）就生效，與上班無關 */
 const PARTNER_PERK={
-  Francis:{ cafeCap:12, batchMul:1.5 },   // 餐廳客流↑、伴侶下廚一批更多
-  Pedro:  { buyMul:0.8, sellMul:1.2 },     // 採購 8 折、收購 +20%
-  Antonio:{ atkMul:2,   defMul:0.5 },      // 毒物傷害↑（可一擊）、被蛇咬傷害減半
+  Francis:{ batchMul:1.5 },              // 弗朗西斯：做料理時一批產量更多
+  Pedro:  { buyMul:0.8, sellMul:1.3 },   // 佩德羅：商店買更便宜、賣更好價
+  Antonio:{ yieldMul:1.5 },              // 安東尼奧：農產品收成量加成
+  Alfred: { atkMul:2,   defMul:0.5 },                 // 阿爾：毒物傷害↑（可一擊）、被蛇咬傷害減半
 };
 function perk(id){ return (S.partner && S.partner.id===id) ? PARTNER_PERK[id] : null; }
-function cafeMateCap(){ const p=perk('Francis'); return p?p.cafeCap:0; }
-function cookBatchMul(){ const p=perk('Francis'); return p?p.batchMul:1; }
-function shopBuyMul(){ const p=perk('Pedro'); return p?p.buyMul:1; }
-function shopSellMul(){ const p=perk('Pedro'); return p?p.sellMul:1; }
-function combatAtkMul(){ const p=perk('Antonio'); return p?p.atkMul:1; }
-function combatDefMul(){ const p=perk('Antonio'); return p?p.defMul:1; }
+function cafeMateCap(){ const p=perk('Alfred');  return (p&&p.cafeCap) ||0; }
+function cookBatchMul(){ const p=perk('Francis'); return (p&&p.batchMul)||1; }
+function farmYieldMul(){ const p=perk('Antonio'); return (p&&p.yieldMul)||1; }
+function shopBuyMul(){ const p=perk('Pedro');    return (p&&p.buyMul) ||1; }
+function shopSellMul(){ const p=perk('Pedro');   return (p&&p.sellMul)||1; }
+function combatAtkMul(){ const p=perk('Alfred'); return (p&&p.atkMul)||1; }
+function combatDefMul(){ const p=perk('Alfred'); return (p&&p.defMul)||1; }
 function romanceHtml(id,rel){
   if(S.partner&&S.partner.id===id) return `<div class="small" style="margin-bottom:10px;color:var(--accent2)">💞 你的伴侶（住在家裡）</div>`;
   if(S.partner) return '';
@@ -294,19 +297,19 @@ function openPartner(){
   freezeNpcById('partner');
   freezeNpcById('partner');
   const m=MERCHANTS[p.id];
-  const jobNm={cafe:'顧店（客流上限 +15）',farm:'顧農場（作物自動照料）',bake:'幫忙烘焙（自動產出甜點）',rich:'出資贊助（定時給零用金）'}[p.job];
+  const PERK_DESC={ Francis:'做料理時產量更多', Pedro:'在商店買賣有更好的價格', Antonio:'農產品收成量增加', Alfred:'戰鬥更強（對毒物傷害提高、被咬傷害減半）' };
+  const jobNm=PERK_DESC[p.id]||'陪在你身邊';
   const inOffice=curScene==='office';
   openSheet(`<div class="sheethead"><h3>${m.e} ${m.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div class="small" style="margin-bottom:4px">你的伴侶。專長：${jobNm}。</div>
     <div class="small" style="margin-bottom:10px">💕 親密度 ${p.intimacy||0}</div>
     <button class="btn" style="width:100%;margin-bottom:8px" onclick="chatPartner()">💬 聊天</button>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn green sm" style="flex:1" onclick="intimate('kiss')">💋 親親</button>
       <button class="btn green sm" style="flex:1" onclick="intimate('hug')">🤗 抱抱</button>
-    </div>
-    <button class="btn gold" style="width:100%;margin-bottom:12px${inOffice?'':';opacity:.45'}" onclick="intimate('spicy')">🔥 做點可疑的事${inOffice?'':'（限辦公室）'}</button>
-    <button class="btn ${p.working?'ghost':'green'}" style="width:100%;margin-bottom:8px" onclick="togglePartnerWork()">${p.working?'上班中・讓他休息':'讓他到甜點店上班'}</button>
-    <button class="btn ghost" style="width:100%" onclick="openPartnerWardrobe()">👗 換裝</button>`);   
+      <button class="btn gold sm" style="flex:1${inOffice?'':';opacity:.45'}" onclick="intimate('spicy')">🔥 可疑的事</button>
+    </div>`);
+    /* 已移除：上班切換按鈕、換裝按鈕（如需恢復請看下方備註） */   
 }
 function togglePartnerWork(){ S.partner.working=!S.partner.working; if(S.partner.working)S.partner.lastBake=Date.now(); toast(S.partner.working?'開始上班':'休息中'); openPartner(); save(); }
 function syncPartnerObject(){
