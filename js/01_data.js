@@ -35,6 +35,8 @@ const PRODUCTS={
   cod:{nm:'鱈魚',e:'🐠',base:18,volat:'mid'},
   salmon:{nm:'鮭魚',e:'🐟',base:34,volat:'big'},
   halibut:{nm:'大比目魚',e:'🐠',base:70,volat:'big'},
+  wool:{nm:'羊毛',e:'🧶',base:9,volat:'mid'},
+  mutton:{nm:'羊肉',e:'🍖',base:11,volat:'mid'},
 };
 const EXTRAS={
   flour:{nm:'麵粉',e:'🌾',price:2},
@@ -205,7 +207,7 @@ const ITEM_IMG_SRC={
   cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
   cheese:'food_cheese.png', butter:'food_butter.png',
   flour:'item_flour.png', sugar:'item_sugar.png',
-  olive_oil:'item_olive_oil.png', 
+  olive_oil:'item_olive_oil.png', wool:'item_wool.png',
 };
 // egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
 const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };

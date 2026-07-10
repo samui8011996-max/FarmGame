@@ -281,6 +281,7 @@ const FOOD_IMG_SRC={
   beef      :'food_beef.png',
   chicken_meat:'food_chicken.png',
   turkey_meat :'food_turkey.png',
+  mutton      :'food_mutton.png',
 };
 const FOOD_IMG={};
 for(const k in FOOD_IMG_SRC){ const im=new Image(); im.src=FOOD_IMG_SRC[k]; FOOD_IMG[k]=im; }
