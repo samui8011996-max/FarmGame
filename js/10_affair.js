@@ -46,7 +46,47 @@ chatMerchant = function(id){
   _chatMerchant_beforeAffair(id);
 };
 
-/* ---------- 情人告白 ---------- */
+/* ---------- 情人聊天：走 LOVER_TOPICS，每次累積懷疑值 + 扣伴侶親密度 ---------- */
+function chatLover(id){
+  ensureAffairState();
+  const rel=S.port.relations[id], now=Date.now();
+  if(!rel) return;
+  if(now-(rel.lastChat||0)<8000){ toast('剛聊過了，等一下'); return; }
+  const pool=(typeof LOVER_TOPICS!=='undefined' && (LOVER_TOPICS[id]||LOVER_TOPICS._default)) || [];
+  if(!pool.length) return;
+  const topic=pool[Math.floor(Math.random()*pool.length)];
+  freezeNpcById('mc_'+id); _convoCid=id;
+  showDialogue(id,'neutral',topic.q, topic.a.map(opt=>({
+    t:opt.t,
+    run:()=>{
+      rel.lastChat=Date.now();
+      rel.aff+=opt.aff;
+      S._suspicion=(S._suspicion||0)+1;
+      if(S.partner) S.partner.intimacy=(S.partner.intimacy||0)+LOVER_CHAT_PARTNER_PENALTY;
+      showDialogue(id, opt.mood, (opt.r||'……')+`（情人好感 ${opt.aff>=0?'+':''}${opt.aff}）`, [
+        {t:'結束對話', run:()=>{
+          if(rel.aff<=LOVER_AFF_LEAVE){ loverLeaves(id); return; }
+          if(S.partner && S.partner.intimacy<=BREAKUP_INTIMACY){ breakupPartner(); return; }
+          openMerchant(id); save();
+        }}
+      ]);
+    }
+  })));
+}
+
+/* ---------- 情人好感掉到底 → 心灰意冷離開 ---------- */
+function loverLeaves(id){
+  const nm=(MERCHANTS[id]||{}).nm||'對方';
+  delete S.lovers[id];
+  S._suspicion=0;
+  const rel=S.port.relations[id];
+  if(rel) rel.proposeCd=true;
+  addLog(`💔 ${nm} 心灰意冷，離開了你`);
+  toast(`💔 ${nm} 心灰意冷地離開了`);
+  closeSheet();
+  save();
+}
+
 /* ---------- 情人告白 ---------- */
 function loverProposal(id){
   freezeNpcById('mc_'+id); _convoCid=id;
