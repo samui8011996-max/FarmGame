@@ -6,7 +6,7 @@ document.getElementById('mask').addEventListener('click',e=>{if(e.target.id==='m
 
 /* ---------- 前往清單（大卡片，好按） ---------- */
 function openTravel(){
-  const here=curScene, portLock=S.era<18;
+  const here=curScene, portLock=S.era<18, londonLock=S.era<19;
   const card=(s,e,nm,note,lock)=>`<button class="btn ${s===here?'green':'ghost'} ${lock?'dis':''}"
     style="width:100%;text-align:left;padding:13px 14px;margin-bottom:8px;font-size:15px;display:flex;align-items:center;gap:10px"
     ${lock?'':`onclick="closeSheet();goScene('${s}')"`}>
@@ -23,7 +23,8 @@ function openTravel(){
     ${card('kitchen','👩‍🍳','廚房')}
     <div class="hr"></div>
     <b class="small">家</b>
-    ${card('office','🏠','辦公室')}`);
+    ${card('office','🏠','辦公室')}
+    ${card('london','🏠','倫敦的家', londonLock?'19世紀解鎖':'', londonLock)}`);
 }
 function goScene(name){
   spicyScene=null;if(name!=='fishing'){ const fu=document.getElementById('fishUI'); if(fu) fu.style.display='none'; const fw=document.getElementById('fishWeaponBtn'); if(fw) fw.style.display='none'; }
@@ -32,6 +33,7 @@ function goScene(name){
     buildPortNpcs(); }
   if(name==='office'){ syncPartnerObject(); buildOfficeNpcs(); }
   if(name==='farm'){ if(S.childHired){ monsters=[]; shots=[]; } else spawnSnakes(); buildChickens(); buildPigs(); buildCows(); buildFarmNpcs(); }
+  if(name==='london'){ buildLondonNpcs(); }
   curScene=name; applyCookSkin();
   player.x=SCENES[name].spawn.x;player.y=SCENES[name].spawn.y;player.facing='up';
   document.getElementById('sceneTitle').textContent=SCENES[name].title;
@@ -66,6 +68,7 @@ function startGame(n){
   if(!S.appleDrops)S.appleDrops=[];
   if(S.appleTreeTs===undefined)S.appleTreeTs=0;
   if(S.childHired===undefined)S.childHired=false;
+  if(S.gardenerHired===undefined)S.gardenerHired=false;
   if(!S.feedBowl)S.feedBowl={};
   if(S.animals){   // 已長大的火雞/豬/牛補上體重欄位
     (S.animals.chicken||[]).forEach(a=>{ if(a.species==='turkey' && isHen(a) && a.weight===undefined) a.weight=MEAT_SPEC.turkey.baseKg; });

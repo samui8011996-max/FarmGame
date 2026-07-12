@@ -21,6 +21,8 @@ const PRODUCTS={
   apple:{nm:'蘋果',e:'🍎',base:6,volat:'small'},
   tomato:{nm:'番茄',e:'🍅',base:5,volat:'small'},
   lemon:{nm:'檸檬',e:'🍋',base:6,volat:'small'},
+  carrot:{nm:'紅蘿蔔',e:'🥕',base:4,volat:'small'},
+  onion:{nm:'洋蔥',e:'🧅',base:4,volat:'small'},
   olive_oil:{nm:'橄欖油',e:'🫒',base:12,volat:'mid'},
   egg:{nm:'雞蛋',e:'🥚',base:10,volat:'mid'},
   milk:{nm:'牛奶',e:'🥛',base:10,volat:'mid'},
@@ -28,6 +30,7 @@ const PRODUCTS={
   butter:{nm:'奶油',e:'🧈',base:14,volat:'mid'},
   pork:{nm:'豬肉',e:'🥓',base:10,volat:'mid'},
   beef:{nm:'牛肉',e:'🥩',base:12,volat:'mid'},
+  mutton:{nm:'羊肉',e:'🍖',base:11,volat:'mid'},
   chicken_meat:{nm:'雞肉',e:'🍗',base:6,volat:'small'},
   turkey_meat:{nm:'火雞肉',e:'🍖',base:7,volat:'small'},
   herring:{nm:'鯡魚',e:'🐟',base:6,volat:'small'},
@@ -36,12 +39,13 @@ const PRODUCTS={
   salmon:{nm:'鮭魚',e:'🐟',base:34,volat:'big'},
   halibut:{nm:'大比目魚',e:'🐠',base:70,volat:'big'},
   wool:{nm:'羊毛',e:'🧶',base:9,volat:'mid'},
-  mutton:{nm:'羊肉',e:'🍖',base:11,volat:'mid'},
+  squid:{nm:'魷魚',e:'🦑',base:14,volat:'mid'},
+  lobster:{nm:'龍蝦',e:'🦞',base:45,volat:'big'},
+  mussel:{nm:'貽貝',e:'🦪',base:5,volat:'small'},
 };
 const EXTRAS={
   flour:{nm:'麵粉',e:'🌾',price:2},
   sugar:{nm:'糖',e:'🧂',price:1},
-  w:{nm:'糖',e:'🧂',price:1},
   olive_oil:{nm:'橄欖油',e:'🫒',price:8}};
 const RECIPES={
   // 旗標：known=一開始就會（免猜免買）；shop=商店可買（learnCost當售價）。都不寫＝只能瞎猜解鎖
@@ -59,6 +63,18 @@ const RECIPES={
     ingredients:{mackerel:1, olive_oil:1, lemon:1}},
   pork_knuckle:{nm:'烤豬腳',e:'🍖',price:35,batch:30,knead:0,bakeMs:10000,
     ingredients:{pork:1, potato:1}},
+  beef_bourguignon:{nm:'紅酒燉牛肉',e:'🍲',price:60,batch:30,knead:3,bakeMs:12000,
+    ingredients:{beef:2, wine:1, potato:1, carrot:1, bay_leaf:1}},
+  portuguese_cod:{nm:'葡式奶油鱈魚',e:'🐟',price:65,batch:30,knead:3,bakeMs:10000,
+    ingredients:{cod:2, milk:1, butter:1, potato:1, nutmeg:1}},
+  shepherds_pie:{nm:'牧羊人派',e:'🥧',price:55,batch:30,knead:4,bakeMs:12000,
+    ingredients:{mutton:2, potato:2, butter:1, milk:1}},
+  paella:{nm:'西班牙海鮮燉飯',e:'🥘',price:95,batch:30,knead:2,bakeMs:11000,
+    ingredients:{rice:2, olive_oil:1, saffron:1, squid:1, lobster:1, mackerel:1, tomato:1}},
+  roast_turkey:{nm:'烤火雞',e:'🍗',price:70,batch:30,knead:2,bakeMs:14000,shop:true,learnCost:130,
+    ingredients:{turkey_meat:3, butter:1, onion:1, potato:2}},
+  cinnamon_roll:{nm:'肉桂捲',e:'🍥',price:26,batch:30,knead:3,bakeMs:7000,shop:true,learnCost:70,
+    ingredients:{flour:2, sugar:1, cinnamon:1, butter:1}},
 };
 const QUAL_MUL={bad:0.5,normal:1,good:1.8};
 const STORE_CAP=200;
@@ -80,16 +96,23 @@ const FARM_CROPS={
   lemon:{ nm:'檸檬', img:'lemon.png', fw:32, fh:32,
     stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
     grow:40000, yield:3, seed:3 },
+  carrot:{ nm:'紅蘿蔔', img:'carrot.png', fw:32, fh:32,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:30000, yield:3, seed:2 },
+  onion:{ nm:'洋蔥', img:'onion.png', fw:32, fh:32,
+    stages:['播種','發芽','成長','開花','結果'], frame:[0,1,2,3,4],
+    grow:30000, yield:3, seed:2 },
 };
 for(const k in FARM_CROPS){ const d=FARM_CROPS[k];   // 預載圖＋算每階段時間
   d._img=new Image(); d._img.src=d.img;
   d.stageMs=d.grow/(d.stages.length-1);
 }
 function fmtSec(ms){const s=Math.max(0,Math.ceil(ms/1000));return s>=60?Math.ceil(s/60)+'分':s+'秒';}     // 之後可加品質/施肥
+function fmtBakeMin(ms){return Math.round(Math.max(0,ms)/1000)+'分鐘';}   // 烤箱顯示用：數字仍是秒數，只是把單位講成「分鐘」比較符合現實烹飪感，實際計時邏輯不變
 
 /* ---------- 時代系統（第一步：解鎖門檻） ---------- */
-const CROP_ERA={ strawberry:17, corn:17, potato:17, tomato:17, lemon:17,
-                  };          
+const CROP_ERA={ strawberry:17, corn:17, potato:17, tomato:17, lemon:17, carrot:17, onion:17,
+                  };
 const RECIPE_ERA={ strawberry_tart:17, stargazy_pie:17 };
 function cropEra(k){ return CROP_ERA[k]||17; }
 function recipeEra(k){ return RECIPE_ERA[k]||17; }
@@ -205,9 +228,17 @@ const ITEM_IMG_SRC={
   apple:'food_apple.png',
   herring:'fish_herring.png', mackerel:'fish_mackerel.png',
   cod:'fish_cod.png', salmon:'fish_salmon.png', halibut:'fish_halibut.png',
+  squid:'fish_squid.png', lobster:'fish_lobster.png', mussel:'fish_mussel.png',
   cheese:'food_cheese.png', butter:'food_butter.png',
   flour:'item_flour.png', sugar:'item_sugar.png',
   olive_oil:'item_olive_oil.png', wool:'item_wool.png',
+  wine:'item_wine.png', white_wine:'item_white_wine.png',
+  brandy:'item_brandy.png', champagne:'item_champagne.png',
+  nutmeg:'item_nutmeg.png', cinnamon:'item_cinnamon.png',
+  bay_leaf:'item_bay_leaf.png', black_pepper:'item_black_pepper.png',
+  ginger:'item_ginger.png', saffron:'item_saffron.png', rice:'item_rice.png',
+  pineapple:'item_pineapple.png', citrus:'item_citrus.png',
+  cocoa:'item_cocoa.png', coconut:'item_coconut.png',
 };
 // egg/milk/pork/beef/chicken_meat/turkey_meat 已在 FOOD_IMG_SRC，會自動沿用
 const MISC_IMG_SRC={ feed:'item_feed.png', fert:'item_fert.png', toxin:'toxin.png' };
@@ -220,6 +251,8 @@ const ANIMAL_ICON_SRC={
 function _imgTag(src,e,px){ px=px||32;
   return `<img src="${src}" style="width:${px}px;height:${px}px;object-fit:contain;image-rendering:pixelated;vertical-align:middle" onerror="this.outerHTML='${e}'">`;
 }
+/* 配方圖示：所有「跟商人買食譜」的地方統一用同一張 recipe.png，載不到才退回 📖 */
+function recipeIcon(px){ return _imgTag('recipe.png','📖',px); }
 /* 作物圖示＝生長圖第六格，用 CSS 裁切（背景縮到高度=px，每格剛好 px 寬，往左推 5 格） */
 function cropIcon(k,px){ px=px||32; const d=FARM_CROPS[k]; if(!d) return '';
   return `<div style="display:inline-block;width:${px}px;height:${px}px;background:url('${d.img}') ${-5*px}px 0 no-repeat;background-size:auto ${px}px;image-rendering:pixelated;vertical-align:middle"></div>`;

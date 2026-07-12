@@ -193,9 +193,10 @@ const FARM_ZONES = [
   {kind:'plot', nm:'農田', x1:8, y1:16, x2:11, y2:21},
   {kind:'plot', nm:'農田', x1:2, y1:18, x2:5, y2:23},
 ];
-function farmZoneAt(x,y){
+function farmZoneAt(x,y,scene){
+  scene=scene||curScene;
   const ix=Math.round(x),iy=Math.round(y);
-  return FARM_ZONES.find(z=>ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2)||null;
+  return FARM_ZONES.find(z=>(z.scene||'farm')===scene&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2)||null;
 }
 /* ---------- game state ---------- */
 let S=null, user=null, curScene='farm';
@@ -227,17 +228,22 @@ function blankState(){
     employee:null,
     cafe:{staff:false,till:0,menu:[],goods:{},lastRun:Date.now()},
     ledger:[], log:[], curRecipe:'strawberry_tart', decor:blankDecor(), child:null, childHired:false,
+    gardenerHired:false,
     kitchenPickups:[],
   };
 }
 const CELL=2;   // 一格作物 = 2×2 tile = 32×32 像素.
 
 
-function cellKeyAt(ix,iy){
-  const ok=FARM_ZONES.some(z=>z.kind==='plot'&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
+function hasPlots(scene){ return FARM_ZONES.some(z=>z.kind==='plot'&&(z.scene||'farm')===scene); }
+function cropKeyScene(key){ const i=key.lastIndexOf(':'); return i<0?'farm':key.slice(0,i); }
+function cropKeyXY(key){ const i=key.lastIndexOf(':'); return (i<0?key:key.slice(i+1)).split(',').map(Number); }
+function cellKeyAt(ix,iy,scene){
+  scene=scene||curScene;
+  const ok=FARM_ZONES.some(z=>z.kind==='plot'&&(z.scene||'farm')===scene&&ix>=z.x1&&ix<=z.x2&&iy>=z.y1&&iy<=z.y2);
   if(!ok) return null;
   const cx=Math.floor(ix/CELL)*CELL, cy=Math.floor(iy/CELL)*CELL;
-  return cx+','+cy;
+  return scene==='farm' ? (cx+','+cy) : (scene+':'+cx+','+cy);   // 農場沿用舊格式（存檔相容），其他場景加場景前綴避免撞格
 }
 function farmTileHere(){ return cellKeyAt(Math.round(player.x),Math.round(player.y)); }
 function farmCellNear(){
@@ -311,8 +317,8 @@ function rollMarket(){
   }
   S.marketDay=S.day;
 }
-function priceOf(k){return S.market[k]?S.market[k].price:PRODUCTS[k].base;}
-function priceDir(k){const m=S.market[k];if(!m)return 0;return m.price>PRODUCTS[k].base*1.05?1:m.price<PRODUCTS[k].base*0.95?-1:0;}
+function priceOf(k){if(S.market[k])return S.market[k].price;return PRODUCTS[k]?PRODUCTS[k].base:0;}
+function priceDir(k){const m=S.market[k];if(!m||!PRODUCTS[k])return 0;return m.price>PRODUCTS[k].base*1.05?1:m.price<PRODUCTS[k].base*0.95?-1:0;}
 
 /* ---------- tick: time progression ---------- */
 function tick(){
@@ -324,17 +330,19 @@ function tick(){
   if(S.employee){
     while(now-S.employee.lastPaidTs>=30*DAY){
       if(S.cash>=300){spend(300,'雇員月薪');S.employee.lastPaidTs+=30*DAY;addLog('💸 付雇員月薪 $300');}
-      else{addLog('👷 沒錢付月薪，雇員離職');S.employee=null;break;}
+      else{addLog('👷 沒錢付月薪，雇員離職');S.employee=null;buildFarmNpcs();break;}
     }
   }
   const emp=!!S.employee || (isPartnerWorking()&&S.partner.job==='farm') || S.childHired;
-  // crops（每格、要澆水才長）
+  // crops（每格、要澆水才長）。倫敦小花園歸園丁管，農夫（雇員/伴侶/小孩）管不到那邊
  for(const key in S.crops){
     const c=S.crops[key]; const def=FARM_CROPS[c.crop]; if(!def){delete S.crops[key];continue;}
     const last=def.stages.length-1;
-    if(emp) c.watered=true;
-    if(c.stage<last && c.watered && now-c.t>=def.stageMs){ c.stage++; if(!emp)c.watered=false; c.t=now; }
-    if(emp && c.stage===last){ if(c.crop==='tulip'){ S.tulips=S.tulips||{}; const _col=c.tulipColor||rollTulipColor(); S.tulips[_col]=(S.tulips[_col]||0)+1; } else { addStore(c.crop,Math.round(def.yield*0.6)); } delete S.crops[key]; }
+    const scn=cropKeyScene(key);
+    const tend = scn==='london' ? !!S.gardenerHired : emp;
+    if(tend) c.watered=true;
+    if(c.stage<last && c.watered && now-c.t>=def.stageMs){ c.stage++; if(!tend)c.watered=false; c.t=now; }
+    if(tend && scn!=='london' && c.stage===last){ if(c.crop==='tulip'){ S.tulips=S.tulips||{}; const _col=c.tulipColor||rollTulipColor(); S.tulips[_col]=(S.tulips[_col]||0)+1; } else { addStore(c.crop,Math.round(def.yield*0.6)); } delete S.crops[key]; }
   }
   // animals
   for(const type in S.animals){
@@ -435,6 +443,8 @@ function updateCamera(){
 function press(d,ev){if(ev)ev.preventDefault();held[d]=true;player.facing=d;}
 function release(d){held[d]=false;}
 document.addEventListener('keydown',e=>{
+  const tag=document.activeElement && document.activeElement.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA') return;   // 打字時（例如古董店解密輸入框）別讓 WASD 被當成移動鍵搶走
   const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right'};
   if(m[e.key]){held[m[e.key]]=true;player.facing=m[e.key];e.preventDefault();}
   if(e.key===' '||e.key==='Enter'){ if(curScene==='fishing'){held.rod=true;} else {interact();} e.preventDefault(); }
@@ -465,7 +475,7 @@ function interact(ev){
  if(curScene===DOCK.scene && S.era>=18 && Math.round(player.x)>=DOCK.x1 && Math.round(player.x)<=DOCK.x2 && Math.round(player.y)>=DOCK.y1 && Math.round(player.y)<=DOCK.y2){ /* 上船 */ askSail(); return; }
   const o=facingObject();
   if(!o){
-    if(curScene==='farm'){
+    if(hasPlots(curScene)){
       const fx=Math.round(player.x)+DIR[player.facing].x, fy=Math.round(player.y)+DIR[player.facing].y;
       const front=cellKeyAt(fx,fy), here=farmTileHere();
       const onTile=(front&&S.crops[front])?front:(here&&!S.crops[here])?here:(front||null);
@@ -769,9 +779,10 @@ function hireEmp(){
   spend(300,'雇員首月薪');
   S.employee={hiredTs:Date.now(),lastPaidTs:Date.now()};
   addLog('👷 雇用了雇員（先付首月 $300）');
+  buildFarmNpcs();
   closeSheet();toast('已雇用，已扣首月 $300');save();refreshTop();
 }
-function fireEmp(){S.employee=null;addLog('解雇雇員');closeSheet();toast('已解雇');save();}
+function fireEmp(){S.employee=null;buildFarmNpcs();addLog('解雇雇員');closeSheet();toast('已解雇');save();}
 
 /* ---------- CAFE ---------- */
 function openMenu(){
@@ -801,12 +812,12 @@ function openPickRecipe(){
     if(!recipeKnown(k)) continue;   // 預設(known)或做過/買過 → 顯示
     const r=RECIPES[k];
     const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
-    const bakeTxt=`揉${r.knead??4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+    const bakeTxt=`揉${r.knead??4}次・烤${fmtBakeMin(r.bakeMs||BAKE_MS)}`;
     body+=`<div class="menucard" style="display:flex;align-items:center;gap:8px"><div style="font-size:22px">${dishIcon(k)}</div>
       <div style="flex:1"><div style="font-weight:700">${r.nm} <span class="small">一批${r.batch}・售$${r.price}</span></div>
       <div class="small">${ingTxt}・${bakeTxt}</div></div></div>`;
   }
-  if(!body) body='<div class="empty-note">還沒做出任何料理。<br>到備料台放食材、揉製、烤對秒數，做成功就會記在這裡。</div>';
+  if(!body) body='<div class="empty-note">還沒做出任何料理。<br>到備料台放食材、揉製、烤對分鐘數，做成功就會記在這裡。</div>';
   const hasP=!!S.partner, self=S.cookBy!=='partner';
   const cookSel=`<div class="small" style="margin-bottom:6px">由誰製作</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -815,7 +826,7 @@ function openPickRecipe(){
     </div>
     <div class="small" style="margin-bottom:8px;color:var(--ink2)">${hasP?'隨時切換要做武器還是食物。':'沒有伴侶時只能做出毒物（18 世紀有伴侶後解鎖食物）。'}</div>`;
   openSheet(`<div class="sheethead"><h3>📖 食譜本</h3><button class="close" onclick="closeSheet()">✕</button></div>
-    <div class="small" style="margin-bottom:8px">這裡是做過的料理圖鑑。到備料台放食材、揉製、烤對秒數就能做出來。</div>${cookSel}${body}`);
+    <div class="small" style="margin-bottom:8px">這裡是做過的料理圖鑑。到備料台放食材、揉製、烤對分鐘數就能做出來。</div>${cookSel}${body}`);
 }
 function pickRecipe(k){ refundSlots(); prep.knead=0; prep.inOven=false; S.curRecipe=k; closeSheet(); toast(`開始做 ${RECIPES[k].nm}`); save(); }
 function refundSlots(){ for(const k in prep.slots){ const n=prep.slots[k]||0; if(n>0){ if(EXTRAS[k]) S.extras[k]=(S.extras[k]||0)+n; else addStore(k,n); } } prep.slots={}; }
@@ -826,7 +837,7 @@ function discardPrep(){
   kCut(); save();
 }
 function addIng(k){
-  if(!prep.slots[k] && slotsUsed()>=5){ toast('料台最多放 5 種食材'); return; }
+  if(!prep.slots[k] && slotsUsed()>=10){ toast('料台最多放 10 種食材'); return; }
   if((S.store[k]||0)<=0 && (S.extras[k]||0)<=0){ toast('庫存不足'); return; }
   if((S.store[k]||0)>0) S.store[k]--; else S.extras[k]--;
   prep.slots[k]=(prep.slots[k]||0)+1; toast(`放入 ${ingNm(k)}`);
@@ -839,7 +850,7 @@ function recipeCheatList(){
     if(!recipeKnown(k)) continue;
     const r=RECIPES[k];
     const ingTxt=Object.keys(r.ingredients||{}).map(i=>`${ingNm(i)}${r.ingredients[i]}`).join('・');
-    const bakeTxt=`揉${r.knead??4}次・烤${Math.round((r.bakeMs||BAKE_MS)/1000)}秒`;
+    const bakeTxt=`揉${r.knead??4}次・烤${fmtBakeMin(r.bakeMs||BAKE_MS)}`;
     cards+=`<div class="menucard" style="display:flex;align-items:center;gap:8px;padding:6px">
       <div style="font-size:20px">${dishIcon(k)}</div>
       <div style="flex:1"><div style="font-weight:700;font-size:13px">${r.nm}</div>
@@ -850,17 +861,17 @@ function recipeCheatList(){
 }
 function toggleKCutRecipes(){ prep._showRecipes=!prep._showRecipes; kCut(); }
 function kCut(){
-  let body=`<div class="small" style="margin-bottom:6px">放入食材，揉製後進烤箱。食材＋揉次＋烤秒數對上某道食譜就會做出來。</div>
-    <div class="small">已用料台 ${slotsUsed()}/5 種</div>
+  let body=`<div class="small" style="margin-bottom:6px">放入食材，揉製後進烤箱。食材＋揉次＋烤分鐘數對上某道食譜就會做出來。</div>
+    <div class="small">已用料台 ${slotsUsed()}/10 種</div>
     <div style="display:flex;gap:8px;margin-top:6px">
       <button class="btn ghost sm" style="color:var(--danger)${slotsUsed()?'':';opacity:.4'}" onclick="discardPrep()">🗑️ 倒掉料台食材（不回收）</button>
       <button class="btn ghost sm" onclick="toggleKCutRecipes()">📖 ${prep._showRecipes?'收起食譜 ▲':'看食譜 ▼'}</button>
     </div>
     ${prep._showRecipes?recipeCheatList():''}
     <div class="hr"></div><b class="small">放入食材</b>`;
-  const avail=[];
-  for(const k in S.store) if(S.store[k]>0) avail.push({k,n:S.store[k]});
-  for(const k in S.extras) if(S.extras[k]>0) avail.push({k,n:S.extras[k]});
+  const avail=[]; const seen={};
+  for(const k in S.store) if(S.store[k]>0){ seen[k]=true; avail.push({k,n:(S.store[k]||0)+(S.extras[k]||0)}); }
+  for(const k in S.extras) if(S.extras[k]>0 && !seen[k]) avail.push({k,n:S.extras[k]});
   body+= avail.length? avail.map(it=>`<div class="row"><div class="e">${prodIcon(it.k,28)}</div>
     <div class="info"><div class="n">${ingNm(it.k)} <span class="small">庫存 ${it.n}・已放 ${prep.slots[it.k]||0}</span></div></div>
     <button class="btn sm" onclick="addIng('${it.k}')">放入</button></div>`).join('')
@@ -877,8 +888,8 @@ function kOven(){
     prep.inOven=true; prep.ovenStart=Date.now(); save(); }
 }
 /* ---------- 桌上取貨：做好的先擺桌上，走過去碰到才收 ---------- */
-const KITCHEN_TABLE_SLOTS=[   // 第一種在 10,14；每多一「種」往左 2 格(=32px)；最多 5 種
-  {x:10,y:15},{x:8,y:15},{x:6,y:15},{x:4,y:15},{x:2,y:15},
+const KITCHEN_TABLE_SLOTS=[   // 第一種在 16,15；每多一「種」往左 2 格(=32px)；最多 6 種
+  {x:16,y:15},{x:14,y:15},{x:12,y:15},{x:10,y:15},{x:8,y:15},{x:6,y:15},
 ];
 const TOXIN_PER_COMPLEXITY=1;   // 毒物量 = 料理複雜度 × 這個倍率，想更毒就調大
 function recipeComplexity(k){
@@ -893,7 +904,7 @@ function addKitchenPickup(kind, recipe, count){
   const same=S.kitchenPickups.find(p=>p.kind===kind && p.recipe===recipe);   // 同款疊加在同一格
   if(same){ same.count+=count; save(); return true; }
   const slot=KITCHEN_TABLE_SLOTS.find(s=>!S.kitchenPickups.some(p=>p.x===s.x&&p.y===s.y));
-  if(!slot){ return false; }   // 桌上已滿（最多 5 種），擺不下
+  if(!slot){ return false; }   // 桌上已滿（最多 6 種），擺不下
   S.kitchenPickups.push({x:slot.x, y:slot.y, kind, recipe, count});
   save(); return true;
 }
@@ -987,7 +998,7 @@ function openShopBuy(){
     if(recipeEra(k)>S.era) continue;                // 沒到時代不賣（想全賣就刪這行）
     const known=recipeKnown(k);
     const cost=Math.round((r.learnCost||60)*shopBuyMul());
-    recipes+=`<div class="row"><div class="e"><img src="recipe.png" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated;vertical-align:middle"></div><div class="info"><div class="n">${r.nm}配方</div>
+    recipes+=`<div class="row"><div class="e">${recipeIcon(32)}</div><div class="info"><div class="n">${r.nm}配方</div>
       <div class="d">${known?'已學會（看食譜本）':'買了才知道做法'}</div></div>
       <div class="price">$${cost}</div>
       <button class="btn sm ${known?'dis':''}" onclick="buyRecipe('${k}')">${known?'已學會':'買'}</button></div>`;
@@ -1082,11 +1093,11 @@ function sellGood(k){
 /* ---------- BAG ---------- */
 function openBag(){
   let seeds=Object.keys(S.seeds).filter(k=>S.seeds[k]>0).map(k=>{const d=FARM_CROPS[k]; const e=prodIcon(k,20); const nm=d?d.nm:k; return `<span class="seedchip">${e}${nm}種子×${S.seeds[k]}</span>`;}).join('')||'<span class="small">無</span>';
-  let prod=Object.keys(S.store).filter(k=>S.store[k]>0).map(k=>`<span class="seedchip">${prodIcon(k,20)}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
-  let goods=Object.keys(S.cafe.goods).filter(k=>S.cafe.goods[k]>0).map(k=>{const r=RECIPES[k];const heal=Math.max(2,Math.round(r.price/6));
+  let prod=Object.keys(S.store).filter(k=>S.store[k]>0 && PRODUCTS[k]).map(k=>`<span class="seedchip">${prodIcon(k,20)}${PRODUCTS[k].nm}×${S.store[k]}</span>`).join('')||'<span class="small">無</span>';
+  let goods=Object.keys(S.cafe.goods).filter(k=>S.cafe.goods[k]>0 && RECIPES[k]).map(k=>{const r=RECIPES[k];const heal=Math.max(2,Math.round(r.price/6));
     return `<div class="row"><div class="e">${dishIcon(k)}</div><div class="info"><div class="n">${r.nm} <span class="small">×${S.cafe.goods[k]}</span></div><div class="d">吃一個回 ${heal} 血</div></div>
       <button class="btn sm green" onclick="eatDish('${k}')">吃</button></div>`;}).join('')||'<div class="empty-note">無</div>';
-  let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0).map(k=>`<span class="seedchip">${prodIcon(k,20)}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
+  let ext=Object.keys(S.extras).filter(k=>S.extras[k]>0 && EXTRAS[k]).map(k=>`<span class="seedchip">${prodIcon(k,20)}${EXTRAS[k].nm}×${S.extras[k]}</span>`).join('')||'<span class="small">無</span>';
   openSheet(`<div class="sheethead"><h3>🎒 背包</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <b class="small">種子</b><div style="margin:4px 0 8px">${seeds}</div>
     <b class="small">農畜產品</b><div style="margin:4px 0 8px">${prod}</div>
@@ -1216,7 +1227,7 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
   if(curScene==='kitchen'&&prep.inOven){const t=Date.now()-prep.ovenStart;ob.classList.add('show');
   document.getElementById('ovenFill').style.width=Math.min(100,(t/BURN_MS)*100)+'%';
   ob.classList.remove('warn');ob.classList.toggle('burn',t>BURN_MS);
-  document.getElementById('ovenTxt').textContent=t<=BURN_MS?`烘烤中 ${(t/1000).toFixed(1)}s`:'💀燒焦中';
+  document.getElementById('ovenTxt').textContent=t<=BURN_MS?`烘烤中 ${fmtBakeMin(t)}`:'💀燒焦中';
   }else ob.classList.remove('show');
   // hint + dialogue
   const near=facingObject();
@@ -1237,14 +1248,14 @@ document.getElementById('sceneTitle').textContent='('+Math.round(player.x)+','+M
     hint.classList.add('show');
  }else{
     let onTile = null;
-    if(curScene==='farm'){
+    if(hasPlots(curScene)){
       const fx=Math.round(player.x)+DIR[player.facing].x, fy=Math.round(player.y)+DIR[player.facing].y;
       const front=cellKeyAt(fx,fy), here=farmTileHere();
       if(front && S.crops[front]) onTile=front;
       else if(here && !S.crops[here]) onTile=here;
       else if(front) onTile=front;
     }
-    const zone   = curScene==='farm' ? farmZoneAt(player.x,player.y) : null;
+    const zone   = farmZoneAt(player.x,player.y);
     const animal = zone && zone.kind!=='plot' ? zone : null;
     document.getElementById('actBtn').className='actbtn'+((near||onTile||animal||onChair||onBed||(curScene==='shop'&&nearKeeper()))?'':' dim');
  const _atKeeper = curScene==='shop' && nearKeeper();
@@ -1422,6 +1433,8 @@ const FLAPS=[
   { scene:'port', img:'port_flap2.png', tx:27, ty:18, near:3.0 },
   { scene:'port', img:'port_flap3.png', tx:36, ty:18, near:3.0 },
   { scene:'port', img:'port_flap4.png', tx:44, ty:18, near:3.0 },
+  { scene:'london', img:'london_flap.png', tx:14, ty:29, near:4.0 },
+  { scene:'london', img:'london_flap2.png', tx:14, ty:42, near:4.0 },
   { scene:'scott_office', img:'scott_office_flap.png', tx:18, ty:15, near:4.0 },
 ];
 function drawFlaps(ox,oy){
@@ -1437,18 +1450,19 @@ function drawFlaps(ox,oy){
 }
 drawCafeFood(ox,oy);   // 餐廳擺盤食物：畫在物件之後、人物之前 → 會被人物蓋住
 drawStorageBarrels(ox,oy);   // 桶子：畫在人物之前 → 人會站在桶子前面
-  if(curScene==='farm'){
+  if(hasPlots(curScene)){
     const SZ=CELL*TS;
     for(const key in S.crops){
+      if(cropKeyScene(key)!==curScene) continue;
       const c=S.crops[key], def=FARM_CROPS[c.crop]; if(!def) continue;
       let img=def._img;
       if(c.crop==='tulip' && c.tulipColor){ const ti=npcImg('tulip_'+c.tulipColor+'.png'); if(ti&&ti.complete&&ti.naturalWidth) img=ti; }
       if(!(img.complete && img.naturalWidth)) continue;
-      const [tx,ty]=key.split(',').map(Number);
+      const [tx,ty]=cropKeyXY(key);
       const fr=def.frame[c.stage]||0;
-      if(c.watered){ ctx.globalAlpha=1; ctx.fillStyle='rgba(60,38,20,.32)'; ctx.fillRect(tx*TS-ox, ty*TS-oy, SZ, SZ); }
+      if(c.watered && curScene!=='london'){ ctx.globalAlpha=1; ctx.fillStyle='rgba(60,38,20,.32)'; ctx.fillRect(tx*TS-ox, ty*TS-oy, SZ, SZ); }
       ctx.drawImage(img, fr*def.fw,0,def.fw,def.fh, tx*TS-ox, ty*TS-oy, SZ, SZ);
-      if(!c.watered && c.stage<def.stages.length-1){ ctx.globalAlpha=1; ctx.fillStyle='#7fb6c4'; ctx.font='12px serif'; ctx.fillText('💧',(tx+CELL/2)*TS-ox,(ty)*TS-oy); }
+      if(!c.watered && c.stage<def.stages.length-1){ ctx.globalAlpha=1; ctx.fillStyle='#7fb6c4'; ctx.font='12px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText('💧',(tx+CELL/2)*TS-ox,ty*TS-oy); }
     }
   }
   if(curScene==='farm'){ ctx.globalAlpha=1; ctx.textAlign='center';ctx.textBaseline='middle';

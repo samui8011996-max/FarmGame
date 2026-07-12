@@ -169,12 +169,18 @@ function pickFarmNpcTarget(n){
 }
 function buildFarmNpcs(){
   farmNpcs={};
-  SCENES.farm.objects=SCENES.farm.objects.filter(o=>o.id!=='alfred');
+  SCENES.farm.objects=SCENES.farm.objects.filter(o=>o.id!=='alfred'&&o.id!=='howard');
   if(S.child && S.child.stage===3){   // 少年期才出現在農田
     const nm=S.child.name||'阿爾弗雷德', sx=8, sy=24;
     SCENES.farm.objects.push({id:'alfred',x:sx,y:sy,e:'🧑‍🎓',nm,kind:'farmhand',npc:true,avatar:'🧑‍🎓',hide:true});
     farmNpcs['alfred']={ x:sx,y:sy, tx:sx,ty:sy, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
       img:npcImg('child_teen.png'), fallback:'🧑‍🎓' };
+  }
+  if(S.employee){   // 雇用農夫後，他會在農田區走動
+    const sx=14, sy=26;
+    SCENES.farm.objects.push({id:'howard',x:sx,y:sy,e:'👷',nm:'霍華德',kind:'employee',npc:true,avatar:'👷',hide:true});
+    farmNpcs['howard']={ x:sx,y:sy, tx:sx,ty:sy, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
+      img:npcImg('employee.png'), fallback:'👷' };
   }
 }
 function updateFarmNpcs(){
@@ -397,6 +403,7 @@ const CHARS={
   Pedro: { nm:'佩德羅·費爾南德斯·卡里埃多', face:{ neutral:'🧔',   happy:'😄', shy:'😅', love:'😍', sad:'😟' } },
   Antonio:{ nm:'安東尼奧·費爾南德斯·卡里埃多',   face:{ neutral:'👩‍🦰', happy:'😊', shy:'😳', love:'🥰', sad:'😢' } },
   Alfred:{ nm:'阿爾弗雷德·F·瓊斯',   face:{ neutral:'🤵', happy:'😎', shy:'😏', love:'😍', sad:'😞' } },
+  Matthew:{ nm:'馬修·威廉姆斯',      face:{ neutral:'😊', happy:'😄', shy:'😳', love:'🥰', sad:'😢' } },
 };
 function charFace(id,mood){ const c=CHARS[id]; if(!c) return '🙂'; return c.face[mood]||c.face.neutral||'🙂'; }
 function charName(id){ return (CHARS[id]&&CHARS[id].nm)||(MERCHANTS[id]&&MERCHANTS[id].nm)||id; }
@@ -447,6 +454,7 @@ function finalizeBreakup(id){
   else S.port.relations[id]={aff:8,met:true,lastChat:0};
   syncPartnerObject();
   if(typeof officeNpcs!=='undefined' && officeNpcs['partner']) delete officeNpcs['partner'];
+  if(typeof buildLondonNpcs==='function') buildLondonNpcs();   // 分手後馬修會回到倫敦街上
   applyCookSkin();
   addLog(`💔 和 ${nm} 漸行漸遠，回到朋友關係。`);
   closeSheet();
@@ -680,7 +688,7 @@ function playIntimacyCG(src, ms, done){
 }
 /* ---------- NPC 互動凍結 + 地圖互動立繪 ---------- */
 function freezeNpcById(id){
-  const n=(typeof officeNpcs!=='undefined'&&officeNpcs[id])||(typeof portNpcs!=='undefined'&&portNpcs[id]);
+  const n=(typeof officeNpcs!=='undefined'&&officeNpcs[id])||(typeof portNpcs!=='undefined'&&portNpcs[id])||(typeof londonNpcs!=='undefined'&&londonNpcs[id]);
   if(n){ n.frozen=true; n.moving=false; n.frame=0;
     const dx=player.x-n.x, dy=player.y-n.y;
     n.facing=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'); }
@@ -688,6 +696,7 @@ function freezeNpcById(id){
 function unfreezeNpcs(){
   if(typeof officeNpcs!=='undefined') for(const id in officeNpcs) officeNpcs[id].frozen=false;
   if(typeof portNpcs!=='undefined')   for(const id in portNpcs)   portNpcs[id].frozen=false;
+  if(typeof londonNpcs!=='undefined') for(const id in londonNpcs) londonNpcs[id].frozen=false;
 }
 let intimCG=null;
 let spicyScene=null;   // 跟伴侶做可疑的事：兩人躺床的事後全圖，按方向鍵才解除

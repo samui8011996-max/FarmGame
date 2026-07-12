@@ -1,54 +1,55 @@
 /* ===================== 🚢 19世紀：倫敦・斯克特辦公室・愛丁堡牧羊 ===================== */
 /* --- 地圖：倫敦40×18、斯克特辦公室26×16、愛丁堡44×26 --- */
 MAPS.london=[
-   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "F...........................F",
-   "F...........................F",
-   "F...........................F",
-   "F...........................F",
-   "F...........................F",
-   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
-   "FFFFF..FFFFFFFFFFFFFFFFFFFFFF",
-   "F...........................F",
-   "F..FFFFFFF..........FFFFFFFFF",
-   "F..FFFFFFFFF......FFFFFFFFFFF",
-   "F..FFFFFFFFFFFFFFFFFFFFFFFFFF",
-   "F....FFFFFFFFFFFFFFFFFFFFFFFF",
-   "FFF..F...FFFFFFFFFFFF.......F",
-   "FFF..F....FFFFFFFFFF........F",
-   "FFF..F......................F",
-   "FFF..F......................F",
-   "FFF..F......................F",
-   "F...........................F",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   "FFFFFFFFFFF.......FFFFFFFFFFF",
-   "FFFFFFFFFFF.......FFFFFFFFFFF",
-   "FFFFFFFFFFF.......FFFFFFFFFFF",
-   "FFFFFFFFFFF.......FFFFFFFFFFF",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
-   ".............................",
+   "FFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F...........................",
+   "F...........................",
+   "F...........................",
+   "F...........................",
+   "F...........................",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFF",
+   "FFFFF..FFFFFFFFFFFFFFFFFFFFF",
+   "F...........................",
+   "F..FFFFFFF..........FFFFFFFF",
+   "F..FFFFFFFFF......FFFFFFFFFF",
+   "F..FFFFFFFFFFFFFFFFFFFFFFFFF",
+   "F....FFFFFFFFFFFFFFFFFFFFFFF",
+   "FFF..F...FFFFFFFFFFFF.....FF",
+   "FFF..F....FFFFFFFFFF.......F",
+   "FFF..F.....................F",
+   "FFF..F.....................F",
+   "FFF..F.....................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "F..........................F",
+   "FFFFFFFFFFFF....FFFFFFFFFFFF",
+   "FFFFFFFFFFFF....FFFFFFFFFFFF",
+   "FFFFFFFFFFFF....FFFFFFFFFFFF",
+   "FFFFFFFFFFFF....FFFFFFFFFFFF",
+   "FF........................FF",
+   "FF........................FF",
+   "FF.........FFFFFF.........FF",
+   "FF.........FFFFFF.........FF",
+   "FF.........FFFFFF.........FF",
+   "FF...........FF...........FF",
+   "FF........................FF",
+   "FF........................FF",
+   "FF..........F..F..........FF",
+   "FFFFFFFFFFFFF..FFFFFFFFFFFFF",
+   "FFFFFFFFFFFFF..FFFFFFFFFFFFF",
+   "FFFFFFFFFFFFF..FFFFFFFFFFFFF",
+   "............................",
+   "............................",
+   "............................",
+   "............................",
+
   ],
 MAPS.scott_office=[
    "FFFFFFFFFFFFFFFFFFFFFFFFFF",
@@ -104,8 +105,19 @@ GRID.london=MAPS.london.map(r=>r.padEnd(MAPS.london[0].length,r[0]).split(''));
 GRID.scott_office=MAPS.scott_office.map(r=>r.padEnd(MAPS.scott_office[0].length,r[0]).split(''));
 GRID.edinburgh=MAPS.edinburgh.map(r=>r.padEnd(MAPS.edinburgh[0].length,r[0]).split(''));
 
+/* --- 倫敦後院小花園：空地上開放的一小塊花圃（農夫管不到，歸園丁馬修照顧） --- */
+FARM_ZONES.push(
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:2, y1:31, x2:9, y2:31},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:0, y1:32, x2:1, y2:40},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:18, y1:31, x2:25, y2:31},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:26, y1:32, x2:27, y2:40},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:11, y1:34, x2:12, y2:35},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:15, y1:34, x2:16, y2:35},
+  {kind:'plot', nm:'倫敦小花園', scene:'london', x1:11, y1:36, x2:16, y2:37},
+  );
+
 /* --- 場景 --- */
-SCENES.london={title:'倫敦的家', big:true, spawn:{x:13,y:3}, objects:[]};
+SCENES.london={title:'倫敦的家', big:true, spawn:{x:14,y:46}, objects:[]};
 SCENES.scott_office={title:'斯克特的辦公室', big:true, spawn:{x:12,y:11}, objects:[
   {id:'scott',   x:18,y:8, e:'🧔', nm:'斯克特', kind:'scott', sense:2, hide:true},
   {id:'sherlock',x:7, y:8, e:'🐕', nm:'夏洛克', kind:'dog', did:'sherlock', hide:true},
@@ -126,10 +138,110 @@ DOORS.push(
   { from:'edinburgh',    area:{x1:1, y1:7,  x2:2, y2:11},  to:'scott_office', at:{x:24,y:18},  label:'🚪 回斯克特的辦公室' },
 );
 
+/* ===================== 🍁 馬修（倫敦小花園園丁，可攻略） ===================== */
+/* 阿爾弗雷德的雙胞胎弟弟，個性比哥哥細心溫柔許多。當商人賣楓糖漿；照顧花園、聊天送禮、談戀愛都走既有的商人系統 */
+EXTRAS.maple_syrup={ nm:'楓糖漿', e:'🍁', price:15, merchantOnly:true };
+MERCHANTS.Matthew={ nm:'馬修·威廉姆斯', e:'🍁', job:'garden', era:19, portExempt:true,
+  lines:['（輕聲）啊……你好，不好意思，嚇到你了嗎？','這裡的花開得很好呢……被雨淋過的樣子，特別漂亮。','要不要嚐嚐我自己做的楓糖漿？','我哥哥阿爾弗雷德……嗯，他比較有活力，我就……喜歡安靜一點的事。'],
+  goods:[ {kind:'extra', k:'maple_syrup', price:15, qty:3} ] };
+const GARDENER_LINES={
+  idle:[
+    '（輕輕蹲在花圃旁，小心翼翼地鬆土）啊……你好，不好意思，嚇到你了嗎？',
+    '這裡的花開得很好呢……被雨淋過的樣子，特別漂亮。',
+    '我是馬修……馬修·威廉姆斯。常常……沒有人記得我的名字，沒關係的。',
+    '如果不嫌棄，我可以幫忙照顧這片小花園……慢慢來，不著急。',
+    '（小聲）你也喜歡花嗎？看著它們一點一點長大，心情會很好。',
+  ],
+  hired:[
+    '嗯……我會每天幫忙澆水，讓它們好好長大的。',
+    '這朵開得真漂亮……會留給你自己採收，我不會擅自摘的。',
+    '謝謝你願意讓我留在這裡……能做點什麼，我很開心。',
+    '（輕輕笑）不用擔心，我會很溫柔地對待每一株植物。',
+    '澆水、鬆土……這些小事，我做起來很開心，真的。',
+  ],
+};
+function hireGardener(){
+  S.gardenerHired=true;
+  addLog('🍁 馬修開始照顧倫敦小花園');
+  toast('🍁 馬修開始細心照顧花園了'); save();
+  openMerchant('Matthew');
+}
+function fireGardener(){
+  S.gardenerHired=false;
+  addLog('讓馬修先休息');
+  toast('他暫時不顧花園了'); save();
+  openMerchant('Matthew');
+}
+/* --- 馬修在倫敦地圖裡走動（成為伴侶後搬進辦公室，就不再出現在這） --- */
+const MATTHEW_ZONE={x1:2,y1:32,x2:9,y2:40};
+let londonNpcs={};
+function londonWalkable(x,y){
+  const ix=Math.round(x),iy=Math.round(y),g=GRID.london;
+  if(iy<0||ix<0||iy>=g.length||ix>=g[0].length) return false;
+  if(ix<MATTHEW_ZONE.x1||ix>MATTHEW_ZONE.x2||iy<MATTHEW_ZONE.y1||iy>MATTHEW_ZONE.y2) return false;
+  return !blocked(g[iy][ix]);
+}
+function pickMatthewTarget(n){
+  for(let i=0;i<20;i++){
+    const tx=MATTHEW_ZONE.x1+Math.floor(Math.random()*(MATTHEW_ZONE.x2-MATTHEW_ZONE.x1+1));
+    const ty=MATTHEW_ZONE.y1+Math.floor(Math.random()*(MATTHEW_ZONE.y2-MATTHEW_ZONE.y1+1));
+    if(londonWalkable(tx,ty)){ n.tx=tx; n.ty=ty; return; }
+  }
+}
+function buildLondonNpcs(){
+  londonNpcs={};
+  SCENES.london.objects=SCENES.london.objects.filter(o=>o.id!=='mc_Matthew');
+  if(S.partner && S.partner.id==='Matthew') return;   // 已經同居了，人在辦公室裡
+  const sx=5, sy=35;
+  SCENES.london.objects.push({id:'mc_Matthew',x:sx,y:sy,e:'🍁',nm:'馬修·威廉姆斯',kind:'merchant',mid:'Matthew',npc:true,avatar:'🍁',hide:true,lines:MERCHANTS.Matthew.lines});
+  londonNpcs['mc_Matthew']={ x:sx,y:sy, tx:sx,ty:sy, facing:'down', frame:0,aTimer:0,aStep:0,moving:false,idleUntil:0,
+    img:npcImg('partner_Matthew.png'), fallback:'🍁' };
+}
+function updateLondonNpcs(){
+  const now=Date.now();
+  for(const id in londonNpcs){
+    const n=londonNpcs[id];
+    if(n.frozen){ n.moving=false; n.frame=0; continue; }
+    const dx=n.tx-n.x, dy=n.ty-n.y, d=Math.hypot(dx,dy);
+    if(d<0.12){
+      n.moving=false;
+      if(!n.idleUntil) n.idleUntil=now+1200+Math.random()*2800;
+      else if(now>=n.idleUntil){ n.idleUntil=0; pickMatthewTarget(n); }
+    }else{
+      n.idleUntil=0;
+      const nx=n.x+(dx/d)*NPC_SPEED, ny=n.y+(dy/d)*NPC_SPEED;
+      if(londonWalkable(nx,n.y)) n.x=nx; else pickMatthewTarget(n);
+      if(londonWalkable(n.x,ny)) n.y=ny;
+      n.facing = Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+      n.moving=true;
+    }
+    if(n.moving){ if(++n.aTimer>=WALK_SPEED){ n.aTimer=0; n.aStep=(n.aStep+1)%WALK_CYCLE.length; } n.frame=WALK_CYCLE[n.aStep]; }
+    else { n.frame=0; n.aTimer=0; n.aStep=0; }
+    const o=SCENES.london.objects.find(ob=>ob.id===id);
+    if(o){ o.x=Math.round(n.x); o.y=Math.round(n.y); }
+  }
+}
+function drawLondonNpcs(){
+  const ox=Math.round(cam.x*TS), oy=Math.round(cam.y*TS);
+  for(const id in londonNpcs){
+    const n=londonNpcs[id];
+    const px=n.x*TS+TS/2-ox, py=n.y*TS+TS/2-oy;
+    ctx.globalAlpha=1; ctx.fillStyle='#00000022';
+    ctx.beginPath();ctx.ellipse(px,py+6,12,4,0,0,Math.PI*2);ctx.fill();
+    if(n.img && n.img.complete && n.img.naturalWidth){
+      const dirCols={down:0,left:1,right:2,up:3}, sx=(dirCols[n.facing]||0)*64, sy=n.frame*64;
+      ctx.drawImage(n.img, sx,sy,64,64, px-32, py-64+14, 64,64);
+    }else{
+      ctx.fillStyle='#000'; ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.fallback||'🍁', px, py);
+    }
+  }
+}
+
 /* --- 19世紀上船選單：捕魚 or 回倫敦 --- */
 const _sailOrig=askSail;
 function goFishTrip(){ _sailOrig(); }
-function sailToLondon(){ closeSheet(); goScene('london'); player.x=14; player.y=35; player.facing='right'; toast('🚢 抵達倫敦'); }
+function sailToLondon(){ closeSheet(); goScene('london'); player.x=14; player.y=46; player.facing='right'; toast('🚢 抵達倫敦'); }
 askSail=function(){
   if(!S || S.era<19){ _sailOrig(); return; }
   openSheet(`<div class="sheethead"><h3>⚓ 要開船去哪裡？</h3><button class="close" onclick="closeSheet()">✕</button></div>
@@ -165,15 +277,32 @@ function feedDog(id){
 }
 /* --- 斯克特 --- */
 const SCOTT_IMG=npcImg('scott.png');   // 64×64 單張立繪，沒放就用 emoji
+const SCOTT_RECIPE_COST=130;
+function buyScottRecipe(){
+  const k='shepherds_pie';
+  if(S.recipesCooked&&S.recipesCooked[k]){ toast('食譜本已經有這道了'); return; }
+  if(S.cash<SCOTT_RECIPE_COST){ toast('現金不足'); return; }
+  spend(SCOTT_RECIPE_COST,`向斯克特買${RECIPES[k].nm}配方`);
+  if(!S.recipesCooked) S.recipesCooked={};
+  S.recipesCooked[k]=true;
+  toast(`📖 跟斯克特學會了 ${RECIPES[k].nm} 的做法！`);
+  openScott(); save();
+}
 function openScott(){
   const anyReady=Object.keys(HERD_DOGS).some(dogReady);
   const pool=(typeof SCOTT_LINES!=='undefined')
     ? (S.herdJustDone?SCOTT_LINES.done:(anyReady?SCOTT_LINES.ready:SCOTT_LINES.intro))
     : ['……'];
   const line=pool[(Math.random()*pool.length)|0];
+  const knownPie=recipeKnown('shepherds_pie');
   openSheet(`<div class="sheethead"><h3>🧔 斯克特</h3><button class="close" onclick="closeSheet()">✕</button></div>
     <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px;font-size:14px;line-height:1.7">${line}</div>
-    <div class="small">任務：餵牛肉討好狗（好感 ${DOG_FOLLOW_AFF}+）→ 去牧羊區站在柵欄邊「開始牧羊」→ 操縱狗把 ${5} 隻羊全趕進柵欄 → 關上柵欄門。做完一輪領一次工錢。</div>`);
+    <div class="small" style="margin-bottom:8px">任務：餵牛肉討好狗（好感 ${DOG_FOLLOW_AFF}+）→ 去牧羊區站在柵欄邊「開始牧羊」→ 操縱狗把 ${5} 隻羊全趕進柵欄 → 關上柵欄門。做完一輪領一次工錢。</div>
+    <div class="hr"></div>
+    <div class="row"><div class="e">${RECIPES.shepherds_pie.e}</div><div class="info"><div class="n">牧羊人派食譜</div>
+      <div class="d">${knownPie?'已學會（看食譜本）':'買了才知道做法'}</div></div>
+      <div class="price">$${SCOTT_RECIPE_COST}</div>
+      <button class="btn sm ${knownPie?'dis':''}" onclick="buyScottRecipe()">${knownPie?'已學會':'買'}</button></div>`);
 }
 /* --- 辦公室裡兩隻狗走動 --- */
 const SCOTT_DOG_ZONE={x1:4,y1:6,x2:20,y2:11};
@@ -519,6 +648,7 @@ update=function(){
       if(h){ h.textContent='🐑 開始牧羊（互動鍵）'; h.classList.add('show'); } }
   }
   if(curScene==='scott_office') updateScottNpcs();
+  if(curScene==='london') updateLondonNpcs();
 };
 const _herdDraw=draw;
 draw=function(){
@@ -526,6 +656,7 @@ draw=function(){
   if(!S) return;
   if(curScene==='edinburgh') drawHerd();
   if(curScene==='scott_office') drawScottNpcs();
+  if(curScene==='london') drawLondonNpcs();
 };
 const _herdInteract=interact;
 interact=function(ev){

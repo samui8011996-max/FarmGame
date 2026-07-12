@@ -282,6 +282,12 @@ const FOOD_IMG_SRC={
   chicken_meat:'food_chicken.png',
   turkey_meat :'food_turkey.png',
   mutton      :'food_mutton.png',
+  beef_bourguignon:'food_beef_bourguignon.png',
+  portuguese_cod:'food_portuguese_cod.png',
+  shepherds_pie:'food_shepherds_pie.png',
+  paella:'food_paella.png',
+  roast_turkey:'food_roast_turkey.png',
+  cinnamon_roll:'food_cinnamon_roll.png',
 };
 const FOOD_IMG={};
 for(const k in FOOD_IMG_SRC){ const im=new Image(); im.src=FOOD_IMG_SRC[k]; FOOD_IMG[k]=im; }
@@ -1054,6 +1060,11 @@ const _repOrigStartGame=startGame;
 startGame=function(n){
   _repOrigStartGame(n);
   if(S.rep===undefined) S.rep=0;
+  // 舊存檔殘留的重複物品：w 併回 sugar、ex_tomato 併回 tomato
+  if(S.extras){
+    if(S.extras.w){ S.extras.sugar=(S.extras.sugar||0)+S.extras.w; delete S.extras.w; }
+    if(S.extras.ex_tomato){ S.extras.tomato=(S.extras.tomato||0)+S.extras.ex_tomato; delete S.extras.ex_tomato; }
+  }
   refreshTop(); save();
 };
 /* ===== 商人專賣商品 + 伴侶免費拿貨 ===== */
@@ -1070,7 +1081,6 @@ Object.assign(EXTRAS, {
   black_pepper:{nm:'黑胡椒',e:'⚫',price:10,merchantOnly:true},
   ginger:{nm:'薑',e:'🫚',price:6,merchantOnly:true},
   pineapple:{nm:'鳳梨',e:'🍍',price:14,merchantOnly:true},
-  ex_tomato:{nm:'番茄',e:'🍅',price:5,merchantOnly:true},
   citrus:{nm:'柑橘',e:'🍊',price:8,merchantOnly:true},
   cocoa:{nm:'可可豆',e:'🫘',price:16,merchantOnly:true},
   coconut:{nm:'椰子',e:'🥥',price:12,merchantOnly:true},
@@ -1085,9 +1095,20 @@ if(MERCHANTS.Pedro) MERCHANTS.Pedro.goods=[
   {kind:'extra',k:'bay_leaf',price:8},{kind:'extra',k:'black_pepper',price:10},
   {kind:'extra',k:'ginger',price:6} ];
 if(MERCHANTS.Antonio) MERCHANTS.Antonio.goods=[
-  {kind:'extra',k:'pineapple',price:14},{kind:'extra',k:'ex_tomato',price:5},
+  {kind:'extra',k:'pineapple',price:14},{kind:'extra',k:'tomato',price:5},
   {kind:'extra',k:'citrus',price:8},{kind:'extra',k:'cocoa',price:16},
   {kind:'extra',k:'coconut',price:12} ];
+
+/* 2b) 新增：紅酒燉牛肉／葡式奶油鱈魚／西班牙海鮮燉飯 食譜，跟對應商人買；燉飯的米也跟安東尼奧買 */
+Object.assign(EXTRAS, {
+  rice:{nm:'米',e:'🍚',price:6,merchantOnly:true},
+  saffron:{nm:'番紅花',e:'🌼',price:25,merchantOnly:true},
+});
+if(MERCHANTS.Francis) MERCHANTS.Francis.goods.push({kind:'recipe',k:'beef_bourguignon',price:150});
+if(MERCHANTS.Pedro)   MERCHANTS.Pedro.goods.push(
+  {kind:'recipe',k:'portuguese_cod',price:140}, {kind:'extra',k:'saffron',price:25} );
+if(MERCHANTS.Antonio) MERCHANTS.Antonio.goods.push(
+  {kind:'recipe',k:'paella',price:140}, {kind:'extra',k:'rice',price:6,qty:5} );
 
 /* 3) 一般採購面板隱藏 merchantOnly 商品（疊加 override，不動原函式） */
 if(typeof openShopBuy==='function'){
@@ -1113,8 +1134,16 @@ if(typeof buyMerchantGood==='function'){
 function takePartnerGood(gi){
   const p=S.partner; if(!p){ toast('還沒有伴侶'); return; }
   const g=MERCHANTS[p.id].goods[gi], qty=g.qty||1;
+  if(g.kind==='recipe'){
+    if(S.recipesCooked&&S.recipesCooked[g.k]){ toast('食譜本已經有這道了'); return; }
+    if(!S.recipesCooked) S.recipesCooked={};
+    S.recipesCooked[g.k]=true;
+    toast(`💞 伴侶特惠・免費學會了 ${RECIPES[g.k].nm} 的做法！`);
+    if(document.getElementById('mask').classList.contains('show')) openPartnerGoods();
+    save(); return;
+  }
   if(g.kind==='seed') S.seeds[g.k]=(S.seeds[g.k]||0)+qty; else S.extras[g.k]=(S.extras[g.k]||0)+qty;
-  toast(`💞 伴侶特惠・免費拿了 ${g.kind==='seed'?FARM_CROPS[g.k].nm+'種子':EXTRAS[g.k].nm}${qty>1?' ×'+qty:''}`);
+  toast(`💞 伴侶特惠・免費拿了 ${g.kind==='seed'?FARM_CROPS[g.k].nm+'種子':ingNm(g.k)}${qty>1?' ×'+qty:''}`);
   if(document.getElementById('mask').classList.contains('show')) openPartnerGoods();
   save();
 }
@@ -1124,8 +1153,14 @@ function openPartnerGoods(){
   const p=S.partner; if(!p){ toast('還沒有伴侶'); return; }
   const m=MERCHANTS[p.id];
   const goods=(m.goods||[]).map((g,gi)=>{
-    const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):EXTRAS[g.k].nm;
-    const e =g.kind==='seed'?((PRODUCTS[g.k]&&PRODUCTS[g.k].e)||'🌱'):EXTRAS[g.k].e;
+    if(g.kind==='recipe'){
+      const known=recipeKnown(g.k);
+      if(known) return `<div class="row"><div class="e">${recipeIcon(24)}</div><div class="info"><div class="n">${RECIPES[g.k].nm}食譜</div><div class="d">已學會</div></div></div>`;
+      return `<div class="row"><div class="e">${recipeIcon(24)}</div><div class="info"><div class="n">${RECIPES[g.k].nm}食譜</div></div>
+        <button class="btn sm green" onclick="takePartnerGood(${gi})">免費拿</button></div>`;
+    }
+    const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):ingNm(g.k);
+    const e =g.kind==='seed'?((PRODUCTS[g.k]&&PRODUCTS[g.k].e)||'🌱'):prodIcon(g.k,24);
     const qty=g.qty||1;
     return `<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${nm}${qty>1?' ×'+qty:''}</div></div>
       <button class="btn sm green" onclick="takePartnerGood(${gi})">免費拿</button></div>`;

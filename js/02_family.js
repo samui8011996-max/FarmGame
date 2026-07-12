@@ -164,7 +164,7 @@ function childLeaveHome(){
 const PORT_SLOTS=[{x:1,y:11},{x:4,y:11},{x:9,y:11},{x:14,y:11}];
 const PORT_REFRESH_MS=60000;
 function refreshPort(){
-  const ids=Object.keys(MERCHANTS).filter(id=>!(S.partner&&S.partner.id===id) && (MERCHANTS[id].era||18)<=S.era).sort(()=>Math.random()-0.5);
+  const ids=Object.keys(MERCHANTS).filter(id=>!(S.partner&&S.partner.id===id) && !MERCHANTS[id].portExempt && (MERCHANTS[id].era||18)<=S.era).sort(()=>Math.random()-0.5);
   const n=1+Math.floor(Math.random()*3);
   S.port.merchants=ids.slice(0,n);
   S.port.lastTs=Date.now();
@@ -191,13 +191,30 @@ function openMerchant(id){
   const m=MERCHANTS[id], rel=S.port.relations[id]||(S.port.relations[id]={aff:0,met:false,lastChat:0});
   rel.met=true;
   const goods=m.goods.map((g,gi)=>{
-    const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):EXTRAS[g.k].nm;
+    if(g.kind==='recipe'){
+      const known=recipeKnown(g.k);
+      return `<div class="row"><div class="e">${recipeIcon(24)}</div><div class="info"><div class="n">${RECIPES[g.k].nm}食譜</div>
+        <div class="d">${known?'已學會（看食譜本）':'買了才知道做法'}</div></div>
+        <div class="price">$${g.price}</div><button class="btn sm ${known?'dis':''}" onclick="buyMerchantGood('${id}',${gi})">${known?'已學會':'買'}</button></div>`;
+    }
+    const nm=g.kind==='seed'?(FARM_CROPS[g.k].nm+'種子'):ingNm(g.k);
     const e = prodIcon(g.k, 24);
     const qty=g.qty||1;
     return `<div class="row"><div class="e">${e}</div><div class="info"><div class="n">${nm}${qty>1?' ×'+qty:''}</div></div>
       <div class="price">$${g.price}</div><button class="btn sm" onclick="buyMerchantGood('${id}',${gi})">買</button></div>`;
   }).join('');
+  const gardenerBlock = (id==='Matthew') ? (()=>{
+    const set=(typeof GARDENER_LINES!=='undefined')?GARDENER_LINES:{idle:['…'],hired:['…']};
+    const pool=S.gardenerHired?(set.hired||['…']):(set.idle||['…']);
+    const line=pool[Math.floor(Math.random()*pool.length)];
+    return `<div class="small" style="margin-bottom:6px">阿爾弗雷德的雙胞胎弟弟，個性比哥哥細心溫柔許多。${S.gardenerHired?'現在正細心地照料倫敦小花園，會自動澆水、養到開花結果，但不會幫你採收。':'常在小花園附近晃悠。'}</div>
+      <div style="background:var(--card);border:2px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px;font-size:14px;line-height:1.5">${line}</div>
+      ${S.gardenerHired
+        ? `<button class="btn ghost" style="width:100%;margin-bottom:10px;color:var(--danger)" onclick="fireGardener()">讓他先休息</button>`
+        : `<button class="btn green" style="width:100%;margin-bottom:10px" onclick="hireGardener()">雇用他照顧花園</button>`}`;
+  })() : '';
   openSheet(`<div class="sheethead"><h3>${m.e} ${m.nm}</h3><button class="close" onclick="closeSheet()">✕</button></div>
+    ${gardenerBlock}
     <div class="small" style="margin-bottom:8px">好感 ${rel.aff}・現金 $${fmt(S.cash)}</div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn green sm" style="flex:1" onclick="chatMerchant('${id}')">💬 聊天</button>
@@ -245,10 +262,19 @@ function giveGift(id,kind,k){
 }
 function buyMerchantGood(id,gi){
   const g=MERCHANTS[id].goods[gi], qty=g.qty||1;
+  if(g.kind==='recipe'){
+    if(S.recipesCooked&&S.recipesCooked[g.k]){ toast('食譜本已經有這道了'); return; }
+    if(S.cash<g.price){ toast('現金不足'); return; }
+    spend(g.price,`向${MERCHANTS[id].nm}買${RECIPES[g.k].nm}配方`);
+    if(!S.recipesCooked) S.recipesCooked={};
+    S.recipesCooked[g.k]=true;
+    toast(`📖 跟${MERCHANTS[id].nm}學會了 ${RECIPES[g.k].nm} 的做法！`);
+    openMerchant(id); save(); return;
+  }
   if(S.cash<g.price){ toast('現金不足'); return; }
   spend(g.price,`向${MERCHANTS[id].nm}購買`);
   if(g.kind==='seed') S.seeds[g.k]=(S.seeds[g.k]||0)+qty; else S.extras[g.k]=(S.extras[g.k]||0)+qty;
-  toast(`買了 ${g.kind==='seed'?FARM_CROPS[g.k].nm+'種子':EXTRAS[g.k].nm}${qty>1?' ×'+qty:''}`);
+  toast(`買了 ${g.kind==='seed'?FARM_CROPS[g.k].nm+'種子':ingNm(g.k)}${qty>1?' ×'+qty:''}`);
   openMerchant(id); save();
 }
 /* ---------- 戀愛＋伴侶 ---------- */
@@ -289,6 +315,7 @@ function cohabit(id){
   const m=MERCHANTS[id];
   S.partner={id, job:m.job, working:false, lastBake:Date.now(), intimacy:0, lastIntim:0, newlyMoved:6, wardrobe:{owned:['default'],wearing:'default'}};
   S.port.merchants=S.port.merchants.filter(x=>x!==id); buildPortObjects();
+  if(typeof buildLondonNpcs==='function') buildLondonNpcs();   // 馬修同居後就不再是倫敦街上走動的商人
   addLog(`💞 和 ${m.nm} 開始同居`);
   closeSheet(); toast(`💞 ${m.nm} 搬進來一起住了`); save(); goScene('office');
 }
